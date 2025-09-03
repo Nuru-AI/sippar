@@ -77,12 +77,9 @@ const getCachedLocalStorage = (key: string): string | null => {
 // Chain Fusion Backend endpoints - Updated with working XNode2 Sippar server
 const getChainFusionEndpoints = () => {
   return [
-    'http://localhost:3002',              // Phase 3: Threshold signatures server (PRIORITY)
-    'http://localhost:3001',              // Phase 2: Local backend fallback
-    'https://xnode2.openmesh.cloud:8202', // XNode2 Sippar server (WORKING on port 8202)
-    'http://10.233.3.2:8202',            // Direct internal container access (VERIFIED WORKING)
-    'https://nuru.network/api/sippar',    // Future public API endpoint  
-    '/api/sippar',                        // Local fallback
+    '/api/sippar',                        // Production: nginx proxy (PRIORITY)
+    'https://nuru.network/api/sippar',    // Public API endpoint fallback
+    'http://localhost:3001',              // Local development fallback
   ];
 };
 

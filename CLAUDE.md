@@ -14,6 +14,7 @@ Sippar extends ICP Chain Fusion technology to the Algorand blockchain ecosystem,
 - **Trustless Bridge**: Direct ICP-Algorand integration without traditional bridge risks
 - **Zero Web3 Complexity**: Internet Identity authentication with automatic Algorand credential derivation
 - **Chain-Key Tokens**: ckALGO with 1:1 backing by native ALGO held in ICP smart contracts
+- **Account Abstraction**: ARC-0058 plugin integration for native Algorand account control
 - **EVM Compatibility**: Milkomeda A1 Rollup integration for Ethereum-compatible development
 - **AI-Powered Trading**: Extend Rabbi trading intelligence to Algorand ecosystem
 
@@ -21,10 +22,10 @@ Sippar extends ICP Chain Fusion technology to the Algorand blockchain ecosystem,
 
 ### **Chain Fusion Technology Stack**
 ```
-Internet Identity → Threshold Ed25519 → Algorand Control
-                 ↓
+Internet Identity → Threshold Ed25519 → Algorand Account Abstraction (ARC-0058)
+                 ↓                                    ↓
             Chain Fusion Backend → ckALGO Minting → ICP Trading
-                 ↓  
+                 ↓                                    ↓
             Milkomeda A1 Bridge → EVM Compatibility → DeFi Integration
 ```
 
@@ -32,9 +33,10 @@ Internet Identity → Threshold Ed25519 → Algorand Control
 1. **Internet Identity Integration**: Seamless user authentication
 2. **Algorand Credential Derivation**: PBKDF2-SHA256 principal → Algorand address
 3. **Threshold Ed25519**: ICP nodes sign Algorand transactions collaboratively  
-4. **Chain-Key ALGO (ckALGO)**: 1:1 backed native ALGO on ICP
-5. **Milkomeda Integration**: EVM-compatible L2 for Ethereum tooling
-6. **Trading Intelligence**: AI-powered arbitrage and DeFi strategies
+4. **ARC-0058 Account Abstraction**: Native Algorand accounts controlled via Chain Fusion plugins
+5. **Chain-Key ALGO (ckALGO)**: 1:1 backed native ALGO on ICP
+6. **Milkomeda Integration**: EVM-compatible L2 for Ethereum tooling
+7. **Trading Intelligence**: AI-powered arbitrage and DeFi strategies
 
 ## 🚀 **Development Standards**
 

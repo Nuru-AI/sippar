@@ -22,7 +22,9 @@ const RedeemFlow: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [ckAlgoBalance, setCkAlgoBalance] = useState<number>(0);
+  const [balanceLoading, setBalanceLoading] = useState<boolean>(false);
   const [processingTimeLeft, setProcessingTimeLeft] = useState<number>(60); // 1 minute for redemption
+  const [transactionResult, setTransactionResult] = useState<any>(null);
 
   const steps: RedeemStep[] = [
     {
@@ -67,13 +69,26 @@ const RedeemFlow: React.FC = () => {
 
   const loadCkAlgoBalance = async () => {
     if (user?.principal) {
+      setBalanceLoading(true);
       try {
-        // Phase 2: Use demo balance - real ckALGO integration in Phase 3
-        console.log('🪙 Loading ckALGO balance for Phase 2 demo');
-        setCkAlgoBalance(10.5); // Demo balance for functional demonstration
+        // Load real ckALGO balance from canister
+        console.log('🪙 Loading ckALGO balance from canister for principal:', user.principal);
+        
+        const response = await fetch(`/api/sippar/ck-algo/balance/${user.principal}`);
+        const balanceData = await response.json();
+        
+        if (response.ok && balanceData.ck_algo_balance !== undefined) {
+          setCkAlgoBalance(balanceData.ck_algo_balance);
+          console.log('✅ Loaded real ckALGO balance:', balanceData.ck_algo_balance);
+        } else {
+          console.error('❌ Failed to load balance:', balanceData);
+          setCkAlgoBalance(0); // Show 0 balance on error instead of fake placeholder
+        }
       } catch (error) {
         console.error('❌ Failed to load ckALGO balance:', error);
-        setCkAlgoBalance(10.5);
+        setCkAlgoBalance(0); // Show 0 balance on error instead of fake placeholder
+      } finally {
+        setBalanceLoading(false);
       }
     }
   };
@@ -104,44 +119,44 @@ const RedeemFlow: React.FC = () => {
     
     try {
       if (user?.principal) {
-        const redeemResult = await ckAlgoCanister.redeemAlgo(
-          parseFloat(redeemAmount),
-          destinationAddress,
-          user.principal
-        );
+        console.log('💸 Starting real ckALGO redemption (Phase 3)...');
+        
+        // Phase 3: Real redemption via confirmed endpoint
+        const response = await fetch('/api/sippar/ck-algo/redeem-confirmed', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            amount: parseFloat(redeemAmount),
+            targetAddress: destinationAddress,
+            userPrincipal: user.principal
+          })
+        });
+        
+        const redeemResult = await response.json();
         
         if (redeemResult.success) {
-          // Start processing simulation
-          startRedemptionProcessing();
+          console.log('✅ ALGO redeemed successfully (Phase 3):', redeemResult);
+          setTransactionResult(redeemResult);
+          setCurrentStep(4); // Success
+          setIsProcessing(false);
+          // Refresh balance after successful redemption
+          loadCkAlgoBalance();
         } else {
           throw new Error(redeemResult.error || 'Redemption failed');
         }
       }
     } catch (error) {
-      console.error('❌ Redemption failed:', error);
-      alert('Redemption failed. Please try again.');
+      console.error('❌ Real redemption failed:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      alert(`Redemption failed: ${errorMessage}`);
       setIsProcessing(false);
       setCurrentStep(2); // Go back to confirmation
     }
   };
 
-  const startRedemptionProcessing = () => {
-    // Simulate redemption processing
-    const interval = setInterval(() => {
-      setProcessingTimeLeft(prev => {
-        const newTime = prev - 1;
-        if (newTime <= 0) {
-          clearInterval(interval);
-          setCurrentStep(4);
-          setIsProcessing(false);
-          // Refresh balance
-          loadCkAlgoBalance();
-          return 0;
-        }
-        return newTime;
-      });
-    }, 1000);
-  };
+  // startRedemptionProcessing function removed - now using real redemption endpoint
 
   const isValidAlgorandAddress = (address: string): boolean => {
     // Basic Algorand address validation
@@ -187,13 +202,13 @@ const RedeemFlow: React.FC = () => {
         </p>
       </div>
       
-      {/* Phase 2 Demo Notice */}
-      <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+      {/* Real Integration Notice */}
+      <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4">
         <div className="flex items-start space-x-3">
-          <div className="text-blue-400 text-xl">ℹ️</div>
-          <div className="text-blue-200 text-sm">
-            <strong>Phase 2 Demo:</strong> This redemption flow demonstrates the complete user experience with simulated ALGO transfers. 
-            ckALGO burning is functional via our deployed canister. Real ALGO transfers will be enabled in Phase 3 with threshold signatures.
+          <div className="text-green-400 text-xl">✅</div>
+          <div className="text-green-200 text-sm">
+            <strong>Live Integration:</strong> This redemption flow uses real blockchain integration. 
+            ckALGO tokens are burned via our deployed canister and ALGO is transferred using threshold signatures.
           </div>
         </div>
       </div>
@@ -203,7 +218,11 @@ const RedeemFlow: React.FC = () => {
         <h3 className="text-lg font-semibold text-white mb-2">Your Balance</h3>
         <div className="flex justify-between items-center">
           <span className="text-gray-300">Available ckALGO:</span>
-          <span className="text-xl font-mono text-green-400">{ckAlgoBalance.toFixed(6)} ckALGO</span>
+          {balanceLoading ? (
+            <span className="text-xl font-mono text-yellow-400">Loading...</span>
+          ) : (
+            <span className="text-xl font-mono text-green-400">{ckAlgoBalance.toFixed(6)} ckALGO</span>
+          )}
         </div>
       </div>
 
@@ -431,15 +450,15 @@ const RedeemFlow: React.FC = () => {
                 </div>
                 <div className="flex justify-between">
                   <span>ALGO Sent:</span>
-                  <span className="font-mono">{(parseFloat(redeemAmount) - 0.001).toFixed(6)} ALGO</span>
+                  <span className="font-mono">{transactionResult?.algoAmount || redeemAmount} ALGO</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Destination:</span>
-                  <span className="font-mono text-xs break-all">{destinationAddress}</span>
+                  <span className="font-mono text-xs break-all">{transactionResult?.targetAddress || destinationAddress}</span>
                 </div>
                 <div className="flex justify-between text-gray-400">
-                  <span>Transaction ID:</span>
-                  <span className="font-mono text-xs">REDEEM-{Date.now()}</span>
+                  <span>Algorand TX ID:</span>
+                  <span className="font-mono text-xs">{transactionResult?.algorandTxId || 'N/A'}</span>
                 </div>
               </div>
             </div>
@@ -450,6 +469,7 @@ const RedeemFlow: React.FC = () => {
                 setRedeemAmount('');
                 setDestinationAddress(credentials?.algorandAddress || '');
                 setIsProcessing(false);
+                setTransactionResult(null);
                 loadCkAlgoBalance(); // Refresh balance
               }}
               className="w-full py-3 px-4 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors"

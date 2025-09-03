@@ -9,6 +9,7 @@ import ChainFusionExplanation from './ChainFusionExplanation';
 import MintFlow from './MintFlow';
 import RedeemFlow from './RedeemFlow';
 import TransactionHistory from './TransactionHistory';
+import AIChat from './ai/AIChat';
 import sipparAPI from '../services/SipparAPIService';
 
 const Dashboard: React.FC = () => {

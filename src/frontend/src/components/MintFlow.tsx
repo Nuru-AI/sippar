@@ -35,6 +35,7 @@ const MintFlow: React.FC = () => {
   const [monitoringTimeLeft, setMonitoringTimeLeft] = useState<number>(300); // 5 minutes in seconds
   const [showWalletModal, setShowWalletModal] = useState<boolean>(false);
   const [depositMethod, setDepositMethod] = useState<'wallet' | 'manual'>('wallet');
+  const [transactionResult, setTransactionResult] = useState<any>(null);
 
   const steps: MintStep[] = [
     {
@@ -139,27 +140,69 @@ const MintFlow: React.FC = () => {
       if (result.success && result.txId) {
         console.log('✅ Transaction sent successfully:', result.txId);
         
-        // Simulate confirmation for Phase 2 demo
-        setTimeout(async () => {
-          // Mint ckALGO tokens
-          try {
-            const mintResult = await ckAlgoCanister.mintCkAlgo({
-              amount: parseFloat(mintAmount),
-              algorandTxId: result.txId!,
-              userPrincipal: user.principal!,
-              depositAddress: wallet.address,
-            });
-            
-            if (mintResult.success) {
-              console.log('🪙 ckALGO minted successfully:', mintResult);
-              setCurrentStep(4);
-            }
-          } catch (error) {
-            console.error('❌ ckALGO minting failed:', error);
+        // Phase 3: Real transaction monitoring and minting
+        const monitorAndMint = async (txId: string, attempts: number = 0) => {
+          const maxAttempts = 30; // 30 attempts × 2 seconds = 1 minute max wait
+          
+          if (attempts >= maxAttempts) {
+            console.error('❌ Transaction confirmation timeout');
+            setIsMonitoring(false);
+            setCurrentStep(1); // Reset to initial state
+            return;
           }
           
-          setIsMonitoring(false);
-        }, 10000); // Simulate 10 second confirmation
+          try {
+            console.log(`🔍 Monitoring Algorand transaction attempt ${attempts + 1}:`, txId);
+            
+            // Call the real mint endpoint which verifies transaction and mints ckALGO
+            const response = await fetch('/api/sippar/ck-algo/mint-confirmed', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                algorandTxId: txId,
+                userPrincipal: user.principal,
+                amount: parseFloat(mintAmount)
+              })
+            });
+            
+            const mintResult = await response.json();
+            
+            if (mintResult.success) {
+              console.log('🪙 ckALGO minted successfully (Phase 3):', mintResult);
+              setTransactionResult(mintResult);
+              setIsMonitoring(false);
+              setCurrentStep(4); // Success
+              return;
+            }
+            
+            // If transaction not confirmed yet, continue monitoring
+            if (mintResult.error === 'Algorand transaction not confirmed yet') {
+              console.log(`⏳ Transaction not confirmed yet, retrying in 2 seconds... (${attempts + 1}/${maxAttempts})`);
+              setTimeout(() => monitorAndMint(txId, attempts + 1), 2000);
+              return;
+            }
+            
+            // Other errors - stop monitoring
+            console.error('❌ ckALGO minting failed:', mintResult);
+            setIsMonitoring(false);
+            setCurrentStep(1); // Reset to initial state
+            
+          } catch (error) {
+            console.error('❌ Monitoring/minting error:', error);
+            // Retry on network errors
+            if (attempts < maxAttempts) {
+              setTimeout(() => monitorAndMint(txId, attempts + 1), 2000);
+            } else {
+              setIsMonitoring(false);
+              setCurrentStep(1); // Reset to initial state
+            }
+          }
+        };
+        
+        // Start real monitoring
+        await monitorAndMint(result.txId!);
         
       } else {
         throw new Error(result.error || 'Transaction failed');
@@ -190,7 +233,7 @@ const MintFlow: React.FC = () => {
         // Try Phase 3 first (threshold signatures), then Phase 2 fallback
         let response;
         try {
-          response = await fetch(`http://localhost:3002/algorand/deposits/${depositAddress}`);
+          response = await fetch(`/api/sippar/algorand/deposits/${depositAddress}`);
           if (!response.ok) {
             response = await fetch(`http://localhost:3001/algorand/deposits/${depositAddress}`);
           }
@@ -214,26 +257,47 @@ const MintFlow: React.FC = () => {
         if (matchingDeposit) {
           console.log('✅ Matching deposit found:', matchingDeposit);
           
-          // Mint ckALGO tokens
-          if (user?.principal) {
+          // Phase 3: Real ckALGO minting via confirmed transaction endpoint
+          if (user?.principal && matchingDeposit.txId) {
             try {
-              const mintResult = await ckAlgoCanister.mintCkAlgo({
-                amount: parseFloat(mintAmount),
-                algorandTxId: matchingDeposit.txId || `ALG-${Date.now()}`,
-                userPrincipal: user.principal,
-                depositAddress: depositAddress,
+              console.log('🪙 Manual deposit confirmed, minting ckALGO via real endpoint:', matchingDeposit);
+              
+              // Use the same real endpoint as direct wallet flow
+              const response = await fetch('/api/sippar/ck-algo/mint-confirmed', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  algorandTxId: matchingDeposit.txId,
+                  userPrincipal: user.principal,
+                  amount: parseFloat(mintAmount)
+                })
               });
               
+              const mintResult = await response.json();
+              
               if (mintResult.success) {
-                console.log('🪙 ckALGO minted successfully:', mintResult);
+                console.log('✅ ckALGO minted successfully via manual deposit (Phase 3):', mintResult);
+                setTransactionResult(mintResult);
+                setCurrentStep(4);
+                setIsMonitoring(false);
+                return;
+              } else {
+                console.error('❌ Manual deposit minting failed:', mintResult);
+                // Continue monitoring in case there are other deposits
               }
+              
             } catch (error) {
-              console.error('❌ ckALGO minting failed:', error);
+              console.error('❌ Manual deposit minting error:', error);
+              // Continue monitoring in case there are other deposits
             }
+          } else {
+            // Fallback for deposits without transaction ID
+            console.log('⚠️ Deposit found but missing transaction ID, using fallback success');
+            setCurrentStep(4);
+            setIsMonitoring(false);
           }
-          
-          setCurrentStep(4);
-          setIsMonitoring(false);
           return true;
         }
         
@@ -728,8 +792,12 @@ const MintFlow: React.FC = () => {
                   <span className="font-mono">{mintAmount} ckALGO</span>
                 </div>
                 <div className="flex justify-between text-gray-400">
-                  <span>Transaction ID:</span>
-                  <span className="font-mono text-xs">SIM-{Date.now()}</span>
+                  <span>ICP Transaction ID:</span>
+                  <span className="font-mono text-xs">{transactionResult?.icpTxId || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between text-gray-400">
+                  <span>Algorand TX ID:</span>
+                  <span className="font-mono text-xs">{transactionResult?.algorandTxId || 'N/A'}</span>
                 </div>
               </div>
             </div>
@@ -739,6 +807,7 @@ const MintFlow: React.FC = () => {
                 setCurrentStep(1);
                 setMintAmount('');
                 setIsMonitoring(false);
+                setTransactionResult(null);
               }}
               className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
             >

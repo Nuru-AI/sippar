@@ -37,17 +37,17 @@ const TransactionHistory: React.FC = () => {
     
     setLoading(true);
     try {
-      // For Phase 2, simulate transaction history
-      // In Phase 3, this would call the backend API
-      const mockTransactions: Transaction[] = [
+      // Demo transaction data for user interface demonstration
+      // Real transaction history API integration planned for future release
+      const demoTransactions: Transaction[] = [
         {
           id: 'tx-001',
           type: 'mint',
           amount: 5.5,
           status: 'completed',
           timestamp: '2025-09-03T14:13:06.541Z',
-          algorandTxId: 'ALG-12345',
-          icpTxId: 'ICP-MINT-1756908786541',
+          algorandTxId: 'DEMO-ALG-12345',
+          icpTxId: 'DEMO-ICP-MINT-001',
           fromAddress: 'ONUXA4DBOIWWC3DHN5ZGC3TEFVTWSY3ONYWXK4DHNRRC25LCMVUPLES5LE',
           fee: 0.001
         },
@@ -57,8 +57,8 @@ const TransactionHistory: React.FC = () => {
           amount: 2.5,
           status: 'completed',
           timestamp: '2025-09-03T15:21:43.419Z',
-          algorandTxId: 'ALGO-OUT-1756912903419',
-          icpTxId: 'ICP-REDEEM-1756912903419',
+          algorandTxId: 'DEMO-ALG-67890',
+          icpTxId: 'DEMO-ICP-REDEEM-001',
           toAddress: 'ONUXA4DBOIWWC3DHN5ZGC3TEFVTWSY3ONYWXK4DHNRRC25LCMVUPLES5LE',
           fee: 0.001
         },
@@ -68,14 +68,14 @@ const TransactionHistory: React.FC = () => {
           amount: 1.0,
           status: 'pending',
           timestamp: '2025-09-03T15:25:13.423Z',
-          algorandTxId: 'ALG-PENDING',
-          icpTxId: 'ICP-MINT-1756913113423',
+          algorandTxId: 'DEMO-ALG-PENDING',
+          icpTxId: 'DEMO-ICP-MINT-002',
           fromAddress: 'ONUXA4DBOIWWC3DHN5ZGC3TEFVTWSY3ONYWXK4DHNRRC25LCMVUPLES5LE',
           fee: 0.001
         }
       ];
       
-      setTransactions(mockTransactions);
+      setTransactions(demoTransactions);
     } catch (error) {
       console.error('❌ Failed to load transaction history:', error);
     } finally {
@@ -127,6 +127,17 @@ const TransactionHistory: React.FC = () => {
         <p className="text-gray-400">
           Complete history of your mint and redeem operations
         </p>
+      </div>
+      
+      {/* Demo Notice */}
+      <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4">
+        <div className="flex items-start space-x-3">
+          <div className="text-yellow-400 text-xl">⚠️</div>
+          <div className="text-yellow-200 text-sm">
+            <strong>Demo Data:</strong> This transaction history shows sample data for demonstration purposes. 
+            Real transaction history integration will be implemented in a future update.
+          </div>
+        </div>
       </div>
 
       {/* Filter Controls */}
