@@ -1,0 +1,21 @@
+[package]
+name = "ck_algo"
+version = "1.0.0"
+edition = "2021"
+description = "ckALGO - Chain-Key Algorand Token on Internet Computer"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+ic-cdk = { workspace = true }
+candid = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = "0.10"
+hex = "0.4"
+
+[dependencies.getrandom]
+version = "0.2"
+features = ["custom"]
+

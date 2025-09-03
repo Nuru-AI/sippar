@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "canisters": {
+    "ck_algo": {
+      "type": "rust",
+      "package": "ck_algo",
+      "candid": "src/canisters/ck_algo/ck_algo.did",
+      "wasm": "target/wasm32-unknown-unknown/release/ck_algo.wasm"
+    }
+  },
+  "networks": {
+    "local": {
+      "bind": "127.0.0.1:8000",
+      "type": "ephemeral"
+    },
+    "ic": {
+      "providers": ["https://ic0.app"],
+      "type": "persistent"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "output_env_file": ".env",
+  "replica": {
+    "subnet_type": "system"
+  }
+}

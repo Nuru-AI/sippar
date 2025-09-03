@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Prevent wallet extension auto-detection -->
+    <meta name="web3" content="disabled">
+    <meta name="ethereum" content="false">
+    <meta name="wallet" content="none">
+    <!-- CSP enabled with unsafe-eval for compatibility -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' http: https: data: blob:; connect-src 'self' http: https: ws: wss:;">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <!-- Mixed content fix deployed: 2025-08-11 11:31 -->
+    <title>Sippar Algorand Bridge - ICP Chain Fusion to Algorand</title>
+    
+    <!-- Production ready - forensic debugging removed -->
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

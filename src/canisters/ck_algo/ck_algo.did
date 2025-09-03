@@ -1,0 +1,26 @@
+// ckALGO Minimal Canister Interface
+service : () -> {
+    // ICRC-1 Standard Methods
+    icrc1_name : () -> (text) query;
+    icrc1_symbol : () -> (text) query;
+    icrc1_decimals : () -> (nat8) query;
+    icrc1_fee : () -> (nat) query;
+    icrc1_total_supply : () -> (nat) query;
+    icrc1_balance_of : (principal) -> (nat) query;
+    icrc1_transfer : (principal, nat) -> (variant { Ok : nat; Err : text });
+    icrc1_supported_standards : () -> (vec record { text; text }) query;
+    
+    // ckALGO Specific Methods
+    mint_ck_algo : (principal, nat) -> (variant { Ok : nat; Err : text });
+    redeem_ck_algo : (nat, text) -> (variant { Ok : text; Err : text });
+    
+    // Utility Methods
+    get_algorand_custody_address : () -> (text) query;
+    get_reserves : () -> (nat, nat, float32) query;
+    
+    // Admin Methods
+    update_algorand_balance : (nat) -> (variant { Ok : null; Err : text });
+    
+    // Debug method
+    get_caller : () -> (principal) query;
+}
