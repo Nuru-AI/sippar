@@ -431,6 +431,11 @@ const Dashboard: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* AI Chat Interface */}
+      <div className="mt-6">
+        <AIChat />
+      </div>
         </div>
       )}
 

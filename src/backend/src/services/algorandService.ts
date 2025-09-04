@@ -17,11 +17,13 @@ export interface AlgorandAccount {
   address: string;
   balance: number;
   minBalance: number;
+  min_balance: number; // Alternative name used in some places
   amountWithoutPendingRewards: number;
   pendingRewards: number;
   rewards: number;
   round: number;
   status: string;
+  assets?: any[]; // Optional assets array for ASA holdings
 }
 
 export interface AlgorandTransaction {
@@ -98,24 +100,28 @@ export class AlgorandService {
         address: accountInfo.address,
         balance: accountInfo.amount / 1000000, // Convert microAlgos to Algos
         minBalance: accountInfo['min-balance'] / 1000000,
+        min_balance: accountInfo['min-balance'] / 1000000, // Alternative name
         amountWithoutPendingRewards: accountInfo['amount-without-pending-rewards'] / 1000000,
         pendingRewards: accountInfo['pending-rewards'] / 1000000,
         rewards: accountInfo.rewards / 1000000,
         round: accountInfo.round,
-        status: accountInfo.status
+        status: accountInfo.status,
+        assets: accountInfo.assets || []
       };
-    } catch (error) {
-      if (error.status === 404) {
+    } catch (error: any) {
+      if (error?.status === 404) {
         // Account doesn't exist yet (zero balance)
         return {
           address,
           balance: 0,
           minBalance: 0.1, // Minimum balance in Algos
+          min_balance: 0.1, // Alternative name
           amountWithoutPendingRewards: 0,
           pendingRewards: 0,
           rewards: 0,
           round: 0,
-          status: 'Offline'
+          status: 'Offline',
+          assets: []
         };
       }
       console.error('Error getting Algorand account info:', error);
@@ -216,6 +222,34 @@ export class AlgorandService {
       return await this.algodClient.getTransactionParams().do();
     } catch (error) {
       console.error('Error getting suggested params:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get transaction by ID
+   */
+  async getTransaction(txId: string): Promise<any> {
+    try {
+      const txInfo = await this.algodClient.pendingTransactionInformation(txId).do();
+      return txInfo;
+    } catch (error) {
+      console.error(`Error getting transaction ${txId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get recent deposits for an address (placeholder implementation)
+   */
+  async getRecentDeposits(address: string): Promise<any[]> {
+    try {
+      // Placeholder implementation - in a real system this would query
+      // transaction history and filter for incoming transactions
+      console.log(`Getting recent deposits for ${address}`);
+      return [];
+    } catch (error) {
+      console.error(`Error getting recent deposits for ${address}:`, error);
       throw error;
     }
   }

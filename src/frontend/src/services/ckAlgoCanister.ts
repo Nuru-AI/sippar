@@ -22,15 +22,15 @@ export class CkAlgoCanisterService {
   private canisterUrl: string;
 
   constructor() {
-    // Phase 3: Use threshold signature backend with fallback
-    this.canisterUrl = 'http://localhost:3002/ck-algo'; // Phase 3: Threshold signatures
+    // Phase 3: Use production API endpoint
+    this.canisterUrl = '/api/sippar/ck-algo'; // Production: nginx proxy
   }
 
   private async tryEndpoints(endpoint: string, options: RequestInit): Promise<Response> {
-    // Try Phase 3 first (threshold signatures), then Phase 2 fallback
+    // Try production API endpoint first, then fallback
     const endpoints = [
-      `http://localhost:3002${endpoint}`, // Phase 3: Threshold signatures
-      `http://localhost:3001${endpoint}`, // Phase 2: Fallback
+      `/api/sippar${endpoint}`, // Production: nginx proxy
+      `http://localhost:3001${endpoint}`, // Local dev fallback
     ];
     
     for (const url of endpoints) {
@@ -80,11 +80,11 @@ export class CkAlgoCanisterService {
     } catch (error) {
       console.error('❌ ckALGO minting error:', error);
       
-      // Phase 2: Return simulated success for demo
+      // Phase 3: No simulation fallback - return actual error
       return {
-        success: true,
-        ckAlgoAmount: request.amount,
-        icpTxId: `SIM-${Date.now()}`,
+        success: false,
+        ckAlgoAmount: 0,
+        error: error instanceof Error ? error.message : String(error),
       };
     }
   }
@@ -137,11 +137,11 @@ export class CkAlgoCanisterService {
     } catch (error) {
       console.error('❌ ALGO redemption error:', error);
       
-      // Phase 2: Return simulated success for demo
+      // Phase 3: No simulation fallback - return actual error
       return {
-        success: true,
-        ckAlgoAmount: amount,
-        icpTxId: `REDEEM-${Date.now()}`,
+        success: false,
+        ckAlgoAmount: 0,
+        error: error instanceof Error ? error.message : String(error),
       };
     }
   }

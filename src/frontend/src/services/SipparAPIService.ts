@@ -62,8 +62,8 @@ class SipparAPIService extends BaseAPIService {
   
   constructor() {
     super('SipparAPI');
-    this.defaultTimeout = SERVICE_TIMEOUTS.NORMAL;
-    this.defaultRetries = 3;
+    this.defaultTimeout = SERVICE_TIMEOUTS.SLOW; // 10 seconds for blockchain operations
+    this.defaultRetries = 3; // Normal retry count
   }
 
   // ================================
