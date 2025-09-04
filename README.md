@@ -4,6 +4,18 @@
 
 Sippar creates the first AI-enhanced, trustless bridge between Internet Computer Protocol (ICP) and Algorand using Chain Fusion technology. Named after the ancient Mesopotamian city that served as a bridge between civilizations, Sippar enables AI agents to autonomously access cross-chain services through mathematical cryptography and smart contract oracles.
 
+## 🤖 **Live AI Oracle - Ready to Use**
+
+**🎉 WORLD'S FIRST AI ORACLE FOR ALGORAND NOW LIVE!**
+
+- **Testnet Contract**: [**App ID 745336634**](https://testnet.explorer.perawallet.app/application/745336634)
+- **Network**: Algorand Testnet (`https://testnet-api.4160.nodely.dev`)
+- **Status**: ✅ Fully operational with verified functionality
+- **Integration Guide**: [Complete developer documentation](src/algorand-contracts/INTEGRATION_GUIDE.md)
+- **Test Interface**: [Interactive testing at nuru.network/sippar](https://nuru.network/sippar/)
+
+**Quick Test**: Add AI capabilities to your Algorand smart contract in 3 lines of code!
+
 ## 🚀 **What Makes Sippar Different**
 
 ### **Zero Bridge Risk**
@@ -47,12 +59,13 @@ Sippar creates the first AI-enhanced, trustless bridge between Internet Computer
 
 ## 📊 **Current Status**
 
-- ✅ **Phase**: Sprint 007 AI Integration Complete (100%) → Sprint 008 AI Oracle Integration (In Progress)
-- 📅 **Started**: September 3, 2025 → Current Sprint: September 4, 2025
-- 🎯 **Current**: Production ckALGO bridge + AI oracle development for smart contract integration
-- 📁 **Deployed**: ckALGO canister (`gbmxj-yiaaa-aaaak-qulqa-cai`) + Threshold Signer (`vj7ly-diaaa-aaaae-abvoq-cai`)
-- 🏗️ **Working**: Complete bridge functionality, AI chat interface, threshold signature security
-- 🤖 **In Development**: Native Algorand AI oracle using PyTeal patterns for smart contract access
+- ✅ **Phase**: Sprint 008 AI Oracle Integration **COMPLETE** (100%) → Sprint 009 ICP Backend Integration (Planning)
+- 📅 **Completed**: September 4, 2025 → Next Sprint: September 5-18, 2025
+- 🎯 **Achievement**: **World's First AI Oracle for Algorand** deployed and verified on testnet
+- 📁 **Deployed**: ckALGO canister (`gbmxj-yiaaa-aaaak-qulqa-cai`) + **AI Oracle** (`745336634` on Algorand testnet)
+- 🏗️ **Live**: Complete bridge functionality, AI chat interface, **AI Oracle with 4 models**
+- 🤖 **Operational**: AI Oracle live on Algorand testnet with verified credit system and AI requests
+- 🔗 **Testnet Contract**: [**App ID 745336634**](https://testnet.explorer.perawallet.app/application/745336634) - Live on Algorand
 - 🔮 **AI Models**: 4+ advanced models (qwen2.5, deepseek-r1, phi-3, mistral) via 120ms XNode2 infrastructure from parent Nuru AI platform
 - 🌐 **Live Demo**: https://nuru.network/sippar/ - Production bridge with AI integration
 
