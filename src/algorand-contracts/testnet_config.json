@@ -1,0 +1,15 @@
+{
+  "testnet_account": {
+    "address": "A3QJWHRHRSHQ6GP5BOXQ5244EYMFMACO2AA7GZL4VYS6TLSPVODR2RRNME",
+    "private_key": "enE+06eszPmN0aqWBbYnqfr0vEe6Wh1oIHE3JMeyx4gG4JseJ4yPDxn9C68O65wmGFYATtAB82V8riXprk+rhw==",
+    "mnemonic": "consider what trumpet skill off lazy midnight print ready submit need pride try upset split follow admit like review drop mixture uncover economy above flip"
+  },
+  "api_config": {
+    "algod_address": "https://testnet-api.4160.nodely.dev",
+    "algod_token": "",
+    "indexer_address": "https://testnet-idx.4160.nodely.dev",
+    "indexer_token": ""
+  },
+  "created_at": "2025-09-04",
+  "network": "testnet"
+}
