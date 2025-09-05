@@ -59,13 +59,13 @@ Sippar creates the first AI-enhanced, trustless bridge between Internet Computer
 
 ## 📊 **Current Status**
 
-- ✅ **Phase**: Sprint 008 AI Oracle Integration **COMPLETE** (100%) → Sprint 009 ICP Backend Integration (Planning)
-- 📅 **Completed**: September 4, 2025 → Next Sprint: September 5-18, 2025
+- ✅ **Phase**: Sprint 008 AI Oracle Integration **COMPLETE** (100%) → Sprint 009 ICP Backend Integration **IN_PROGRESS** (60-70% Complete)
+- 📅 **Active Sprint**: September 5-18, 2025 (ICP Backend Integration & Oracle Response System)
 - 🎯 **Achievement**: **World's First AI Oracle for Algorand** deployed and verified on testnet
-- 📁 **Deployed**: ckALGO canister (`gbmxj-yiaaa-aaaak-qulqa-cai`) + **AI Oracle** (`745336634` on Algorand testnet)
+- 📁 **Deployed**: ckALGO canister (`gbmxj-yiaaa-aaaak-qulqa-cai`) + **AI Oracle** (`745336394` on Algorand testnet)
 - 🏗️ **Live**: Complete bridge functionality, AI chat interface, **AI Oracle with 4 models**
 - 🤖 **Operational**: AI Oracle live on Algorand testnet with verified credit system and AI requests
-- 🔗 **Testnet Contract**: [**App ID 745336634**](https://testnet.explorer.perawallet.app/application/745336634) - Live on Algorand
+- 🔗 **Testnet Contract**: [**App ID 745336394**](https://testnet.explorer.perawallet.app/application/745336394) - Live on Algorand
 - 🔮 **AI Models**: 4+ advanced models (qwen2.5, deepseek-r1, phi-3, mistral) via 120ms XNode2 infrastructure from parent Nuru AI platform
 - 🌐 **Live Demo**: https://nuru.network/sippar/ - Production bridge with AI integration
 
@@ -225,12 +225,24 @@ sippar/
 - `docs/guides/` - User and development documentation
 - `docs/api/` - Complete API reference
 
-## 📚 **Documentation**
+## 📚 **Documentation & Sprint Management** *(Updated: September 5, 2025)*
 
+### **Active Sprint Management**
+- **Current Sprint 009**: [ICP Backend Integration & Oracle Response System](/working/sprint-009/sprint009-icp-backend-integration.md)
+- **Status**: 🔄 **IN_PROGRESS** (60-70% existing infrastructure discovered)
+- **Working Directory**: `/working/sprint-009/` with standardized sprint structure
+- **Key Discovery**: Comprehensive oracle services already implemented, needs enabling
+
+### **Core Documentation**
 - **[Architecture](docs/architecture/)**: Technical system design
 - **[Integration Guide](docs/integration/)**: Developer integration docs
+- **[API Reference](docs/api/)**: Complete API documentation (18/18 endpoints verified)
 - **[User Guide](docs/guides/user/)**: End-user documentation
-- **[API Reference](docs/api/)**: Complete API documentation
+
+### **Strategic Research Documentation**
+- **[Algorand Strategy](docs/research/algorand-strategy.md)**: Strategic alignment & competitive analysis
+- **[Ecosystem Analysis](docs/research/algorand-ecosystem-analysis.md)**: Technical capabilities & market context
+- **[Future Integration](docs/roadmap/algorand-future-integration.md)**: Long-term development opportunities
 
 ## 🔐 **Security**
 
@@ -270,13 +282,19 @@ sippar/
 - ✅ Production deployment with real-time AI service monitoring
 - ✅ Foundation for Sprint 008 AI oracle development
 
-### **🔄 Sprint 008**: AI Oracle for Smart Contracts (IN PROGRESS - September 2025)
-- 🔄 **Native PyTeal Oracle**: Following proven MainNet oracle patterns (TEAL ALGO Oracle architecture)
-- 🔄 **Smart Contract Integration**: Enable Algorand contracts to query AI models directly
-- 🔄 **X402 Payment Protocol**: Internet-native payments for autonomous AI agent transactions
-- 🔄 **ASIF Framework**: Agentic Security and Identity Framework for trusted AI interactions
-- 🔄 **Credit System**: Bulk AI request purchases via atomic transfers (1 ALGO = 120 requests)
-- 🔄 **Production Infrastructure**: Leverage existing 120ms AI response infrastructure
+### **✅ Sprint 008**: AI Oracle for Smart Contracts (COMPLETE - September 4, 2025)
+- ✅ **Native PyTeal Oracle**: AI Oracle deployed on Algorand testnet (App ID 745336394)
+- ✅ **Smart Contract Integration**: Oracle contract ready for AI model queries
+- ✅ **Credit System**: Bulk AI request system architecture implemented
+- ✅ **Production Infrastructure**: 120ms AI response infrastructure verified
+
+### **🔄 Sprint 009**: ICP Backend Integration & Oracle Response System (IN_PROGRESS - September 5-18, 2025)
+- 🔄 **Status**: 60-70% Complete (existing infrastructure discovered)
+- ✅ **Oracle Service**: Comprehensive `sipparAIOracleService.ts` already implemented
+- ✅ **API Endpoints**: 8 oracle management endpoints already created
+- ✅ **Algorand Integration**: Complete indexer monitoring and transaction parsing
+- 🔄 **Remaining Work**: Enable oracle routes, complete callback system, end-to-end testing
+- 🔄 **Timeline**: 7 days to complete (primarily enabling existing code)
 
 ### **⏳ Phase 3**: Advanced AI Agent Features (Next)
 - ⏳ Multi-step AI workflows for complex smart contract logic
@@ -299,11 +317,11 @@ sippar/
 - AI chat interface with 4+ models (120-727ms response times)
 - Multi-wallet support (Pera, MyAlgo, Defly) with mobile optimization
 
-**🔄 In Development (Sprint 008):**
-- Native PyTeal AI oracle for smart contract integration
-- X402 protocol implementation for AI agent payments
-- Bulk AI request credit system (1 ALGO = 100+ requests)
-- ASIF framework preparation (pending Algorand Foundation release)
+**🔄 In Development (Sprint 009 - 60-70% Complete):**
+- Enabling existing oracle monitoring and response system
+- Completing callback transaction implementation (framework exists)
+- End-to-end testing with deployed App ID 745336394
+- Production hardening and monitoring for oracle operations
 
 **🌐 Demo**: https://nuru.network/sippar/
 

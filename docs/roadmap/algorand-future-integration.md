@@ -125,6 +125,33 @@
 
 ---
 
+### **Sprint 015: ARC-0058 Account Abstraction** *(NEW)*
+**Timeline**: Q2-Q3 2026  
+**Priority**: Medium (High Impact)  
+**Foundation**: ARC-0058 Plugin-Based Account Abstraction
+
+#### **Account Abstraction Innovation**
+**ARC-0058 Overview**: Plugin-based account abstraction enabling smart contract control of Algorand accounts with flexible delegation patterns
+
+**Chain Fusion Synergy**: ICP threshold signatures as ARC-0058 plugin creates first cross-chain account abstraction bridge
+
+#### **Technical Implementation**
+- **Plugin Development**: Create ICP Chain Fusion as ARC-0058 plugin
+- **Account Factory**: Abstracted account creation system
+- **Gasless Transactions**: Transaction fee abstraction for end users
+- **Cross-Chain Control**: Unified account management across ICP and Algorand
+
+#### **Market Innovation**
+- **First Implementation**: First ICP-Algorand account abstraction integration
+- **Enterprise UX**: Internet Identity + Account Abstraction combination
+- **Developer Platform**: Advanced account programmability for dApps
+
+**Expected Outcome**: Sippar becomes first cross-chain account abstraction bridge with superior user experience
+
+**Documentation**: [sprint015-arc-0058-account-abstraction.md](/working/sprint-015/sprint015-arc-0058-account-abstraction.md)
+
+---
+
 ## 🛠️ **Technical Development Roadmap**
 
 ### **Phase 1: AI Integration Enhancement** (Q1 2026)
@@ -199,7 +226,9 @@
 - **Technical Deep-Dive**: [/docs/research/algorand-ecosystem-analysis.md](/docs/research/algorand-ecosystem-analysis.md) - Ecosystem capabilities
 
 ### **Implementation Planning**
-- **Current Sprint**: [/working/sprints/sprint010-frontend-state-management.md](/working/sprints/sprint010-frontend-state-management.md) - Active development
+- **Current Sprint**: [sprint009-icp-backend-integration.md](/working/sprint-009/sprint009-icp-backend-integration.md) - Active ICP backend integration
+- **Next Sprint**: [sprint010-frontend-state-management.md](/working/sprint-010/sprint010-frontend-state-management.md) - Upcoming frontend enhancement
+- **Sprint Management**: [/docs/development/sprint-management.md](/docs/development/sprint-management.md) - Sprint planning and tracking system
 - **Project Roadmap**: [/CLAUDE.md](/CLAUDE.md) - Overall project status and phases
 
 ---
