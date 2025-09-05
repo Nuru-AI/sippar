@@ -18,7 +18,7 @@ import algosdk from 'algosdk';
 import { algorandService, algorandMainnet, AlgorandAccount } from './services/algorandService.js';
 import { thresholdSignerService } from './services/thresholdSignerService.js';
 import { sipparAIService } from './services/sipparAIService.js';
-// import aiOracleRoutes from './routes/aiOracle.js'; // Temporarily disabled
+import aiOracleRoutes from './routes/aiOracle.js';
 
 // ICP Canister Configuration
 const CK_ALGO_CANISTER_ID = 'gbmxj-yiaaa-aaaak-qulqa-cai';
@@ -68,7 +68,7 @@ app.use(morgan('combined'));
 app.use(express.json());
 
 // Routes
-// app.use('/api/v1/ai-oracle', aiOracleRoutes); // Temporarily disabled
+app.use('/api/v1/ai-oracle', aiOracleRoutes);
 
 // Request validation schemas
 const deriveCredentialsSchema = z.object({

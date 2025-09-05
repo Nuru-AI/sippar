@@ -396,9 +396,9 @@ export class SipparAIOracleService extends SipparAIService {
 
 // Export default indexer configuration
 export const DEFAULT_INDEXER_CONFIG: IndexerConfig = {
-  server: 'https://testnet-algorand.api.purestake.io/idx2',
+  server: 'https://testnet-idx.algonode.cloud',
   port: 443,
-  token: '' // Set your API token here
+  token: '' // No token needed for public Algonode
 };
 
 // Export singleton instance (will need to be initialized with proper config)
