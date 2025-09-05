@@ -1,0 +1,33 @@
+type AlgorandAddress = record {
+    address : text;
+    public_key : vec nat8;
+};
+
+type SignedTransaction = record {
+    transaction_bytes : vec nat8;
+    signature : vec nat8;
+    signed_tx_id : text;
+};
+
+type SigningError = record {
+    code : nat32;
+    message : text;
+};
+
+type SigningResult = variant {
+    Ok : AlgorandAddress;
+    Err : SigningError;
+};
+
+type TransactionSigningResult = variant {
+    Ok : SignedTransaction;
+    Err : SigningError;
+};
+
+service : {
+    "greet": (text) -> (text) query;
+    "derive_algorand_address": (principal) -> (SigningResult);
+    "sign_algorand_transaction": (principal, vec nat8) -> (TransactionSigningResult);
+    "get_canister_status": () -> (vec record { text; text }) query;
+    "verify_signature": (vec nat8, vec nat8, vec nat8) -> (bool) query;
+}

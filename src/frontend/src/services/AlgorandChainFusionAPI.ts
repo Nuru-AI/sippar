@@ -11,8 +11,8 @@ import { BaseAPIService } from './BaseAPIService';
 const getAlgorandChainFusionAPIEndpoints = (): string[] => {
   return [
     'http://localhost:3001',                     // Local backend for Phase 1 development
-    'https://nuru.network/api/sippar',           // Future Sippar API (production)
-    '/api/sippar',                               // Relative proxy path (fallback)
+    '/api/sippar',                               // Production nginx proxy (HTTPS compatible)
+    'https://nuru.network/api/sippar',           // Absolute HTTPS proxy path (fallback)
   ];
 };
 

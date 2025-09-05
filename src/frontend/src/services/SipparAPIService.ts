@@ -57,8 +57,8 @@ export interface SignedTransaction {
 
 class SipparAPIService extends BaseAPIService {
   private readonly API_BASE = window.location.hostname === 'localhost' 
-    ? 'http://74.50.113.152:8203'  // Development: direct to API server
-    : '/api/sippar';               // Production: use nginx proxy
+    ? 'http://74.50.113.152:3004'     // Development: direct to API server on port 3004
+    : '/api/sippar';                  // Production: use nginx HTTPS proxy
   
   constructor() {
     super('SipparAPI');

@@ -7,6 +7,9 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import https from 'https';
+import fs from 'fs';
+import path from 'path';
 import { config } from 'dotenv';
 import { z } from 'zod';
 import { Principal } from '@dfinity/principal';
@@ -15,7 +18,7 @@ import algosdk from 'algosdk';
 import { algorandService, algorandMainnet, AlgorandAccount } from './services/algorandService.js';
 import { thresholdSignerService } from './services/thresholdSignerService.js';
 import { sipparAIService } from './services/sipparAIService.js';
-import aiOracleRoutes from './routes/aiOracle.js';
+// import aiOracleRoutes from './routes/aiOracle.js'; // Temporarily disabled
 
 // ICP Canister Configuration
 const CK_ALGO_CANISTER_ID = 'gbmxj-yiaaa-aaaak-qulqa-cai';
@@ -64,7 +67,7 @@ app.use(morgan('combined'));
 app.use(express.json());
 
 // Routes
-app.use('/api/v1/ai-oracle', aiOracleRoutes);
+// app.use('/api/v1/ai-oracle', aiOracleRoutes); // Temporarily disabled
 
 // Request validation schemas
 const deriveCredentialsSchema = z.object({
@@ -101,163 +104,8 @@ app.get('/health', (req, res) => {
   });
 });
 
-// ckALGO minting endpoint (Phase 2 simulation)
-app.post('/ck-algo/mint', (req, res) => {
-  try {
-    console.log('🪙 ckALGO mint request:', req.body);
-    
-    const { amount, algorandTxId, userPrincipal, depositAddress } = req.body;
-    
-    if (!amount || !userPrincipal) {
-      return res.status(400).json({
-        success: false,
-        error: 'Missing required fields: amount, userPrincipal'
-      });
-    }
-    
-    // Phase 2: Simulate successful minting
-    const response = {
-      success: true,
-      ckAlgoAmount: amount,
-      icpTxId: `DEPRECATED-MINT-${Date.now()}`, // TODO: Remove this deprecated endpoint
-      algorandTxId,
-      userPrincipal,
-      timestamp: new Date().toISOString(),
-    };
-    
-    console.log('✅ ckALGO minted (simulated):', response);
-    res.json(response);
-    
-  } catch (error) {
-    console.error('❌ ckALGO minting error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error during minting'
-    });
-  }
-});
 
-// ckALGO redemption endpoint (Phase 2 simulation)
-app.post('/ck-algo/redeem', (req, res) => {
-  try {
-    console.log('💸 ckALGO redeem request:', req.body);
-    
-    const { amount, targetAddress, principal } = req.body;
-    
-    if (!amount || !targetAddress || !principal) {
-      return res.status(400).json({
-        success: false,
-        error: 'Missing required fields: amount, targetAddress, principal'
-      });
-    }
-    
-    // Basic Algorand address validation
-    if (!/^[A-Z2-7]{58}$/.test(targetAddress)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid Algorand address format'
-      });
-    }
-    
-    // Phase 2: Simulate successful redemption
-    const response = {
-      success: true,
-      ckAlgoAmount: amount,
-      algoAmount: amount - 0.001, // Subtract network fee
-      targetAddress,
-      icpTxId: `DEPRECATED-REDEEM-${Date.now()}`, // TODO: Remove this deprecated endpoint
-      algorandTxId: `DEPRECATED-ALGO-${Date.now()}`, // TODO: Remove this deprecated endpoint
-      userPrincipal: principal,
-      networkFee: 0.001,
-      timestamp: new Date().toISOString(),
-    };
-    
-    console.log('✅ ckALGO redeemed (simulated):', response);
-    res.json(response);
-    
-  } catch (error) {
-    console.error('❌ ckALGO redemption error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error during redemption'
-    });
-  }
-});
 
-// Phase 1: Simple credential derivation (deterministic from principal)
-app.post('/derive-algorand-credentials', async (req, res) => {
-  try {
-    const startTime = Date.now();
-    console.log('🔗 Algorand credential derivation request:', req.body);
-    
-    // Validate request
-    const validation = deriveCredentialsSchema.safeParse(req.body);
-    if (!validation.success) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid request format',
-        details: validation.error.errors
-      });
-    }
-
-    const { principal, timestamp = Date.now() } = validation.data;
-    
-    // Validate principal format
-    try {
-      Principal.fromText(principal);
-    } catch (error) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid principal format'
-      });
-    }
-
-    let algorandAddress: string;
-    
-    try {
-      // Phase 3: Derive Algorand address using threshold signatures
-      // This replaces the previous deterministic derivation with real ICP Chain Fusion
-      const algorandAddressInfo = await thresholdSignerService.deriveAlgorandAddress(principal);
-      algorandAddress = algorandAddressInfo.address;
-    } catch (error) {
-      console.error('❌ Failed to derive Algorand address via threshold signer:', error);
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to derive Algorand address using threshold signatures'
-      });
-    }
-    
-    // Future Phase 3: Derive Ethereum address for Milkomeda
-    const ethereumAddress = deriveEthereumAddress(principal);
-
-    const processingTime = Date.now() - startTime;
-
-    console.log(`✅ Algorand credentials derived in ${processingTime}ms`);
-    console.log(`🟢 Algorand Address: ${algorandAddress}`);
-    console.log(`🟣 Ethereum Address: ${ethereumAddress}`);
-
-    res.json({
-      success: true,
-      principal,
-      addresses: {
-        algorand: algorandAddress,
-        ethereum: ethereumAddress
-      },
-      timestamp,
-      processing_time_ms: processingTime,
-      derivation_method: 'deterministic_phase1', // Will be 'threshold_ed25519' in production
-      phase: 1
-    });
-
-  } catch (error) {
-    console.error('❌ Credential derivation failed:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error during credential derivation',
-      timestamp: Date.now()
-    });
-  }
-});
 
 // Phase 2: Enhanced balance endpoint
 app.get('/ck-algo/balance/:principal', async (req, res) => {
@@ -326,147 +174,8 @@ app.get('/ck-algo/balance/:principal', async (req, res) => {
   }
 });
 
-// Phase 2: Mint ckALGO endpoint
-app.post('/ck-algo/mint-request', async (req, res) => {
-  try {
-    const mintSchema = z.object({
-      amount: z.number().positive(),
-      algorand_tx_id: z.string().min(1),
-      algorand_block_height: z.number().optional(),
-      to_principal: z.string().min(1)
-    });
 
-    const validation = mintSchema.safeParse(req.body);
-    if (!validation.success) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid mint request format',
-        details: validation.error.errors
-      });
-    }
 
-    const { amount, algorand_tx_id, to_principal } = validation.data;
-
-    // TODO: Verify Algorand transaction and call ckALGO canister
-    // For Phase 2, return mock mint result
-    const mintId = `deprecated_mint_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`; // TODO: Remove deprecated endpoint
-
-    res.json({
-      success: true,
-      mint_id: mintId,
-      amount_requested: amount,
-      algorand_tx_id,
-      to_principal,
-      status: 'processing',
-      estimated_completion: new Date(Date.now() + 30000).toISOString(), // 30 seconds
-      message: 'Mint request received and processing'
-    });
-
-  } catch (error) {
-    console.error('❌ Mint request failed:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error during mint request'
-    });
-  }
-});
-
-// Phase 2: Redeem ckALGO endpoint  
-app.post('/ck-algo/redeem-request', async (req, res) => {
-  try {
-    const redeemSchema = z.object({
-      amount: z.number().positive(),
-      algorand_address: z.string().min(1),
-      from_principal: z.string().min(1)
-    });
-
-    const validation = redeemSchema.safeParse(req.body);
-    if (!validation.success) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid redeem request format',
-        details: validation.error.errors
-      });
-    }
-
-    const { amount, algorand_address, from_principal } = validation.data;
-
-    // TODO: Burn ckALGO tokens and execute Algorand transfer
-    // For Phase 2, return mock redeem result
-    const redeemId = `deprecated_redeem_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`; // TODO: Remove deprecated endpoint
-    const mockAlgoTxId = `ALGO_TX_${Date.now()}`;
-
-    res.json({
-      success: true,
-      redeem_id: redeemId,
-      amount_requested: amount,
-      algorand_address,
-      from_principal,
-      algorand_tx_id: mockAlgoTxId,
-      status: 'completed',
-      message: 'Redemption completed successfully'
-    });
-
-  } catch (error) {
-    console.error('❌ Redeem request failed:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error during redeem request'
-    });
-  }
-});
-
-// Phase 2: Get mint operation status
-app.get('/ck-algo/mint-status/:mint_id', async (req, res) => {
-  try {
-    const { mint_id } = req.params;
-
-    // TODO: Query actual mint operation status
-    // For Phase 2, return mock status
-    res.json({
-      success: true,
-      mint_id,
-      status: 'completed',
-      ck_algo_minted: 100.5,
-      transaction_index: 42,
-      algorand_tx_verified: true,
-      completion_time: new Date().toISOString()
-    });
-
-  } catch (error) {
-    console.error('❌ Mint status check failed:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error during mint status check'
-    });
-  }
-});
-
-// Phase 2: Get redeem operation status
-app.get('/ck-algo/redeem-status/:redeem_id', async (req, res) => {
-  try {
-    const { redeem_id } = req.params;
-
-    // TODO: Query actual redeem operation status
-    // For Phase 2, return mock status
-    res.json({
-      success: true,
-      redeem_id,
-      status: 'completed',
-      algo_redeemed: 100.0,
-      algorand_tx_id: `ALGO_TX_${Date.now()}`,
-      algorand_tx_confirmed: true,
-      completion_time: new Date().toISOString()
-    });
-
-  } catch (error) {
-    console.error('❌ Redeem status check failed:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error during redeem status check'
-    });
-  }
-});
 
 // Phase 3: Real ckALGO minting with confirmed Algorand transaction
 app.post('/api/ck-algo/mint-confirmed', async (req, res) => {
@@ -1148,6 +857,61 @@ app.post('/api/ai/chat', async (req, res) => {
 });
 
 /**
+ * Get authenticated OpenWebUI URL for iframe embedding
+ */
+app.post('/api/ai/auth-url', async (req, res) => {
+  try {
+    const authSchema = z.object({
+      userPrincipal: z.string().min(1, 'User principal required'),
+      algorandAddress: z.string().optional(),
+      authSignature: z.string().optional()
+    });
+    
+    const { userPrincipal, algorandAddress, authSignature } = authSchema.parse(req.body);
+    console.log('🔐 Creating authenticated AI chat URL for user:', userPrincipal);
+    
+    // Get the base OpenWebUI URL
+    const baseUrl = sipparAIService.getOpenWebUIUrl();
+    
+    if (!baseUrl || baseUrl === 'unknown') {
+      throw new Error('OpenWebUI service not available');
+    }
+    
+    // For now, we'll create a direct link with user context in localStorage/sessionStorage approach
+    // This is a simplified approach that works with most chat interfaces
+    const authUrl = `${baseUrl}?sippar_user=${encodeURIComponent(userPrincipal)}&sippar_address=${encodeURIComponent(algorandAddress || '')}&source=sippar`;
+    
+    res.json({
+      success: true,
+      authUrl,
+      message: 'Authenticated chat URL created',
+      userContext: {
+        principal: userPrincipal,
+        algorandAddress: algorandAddress || null
+      },
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('❌ Auth URL creation error:', error);
+    
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid request format',
+        details: error.errors
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create authenticated chat URL',
+      authUrl: null
+    });
+  }
+});
+
+/**
  * Get available AI models (when API access is established)
  */
 app.get('/api/ai/models', async (req, res) => {
@@ -1225,13 +989,32 @@ app.use('*', (req, res) => {
   });
 });
 
-// Start server
-const server = app.listen(PORT, () => {
-  console.log('🚀 Sippar Algorand Chain Fusion Backend started!');
-  console.log(`📡 Server running on http://localhost:${PORT}`);
-  console.log('🌉 Phase 2: Real Algorand Network Integration');
-  console.log('⚡ Ready for Internet Identity authentication and real ALGO balances!');
-});
+// SSL Configuration for HTTPS
+let server;
+try {
+  // Try to use HTTPS if certificates exist
+  const httpsOptions = {
+    key: fs.readFileSync(path.join(process.cwd(), 'server.key')),
+    cert: fs.readFileSync(path.join(process.cwd(), 'server.crt'))
+  };
+  
+  server = https.createServer(httpsOptions, app).listen(PORT, () => {
+    console.log('🚀 Sippar Algorand Chain Fusion Backend started!');
+    console.log(`📡 Server running on https://localhost:${PORT}`);
+    console.log('🔒 HTTPS enabled with self-signed certificate');
+    console.log('🌉 Phase 2: Real Algorand Network Integration');
+    console.log('⚡ Ready for Internet Identity authentication and real ALGO balances!');
+  });
+} catch (error) {
+  // Fallback to HTTP if certificates don't exist
+  console.log('⚠️  HTTPS certificates not found, falling back to HTTP');
+  server = app.listen(PORT, () => {
+    console.log('🚀 Sippar Algorand Chain Fusion Backend started!');
+    console.log(`📡 Server running on http://localhost:${PORT}`);
+    console.log('🌉 Phase 2: Real Algorand Network Integration');
+    console.log('⚡ Ready for Internet Identity authentication and real ALGO balances!');
+  });
+}
 
 // Graceful shutdown
 process.on('SIGTERM', () => {

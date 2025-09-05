@@ -23,7 +23,7 @@ export class CkAlgoCanisterService {
 
   constructor() {
     // Phase 3: Use production API endpoint
-    this.canisterUrl = '/api/sippar/ck-algo'; // Production: nginx proxy
+    this.canisterUrl = '/ck-algo'; // Production: nginx proxy
   }
 
   private async tryEndpoints(endpoint: string, options: RequestInit): Promise<Response> {

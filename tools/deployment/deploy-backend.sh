@@ -57,7 +57,7 @@ Group=www-data
 WorkingDirectory=/var/www/nuru.network/sippar-backend
 ExecStart=/usr/bin/node dist/server.js
 Environment=NODE_ENV=production
-Environment=PORT=3001
+Environment=PORT=3004
 Restart=always
 RestartSec=5
 StandardOutput=journal
@@ -81,8 +81,8 @@ ENDSSH
 
 echo "⚙️  Updating nginx configuration for backend..."
 ssh -i ${SSH_KEY} root@${VPS_IP} << 'ENDSSH'
-# Update nginx config to proxy to Node.js backend on port 3001
-sed -i 's/proxy_pass http:\/\/localhost:8203\//proxy_pass http:\/\/localhost:3001\//' /etc/nginx/sites-available/nuru.network
+# Update nginx config to proxy to Node.js backend on port 3004
+sed -i 's/proxy_pass http:\/\/localhost:8203\//proxy_pass http:\/\/localhost:3004\//' /etc/nginx/sites-available/nuru.network
 
 # Test and reload nginx
 nginx -t && systemctl reload nginx

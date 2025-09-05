@@ -197,9 +197,10 @@ export class AlgorandService {
 ### ICP Integration
 
 **Canister Services:**
-- **Threshold Signer**: `vj7ly-diaaa-aaaae-abvoq-cai` (mainnet)
-- **ckALGO Token**: `gbmxj-yiaaa-aaaak-qulqa-cai` (mainnet)
-- **Chain Fusion Backend**: Production API at `74.50.113.152:8203`
+- **Threshold Signer**: `vj7ly-diaaa-aaaae-abvoq-cai` (mainnet - signature operations) ✅ **CONTROLLED**
+- **ckALGO Token**: `gbmxj-yiaaa-aaaak-qulqa-cai` (mainnet - ICRC-1 token) ✅ **CONTROLLED**
+- **Chain Fusion Backend**: Production API at `74.50.113.152:3004`
+- **Frontend Hosting**: Traditional VPS hosting at `https://nuru.network/sippar/` (not decentralized)
 
 ## Performance Characteristics
 
@@ -387,5 +388,5 @@ Sippar's Chain Fusion architecture represents a significant advancement in cross
 
 The architecture demonstrates a practical approach to cross-chain bridges using existing ICP threshold cryptography capabilities, with a clear path to native Ed25519 integration when available.
 
-**Last Updated**: September 3, 2025
+**Last Updated**: September 5, 2025 - Canister Architecture Cleanup
 **Status**: Production Deployment Active

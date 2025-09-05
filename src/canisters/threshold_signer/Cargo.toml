@@ -1,0 +1,5 @@
+[workspace]
+members = [
+    "src/algorand_threshold_signer_backend"
+]
+resolver = "2"

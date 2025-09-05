@@ -5,6 +5,7 @@
 
 import { HttpAgent, Actor } from '@dfinity/agent';
 import { Principal } from '@dfinity/principal';
+import crypto from 'crypto';
 
 // Threshold Signer Types (copied from canister declarations)
 export interface AlgorandAddress {
@@ -71,10 +72,12 @@ export class ThresholdSignerServiceClient {
   private agent: HttpAgent;
   private actor: any;
   private canisterId: string;
+  private chainFusionEndpoint: string;
 
   constructor() {
     this.canisterId = 'vj7ly-diaaa-aaaae-abvoq-cai'; // Threshold signer canister ID
     this.agent = new HttpAgent({ host: 'https://ic0.app' });
+    this.chainFusionEndpoint = 'http://localhost:9002'; // Chain-fusion backend
     
     // Initialize actor
     this.actor = Actor.createActor(thresholdSignerIdl, {
@@ -90,15 +93,54 @@ export class ThresholdSignerServiceClient {
     try {
       console.log(`🔑 Deriving Algorand address for principal: ${userPrincipal}`);
       
-      const principal = Principal.fromText(userPrincipal);
-      const result = await this.actor.derive_algorand_address(principal);
-      
-      if ('Ok' in result) {
-        console.log(`✅ Algorand address derived: ${result.Ok.address}`);
-        return result.Ok;
-      } else {
-        throw new Error(`Threshold signer error: ${result.Err.message} (code: ${result.Err.code})`);
+      // First try to derive from chain-fusion backend
+      try {
+        console.log(`🔗 Attempting Algorand derivation via chain-fusion backend...`);
+        
+        const response = await fetch(`${this.chainFusionEndpoint}/api/algorand/derive-address`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ principal: userPrincipal }),
+        });
+
+        if (response.ok) {
+          const data = await response.json() as { address: string; public_key?: number[] };
+          console.log(`✅ Algorand address derived via chain-fusion: ${data.address}`);
+          return {
+            address: data.address,
+            public_key: data.public_key || []
+          };
+        }
+        
+        console.warn(`⚠️ Chain-fusion backend responded with: ${response.status}`);
+      } catch (chainFusionError: any) {
+        console.warn(`⚠️ Chain-fusion backend failed: ${chainFusionError?.message || chainFusionError}`);
       }
+      
+      // Fallback: Try threshold signer canister
+      try {
+        let principal: Principal;
+        try {
+          principal = Principal.fromText(userPrincipal.trim());
+        } catch {
+          throw new Error('Principal parsing failed');
+        }
+        
+        const result = await this.actor.derive_algorand_address(principal);
+        
+        if ('Ok' in result) {
+          console.log(`✅ Algorand address derived via threshold signer: ${result.Ok.address}`);
+          return result.Ok;
+        } else {
+          throw new Error(`Threshold signer error: ${result.Err.message} (code: ${result.Err.code})`);
+        }
+      } catch (thresholdError: any) {
+        console.warn(`⚠️ Threshold signer failed: ${thresholdError?.message || thresholdError}`);
+        throw new Error('Both chain-fusion backend and threshold signer failed');
+      }
+      
     } catch (error) {
       console.error('❌ Failed to derive Algorand address:', error);
       throw error;
@@ -164,6 +206,7 @@ export class ThresholdSignerServiceClient {
       return false;
     }
   }
+
 }
 
 // Export singleton instance

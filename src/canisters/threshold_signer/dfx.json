@@ -1,0 +1,27 @@
+{
+  "canisters": {
+    "algorand_threshold_signer_backend": {
+      "candid": "src/algorand_threshold_signer_backend/algorand_threshold_signer_backend.did",
+      "package": "algorand_threshold_signer_backend",
+      "type": "rust"
+    },
+    "algorand_threshold_signer_frontend": {
+      "dependencies": [
+        "algorand_threshold_signer_backend"
+      ],
+      "source": [
+        "src/algorand_threshold_signer_frontend/dist"
+      ],
+      "type": "assets",
+      "workspace": "algorand_threshold_signer_frontend"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "output_env_file": ".env",
+  "version": 1
+}

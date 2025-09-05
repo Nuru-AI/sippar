@@ -74,7 +74,7 @@ const RedeemFlow: React.FC = () => {
         // Load real ckALGO balance from canister
         console.log('🪙 Loading ckALGO balance from canister for principal:', user.principal);
         
-        const response = await fetch(`/api/sippar/ck-algo/balance/${user.principal}`);
+        const response = await fetch(`/ck-algo/balance/${user.principal}`);
         const balanceData = await response.json();
         
         if (response.ok && balanceData.ck_algo_balance !== undefined) {
@@ -122,7 +122,7 @@ const RedeemFlow: React.FC = () => {
         console.log('💸 Starting real ckALGO redemption (Phase 3)...');
         
         // Phase 3: Real redemption via confirmed endpoint
-        const response = await fetch('/api/sippar/ck-algo/redeem-confirmed', {
+        const response = await fetch('/ck-algo/redeem-confirmed', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

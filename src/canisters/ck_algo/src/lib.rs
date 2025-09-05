@@ -14,6 +14,7 @@ thread_local! {
     static TOKEN_SYMBOL: RefCell<String> = RefCell::new("ckALGO".to_string());
     static DECIMALS: RefCell<u8> = RefCell::new(6u8);
     static FEE: RefCell<Nat> = RefCell::new(Nat::from(10000u64));
+    static AUTHORIZED_MINTERS: RefCell<Vec<Principal>> = RefCell::new(Vec::new());
 }
 
 // Helper functions
@@ -41,6 +42,17 @@ fn init() {
     TOKEN_SYMBOL.with(|symbol| *symbol.borrow_mut() = "ckALGO".to_string());
     DECIMALS.with(|decimals| *decimals.borrow_mut() = 6u8);
     FEE.with(|fee| *fee.borrow_mut() = Nat::from(10000u64));
+    
+    // Initialize authorized minters
+    AUTHORIZED_MINTERS.with(|minters| {
+        let mut minters_vec = minters.borrow_mut();
+        // Management canister (for administrative operations)
+        minters_vec.push(Principal::management_canister());
+        // Threshold signer canister - Phase 3 integration
+        minters_vec.push(Principal::from_text("vj7ly-diaaa-aaaae-abvoq-cai").unwrap());
+        // Add backend canister ID when available
+        // minters_vec.push(Principal::from_text("backend-canister-id").unwrap());
+    });
 }
 
 // ICRC-1 Standard Methods (simplified)
@@ -112,10 +124,14 @@ fn icrc1_transfer(to: Principal, amount: Nat) -> Result<Nat, String> {
 // ckALGO Specific Methods (simplified)
 #[update]
 fn mint_ck_algo(to: Principal, amount: Nat) -> Result<Nat, String> {
-    // Only allow minting from system principal for now
+    // Check if caller is authorized to mint
     let caller = caller();
-    if caller != Principal::management_canister() {
-        return Err("Only management canister can mint".to_string());
+    let is_authorized = AUTHORIZED_MINTERS.with(|minters| {
+        minters.borrow().contains(&caller)
+    });
+    
+    if !is_authorized {
+        return Err(format!("Unauthorized minting attempt from principal: {}", caller.to_text()));
     }
     
     let to_str = principal_to_string(&to);
@@ -176,6 +192,53 @@ fn get_reserves() -> (Nat, Nat, f32) {
 fn update_algorand_balance(balance: Nat) -> Result<(), String> {
     // Placeholder for updating Algorand balance
     Ok(())
+}
+
+// Authorized Minter Management
+#[update]
+fn add_authorized_minter(principal: Principal) -> Result<(), String> {
+    let caller = caller();
+    if caller != Principal::management_canister() {
+        return Err("Only management canister can add authorized minters".to_string());
+    }
+    
+    AUTHORIZED_MINTERS.with(|minters| {
+        let mut minters_vec = minters.borrow_mut();
+        if !minters_vec.contains(&principal) {
+            minters_vec.push(principal);
+        }
+    });
+    
+    Ok(())
+}
+
+#[update]
+fn remove_authorized_minter(principal: Principal) -> Result<(), String> {
+    let caller = caller();
+    if caller != Principal::management_canister() {
+        return Err("Only management canister can remove authorized minters".to_string());
+    }
+    
+    AUTHORIZED_MINTERS.with(|minters| {
+        let mut minters_vec = minters.borrow_mut();
+        minters_vec.retain(|p| p != &principal);
+    });
+    
+    Ok(())
+}
+
+#[query]
+fn get_authorized_minters() -> Vec<Principal> {
+    AUTHORIZED_MINTERS.with(|minters| {
+        minters.borrow().clone()
+    })
+}
+
+#[query]
+fn is_authorized_minter(principal: Principal) -> bool {
+    AUTHORIZED_MINTERS.with(|minters| {
+        minters.borrow().contains(&principal)
+    })
 }
 
 #[query]

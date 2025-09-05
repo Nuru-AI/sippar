@@ -6,6 +6,12 @@
       "package": "ck_algo",
       "candid": "src/canisters/ck_algo/ck_algo.did",
       "wasm": "target/wasm32-unknown-unknown/release/ck_algo.wasm"
+    },
+    "threshold_signer": {
+      "type": "rust",
+      "package": "algorand_threshold_signer_backend",
+      "candid": "src/canisters/threshold_signer/src/algorand_threshold_signer_backend/algorand_threshold_signer_backend.did",
+      "wasm": "src/canisters/threshold_signer/target/wasm32-unknown-unknown/release/algorand_threshold_signer_backend.wasm"
     }
   },
   "networks": {

@@ -30,8 +30,8 @@ export interface BasicAITest {
 }
 
 export class SipparAIService {
-  // OpenWebUI Endpoints - Primary is nuru.network openwebui proxy, fallback is direct XNode2
-  private primaryEndpoint: string = 'https://nuru.network/openwebui/';
+  // OpenWebUI Endpoints - Primary is chat.nuru.network, fallback is direct XNode2
+  private primaryEndpoint: string = 'https://chat.nuru.network';
   private fallbackEndpoint: string = 'https://xnode2.openmesh.cloud:8080';
   private connectionCache: OpenWebUIStatus | null = null;
   private cacheTimeout: number = 30000; // 30 seconds
@@ -121,7 +121,7 @@ export class SipparAIService {
       } catch (fallbackError) {
         console.error('Both OpenWebUI endpoints failed:', {primaryError, fallbackError});
         return {
-          response: 'OpenWebUI is currently unavailable. Please try again later. You can also access the chat interface directly at https://nuru.network/api/chat/',
+          response: 'OpenWebUI is currently unavailable. Please try again later. You can also access the chat interface directly at https://chat.nuru.network',
           responseTime: Date.now() - startTime,
           success: false,
           source: 'openwebui',

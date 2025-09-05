@@ -155,7 +155,7 @@ const MintFlow: React.FC = () => {
             console.log(`🔍 Monitoring Algorand transaction attempt ${attempts + 1}:`, txId);
             
             // Call the real mint endpoint which verifies transaction and mints ckALGO
-            const response = await fetch('/api/sippar/ck-algo/mint-confirmed', {
+            const response = await fetch('/ck-algo/mint-confirmed', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -233,7 +233,7 @@ const MintFlow: React.FC = () => {
         // Try Phase 3 first (threshold signatures), then Phase 2 fallback
         let response;
         try {
-          response = await fetch(`/api/sippar/algorand/deposits/${depositAddress}`);
+          response = await fetch(`/algorand/deposits/${depositAddress}`);
           if (!response.ok) {
             response = await fetch(`http://localhost:3001/algorand/deposits/${depositAddress}`);
           }
@@ -263,7 +263,7 @@ const MintFlow: React.FC = () => {
               console.log('🪙 Manual deposit confirmed, minting ckALGO via real endpoint:', matchingDeposit);
               
               // Use the same real endpoint as direct wallet flow
-              const response = await fetch('/api/sippar/ck-algo/mint-confirmed', {
+              const response = await fetch('/ck-algo/mint-confirmed', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',

@@ -7,7 +7,7 @@
  */
 
 import express from 'express';
-import { sipparAIOracleService, initializeOracleService, DEFAULT_INDEXER_CONFIG } from '../services/sipparAIOracleService';
+import { sipparAIOracleService, initializeOracleService, DEFAULT_INDEXER_CONFIG } from '../services/sipparAIOracleService.js';
 
 const router = express.Router();
 
@@ -251,7 +251,7 @@ router.post('/test-ai-query', async (req, res) => {
  */
 router.get('/health', async (req, res) => {
   try {
-    const health = {
+    const health: any = {
       timestamp: Date.now(),
       uptime: process.uptime(),
       memory: process.memoryUsage(),
@@ -360,8 +360,7 @@ router.get('/docs', (req, res) => {
       }
     ],
     supportedModels: ['qwen2.5', 'deepseek-r1', 'phi-3', 'mistral'],
-    oracleNote: 'sippar-ai-oracle',
-    version: '1.0.0'
+    oracleNote: 'sippar-ai-oracle'
   };
 
   res.json(docs);
