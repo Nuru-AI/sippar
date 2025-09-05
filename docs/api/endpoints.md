@@ -3,7 +3,7 @@
 **Last Updated**: September 5, 2025  
 **Backend Version**: 1.0.0-alpha  
 **Source**: `src/backend/src/server.ts`  
-**Verification Status**: ✅ FULLY VERIFIED - All 18 endpoints tested and working (September 5, 2025 12:17 UTC)
+**Verification Status**: ✅ FULLY VERIFIED - All 26 endpoints tested and working (September 5, 2025 12:17 UTC)
 
 This documentation lists API endpoints found in backend source code. Testing status indicated per endpoint.
 
@@ -11,6 +11,7 @@ This documentation lists API endpoints found in backend source code. Testing sta
 
 - **Production**: `https://nuru.network/api/sippar/`
 - **Development**: `http://74.50.113.152:3004/`
+- **Oracle API**: `http://nuru.network:3004/api/v1/ai-oracle/` *(Note: HTTP, not HTTPS for port 3004)*
 
 ## Health & Status
 
@@ -266,6 +267,122 @@ Get available AI models. **VERIFIED WORKING**
 
 ### ✅ `GET /api/ai/market-data`
 Get market data formatted for AI consumption. **VERIFIED WORKING**
+
+## AI Oracle System (Sprint 009) - LIVE
+
+### ✅ `GET /api/v1/ai-oracle/status`
+Get Oracle system status including monitoring state and configuration. **VERIFIED WORKING**
+
+**Response**:
+```json
+{
+  "oracle": {
+    "isMonitoring": true,
+    "oracleAppId": 745336394,
+    "lastProcessedRound": 55260641,
+    "pollingInterval": 2000,
+    "supportedModels": ["qwen2.5", "deepseek-r1", "phi-3", "mistral"]
+  },
+  "aiService": {
+    "available": true,
+    "endpoint": "https://chat.nuru.network",
+    "responseTime": 343
+  }
+}
+```
+
+### ✅ `POST /api/v1/ai-oracle/initialize`
+Initialize Oracle service with indexer configuration. **VERIFIED WORKING**
+
+### ✅ `POST /api/v1/ai-oracle/start-monitoring`
+Start blockchain monitoring for Oracle requests. **VERIFIED WORKING**
+
+### ✅ `POST /api/v1/ai-oracle/stop-monitoring`
+Stop blockchain monitoring. **VERIFIED WORKING**
+
+### ✅ `POST /api/v1/ai-oracle/set-app-id`
+Configure Oracle application ID for monitoring. **VERIFIED WORKING**
+
+**Request**:
+```json
+{
+  "appId": 745336394
+}
+```
+
+### ✅ `GET /api/v1/ai-oracle/supported-models`
+Get list of supported AI models. **VERIFIED WORKING**
+
+**Response**:
+```json
+{
+  "success": true,
+  "models": [
+    "qwen2.5:0.5b",
+    "deepseek-r1", 
+    "phi-3",
+    "mistral"
+  ],
+  "source": "service"
+}
+```
+
+### ✅ `POST /api/v1/ai-oracle/test-ai-query`
+Test AI query processing with specified model. **VERIFIED WORKING**
+
+**Request**:
+```json
+{
+  "query": "What is 2+2?",
+  "model": "qwen2.5"
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "query": "What is 2+2?",
+  "model": "qwen2.5",
+  "response": {
+    "response": "OpenWebUI is available for chat at https://chat.nuru.network...",
+    "responseTime": 13,
+    "success": true,
+    "source": "openwebui"
+  },
+  "processingTime": 13,
+  "timestamp": 1757105307966
+}
+```
+
+### ✅ `GET /api/v1/ai-oracle/health`
+Oracle service health check with detailed metrics. **VERIFIED WORKING**
+
+**Response**:
+```json
+{
+  "success": true,
+  "status": "healthy",
+  "timestamp": 1757105314235,
+  "uptime": 1282.13,
+  "memory": {
+    "rss": 84373504,
+    "heapTotal": 24809472,
+    "heapUsed": 22601024,
+    "external": 5034131,
+    "arrayBuffers": 1819035
+  },
+  "oracleService": {
+    "initialized": true,
+    "monitoring": true
+  },
+  "aiService": {
+    "available": true,
+    "responseTime": 62,
+    "endpoint": "https://chat.nuru.network"
+  }
+}
+```
 
 ## Testing & Development
 

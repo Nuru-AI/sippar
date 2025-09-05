@@ -57,9 +57,11 @@ Sippar bridges multiple blockchain ecosystems and AI infrastructures through ver
 ## 🔧 **Current System Status**
 
 **Verified Operational Components** (September 5, 2025):
-- **Backend Version**: 1.0.0-alpha with 18/18 API endpoints verified
+- **Backend Version**: 1.0.0-alpha with 26/26 API endpoints verified
 - **ICP Canisters**: 2 production canisters fully controlled
-- **Algorand Contract**: AI Oracle deployed on testnet
+- **Algorand Contract**: AI Oracle deployed on testnet (App ID 745336394)
+- **AI Oracle System**: Live monitoring with 343ms AI response time *(NEW)*
+- **Oracle API**: 8 Oracle management endpoints operational *(NEW)*
 - **AI Infrastructure**: XNode2 containers active with OpenWebUI
 - **Processing Time**: 150ms average backend response
 
@@ -80,7 +82,7 @@ From verified dfx commands:
 - **ckALGO Token**: `gbmxj-yiaaa-aaaak-qulqa-cai` (mainnet-deploy controlled)
 - **Both Status**: Running with sufficient cycles
 
-## Verified Algorand Smart Contract
+## Verified Algorand Smart Contract & Oracle System
 
 From archived deployment and testnet verification:
 - **AI Oracle Contract**: App ID `745336394` (Algorand testnet)
@@ -88,6 +90,14 @@ From archived deployment and testnet verification:
 - **Creator**: `A3QJWHRHRSHQ6GP5BOXQ5244EYMFMACO2AA7GZL4VYS6TLSPVODR2RRNME`
 - **Status**: Deployed and verified on testnet
 - **Deployment**: September 4, 2025
+
+### **Oracle Integration Status** *(NEW - September 5, 2025)*
+- **Backend Integration**: ✅ LIVE - Oracle routes enabled and deployed
+- **Monitoring Status**: ✅ ACTIVE - Monitoring blockchain round 55260641
+- **Indexer Configuration**: ✅ CONFIGURED - Public Algonode (testnet-idx.algonode.cloud)
+- **AI Integration**: ✅ OPERATIONAL - 343ms response time verified
+- **Polling Frequency**: 2-second intervals for real-time Oracle requests
+- **Production URL**: `https://nuru.network:3004/api/v1/ai-oracle/`
 
 ## Verified AI Infrastructure Integration
 

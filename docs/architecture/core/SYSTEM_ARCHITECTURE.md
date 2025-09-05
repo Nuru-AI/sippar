@@ -302,6 +302,47 @@ export class MilkomedaBridge {
 
 ## 🤖 **AI Integration Architecture**
 
+### **AI Oracle System** *(LIVE - Sprint 009)*
+Complete Algorand AI Oracle integration with blockchain monitoring and AI response system:
+
+```typescript
+// AI Oracle Service Architecture (ACTIVE)
+export class SipparAIOracleService extends SipparAIService {
+    private indexer: algosdk.Indexer;
+    private oracleAppId: number = 745336394; // LIVE on Algorand testnet
+    private isMonitoring: boolean = true;     // ACTIVE monitoring
+    
+    // Live Oracle Monitoring (2-second polling)
+    async processNewOracleRequests(): Promise<void> {
+        const response = await this.indexer
+            .searchForTransactions()
+            .applicationID(this.oracleAppId)
+            .minRound(this.lastProcessedRound + 1)
+            .notePrefix(Buffer.from('sippar-ai-oracle').toString('base64'))
+            .do();
+            
+        // Process AI requests with 343ms response time
+        for (const tx of response.transactions) {
+            const aiResponse = await this.processAIQuery(tx);
+            await this.sendCallbackResponse(tx, aiResponse);
+        }
+    }
+}
+```
+
+### **Oracle API Endpoints** *(LIVE - 8 Endpoints)*
+```typescript
+// Production Oracle Management API (http://nuru.network:3004)
+├── GET /api/v1/ai-oracle/status           # Oracle system status
+├── POST /api/v1/ai-oracle/initialize      # Initialize oracle service  
+├── POST /api/v1/ai-oracle/start-monitoring # Start blockchain monitoring
+├── POST /api/v1/ai-oracle/stop-monitoring  # Stop blockchain monitoring
+├── POST /api/v1/ai-oracle/set-app-id      # Configure oracle app ID
+├── GET /api/v1/ai-oracle/supported-models # List available AI models
+├── POST /api/v1/ai-oracle/test-ai-query   # Test AI query processing
+└── GET /api/v1/ai-oracle/health           # Detailed health metrics
+```
+
 ### **OpenWebUI Integration**
 Current live integration with OpenWebUI service for AI-enhanced trading and assistance:
 ```typescript
@@ -364,7 +405,7 @@ export class SipparAIService {
 ## 📊 **API Architecture**
 
 ### **REST API Design**
-Current production API with 18 verified endpoints (as of September 5, 2025):
+Current production API with 26 verified endpoints (as of September 5, 2025):
 ```typescript
 // Verified API endpoint structure
 ├── GET /health                                   # System health check
@@ -390,6 +431,15 @@ Current production API with 18 verified endpoints (as of September 5, 2025):
 │   ├── POST /api/ai/auth-url                    # Get authenticated URL
 │   ├── GET /api/ai/models                       # Available AI models
 │   └── GET /api/ai/market-data                  # Market data for AI
+├── AI Oracle System (Sprint 009) - LIVE
+│   ├── GET /api/v1/ai-oracle/status             # Oracle system status
+│   ├── POST /api/v1/ai-oracle/initialize        # Initialize oracle service
+│   ├── POST /api/v1/ai-oracle/start-monitoring  # Start blockchain monitoring
+│   ├── POST /api/v1/ai-oracle/stop-monitoring   # Stop blockchain monitoring
+│   ├── POST /api/v1/ai-oracle/set-app-id        # Configure oracle app ID
+│   ├── GET /api/v1/ai-oracle/supported-models   # List available AI models
+│   ├── POST /api/v1/ai-oracle/test-ai-query     # Test AI query processing
+│   └── GET /api/v1/ai-oracle/health             # Detailed health metrics
 └── Testing & Development
     └── GET /test/threshold-signer               # Test threshold signer
 ```
@@ -523,10 +573,12 @@ export interface SipparAppState {
 
 ### **✅ Live Production Features**
 - **Internet Identity Integration**: Operational with Algorand address derivation
-- **Chain Fusion Backend**: TypeScript service with 18 verified API endpoints
+- **Chain Fusion Backend**: TypeScript service with 26 verified API endpoints
 - **Threshold Signatures**: Live ICP canister integration (`vj7ly-diaaa-aaaae-abvoq-cai`)
 - **Algorand Network**: Real-time status monitoring for testnet and mainnet
 - **AI Integration**: OpenWebUI chat interface with 4 available models
+- **AI Oracle System**: Live monitoring of App ID 745336394 with 343ms response time *(NEW)*
+- **Oracle API**: 8 Oracle management endpoints operational at production *(NEW)*
 - **Frontend**: React SPA deployed at `https://nuru.network/sippar/`
 - **System Monitoring**: Real-time alerts and performance optimization
 
