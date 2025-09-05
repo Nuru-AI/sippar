@@ -293,7 +293,7 @@ Common HTTP status codes:
 
 ## Notes
 
-1. **Port Configuration**: Backend runs on port 3004 (changed from original 3001)
+1. **Port Configuration**: Backend runs on port 3004 (standardized across all environments)
 2. **CORS**: Configured for localhost development and nuru.network production
 3. **SSL**: HTTPS support with fallback to HTTP
 4. **Validation**: Uses Zod schema validation for request bodies

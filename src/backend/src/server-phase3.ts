@@ -19,7 +19,8 @@ import { icpCanisterService } from './services/icpCanisterService.js';
 config();
 
 const app = express();
-const PORT = process.env.PORT || 3002; // Different port for Phase 3
+// Phase 3 uses same port as production for consistency  
+const PORT = process.env.PORT || 3004;
 
 // Middleware
 app.use(helmet());

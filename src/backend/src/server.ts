@@ -49,7 +49,8 @@ const ckAlgoActor = Actor.createActor(ckAlgoIdl, {
 config();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+// Standard Sippar production port - matches deployment scripts and frontend config
+const PORT = process.env.PORT || 3004;
 
 // Middleware
 app.use(helmet());

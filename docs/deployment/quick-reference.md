@@ -70,5 +70,5 @@ ssh root@74.50.113.152 "systemctl status sippar-backend"
 3. ✅ Redeploy frontend if using wrong URLs
 
 ## 📚 **Full Documentation**
-- **Complete Structure**: `tools/deployment/DEPLOYMENT_STRUCTURE.md`
+- **Complete Structure**: `docs/deployment/structure.md`
 - **Project Overview**: `CLAUDE.md`
