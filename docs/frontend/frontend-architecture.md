@@ -11,8 +11,8 @@ The Sippar frontend is a React + TypeScript application that provides Internet I
 
 ### **Core Architecture Principles**
 - **Service-First Design**: All API interactions through dedicated service classes
-- **Hook-Based State Management**: Custom hooks manage authentication and wallet states
-- **Component Isolation**: Each component handles specific functionality
+- **Zustand State Management**: Centralized reactive state with custom hooks (Sprint 010)
+- **Component Isolation**: Each component handles specific functionality with direct store access
 - **Type Safety**: Full TypeScript implementation with strict type checking
 - **Error-First Development**: Comprehensive error handling and graceful degradation
 
@@ -21,7 +21,7 @@ The Sippar frontend is a React + TypeScript application that provides Internet I
 - **Build Tool**: Vite 6.0.0
 - **Styling**: Tailwind CSS 3.4.1
 - **Query Library**: @tanstack/react-query 5.85.3 (installed but not used)
-- **State Library**: zustand 5.0.7 (installed but not used)
+- **State Library**: zustand 5.0.7 ✅ **ACTIVE** (Sprint 010 implementation)
 - **Wallet Integration**: PeraWallet, MyAlgo, DeflyWallet
 - **ICP Integration**: @dfinity/auth-client, @dfinity/principal
 - **Algorand Integration**: algosdk 3.4.0
@@ -56,8 +56,14 @@ The Sippar frontend is a React + TypeScript application that provides Internet I
 | `useAlgorandWallet` | `useAlgorandWallet.ts` | Algorand wallet connection & transaction management |
 
 ### **Hook Responsibilities**
-- **useAlgorandIdentity**: Manages user authentication, principal derivation, Algorand address generation
+- **useAlgorandIdentity**: Authentication hook - integrates with Zustand auth store for reactive state
 - **useAlgorandWallet**: Handles wallet connections, transaction signing, balance queries
+
+### **State Management Integration** *(Added: Sprint 010)*
+- **Zustand Store**: `src/stores/authStore.ts` - Centralized authentication and balance state
+- **Hook Integration**: `useAlgorandIdentity` migrated to use Zustand store with backward compatibility
+- **Store Features**: Automatic persistence, selective subscriptions, computed selectors
+- **Performance**: Eliminated manual localStorage polling, reactive component updates
 
 ## 🔌 **Service Layer Architecture**
 
@@ -96,28 +102,37 @@ The Sippar frontend is a React + TypeScript application that provides Internet I
 - **AI Models**: Qwen 2.5, DeepSeek R1, phi-3, mistral
 - **Backend Processing**: Average 150ms response time
 
-## 🔄 **State Management Architecture**
+## 🔄 **State Management Architecture** *(Updated: Sprint 010)*
+
+### **Zustand Store Architecture**
+- **Primary Store**: `authStore.ts` - Authentication, user data, and balance management
+- **Store Features**: Persistence middleware, selective subscriptions, computed selectors
+- **Integration Pattern**: Components access store directly or through `useAlgorandIdentity` hook
+- **Performance**: Reactive updates, eliminates manual localStorage caching
 
 ### **Authentication State Flow**
 1. **Internet Identity Login** → User Principal
-2. **Threshold Address Derivation** → Algorand Address
-3. **Credential Storage** → Session Management
-4. **Multi-Service Integration** → Unified User State
+2. **Threshold Address Derivation** → Algorand Address  
+3. **Zustand Store Update** → Automatic Persistence
+4. **Component Reactivity** → UI Updates via Selective Subscriptions
 
 ### **Component State Patterns**
-- **Local State**: useState for component-specific state
-- **Global State**: React Context (no external state management library currently used)
-- **Hook State**: Custom hooks for complex state logic
+- **Global Auth State**: Zustand store with automatic persistence
+- **Local UI State**: useState for component-specific interactions
+- **Store Subscriptions**: `useAuthStore(state => state.user)` for selective reactivity
+- **Hook Integration**: `useAlgorandIdentity` provides backward-compatible API
 - **Service State**: API response caching and error states
 
-### **Data Flow Architecture**
+### **Modern Data Flow Architecture** *(Sprint 010)*
 ```
-User Interaction → Component → Hook → Service → API/Canister → Response → State Update → UI Update
+User Interaction → Component → Zustand Store → Reactive UI Update
+                            ↓
+User Interaction → Component → Hook → Service → API → Store Update → Reactive UI Update
 ```
 
 ## 🚀 **Development Architecture**
 
-### **Project Structure**
+### **Project Structure** *(Updated: Sprint 010)*
 ```
 src/frontend/src/
 ├── components/          # React components
@@ -125,6 +140,9 @@ src/frontend/src/
 │   └── *.tsx           # Main components (7)
 ├── hooks/              # Custom hooks (2)
 ├── services/           # API services (5)
+├── stores/             # Zustand state stores (Sprint 010)
+│   ├── authStore.ts    # Authentication & balance state
+│   └── index.ts        # Store exports
 └── types/              # TypeScript definitions (1 file: wallet.ts)
 ```
 
@@ -142,9 +160,11 @@ src/frontend/src/
 
 ## 📊 **Performance Architecture**
 
-### **Optimization Strategies**
+### **Optimization Strategies** *(Updated: Sprint 010)*
+- **Zustand State Management**: Reactive store eliminates manual localStorage polling (Sprint 010)
+- **Selective Subscriptions**: Components only re-render on relevant state changes
 - **Service Layer Caching**: API response caching with configurable TTL (implemented in BaseAPIService)
-- **Bundle Optimization**: Vite's built-in tree shaking and minification
+- **Bundle Optimization**: Vite's built-in tree shaking and minification + Zustand (2.9kb gzipped)
 - **Network Optimization**: Request timeout management and retry logic
 - **React Optimization**: useCallback and useMemo used in custom hooks
 

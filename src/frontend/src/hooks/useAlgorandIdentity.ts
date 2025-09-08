@@ -12,6 +12,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { AuthClient } from '@dfinity/auth-client';
 import { Principal } from '@dfinity/principal';
 import sipparAPI from '../services/SipparAPIService';
+import { useAuthStore } from '../stores/authStore';
 
 // Types for Algorand Identity integration
 export interface AuthUser {
@@ -36,12 +37,8 @@ interface AuthError {
   message: string;
 }
 
-interface AuthState {
-  user: AuthUser | null;
-  isLoading: boolean;
-  error: AuthError | null;
-  credentials: AlgorandChainFusionCredentials | null;
-}
+// ✅ REMOVED: AuthState interface - now using Zustand store
+// Sprint 010: Phase 2 - Replaced with useAuthStore
 
 const DAILY_LIMIT_FREE = 10;
 
@@ -49,30 +46,8 @@ const DAILY_LIMIT_FREE = 10;
 const INTERNET_IDENTITY_URL = 'https://identity.ic0.app';
 const IDENTITY_PROVIDER = 'https://identity.ic0.app/#authorize';
 
-// Performance optimization: Cache localStorage values to reduce access frequency
-let cachedToken: string | null = null;
-let cachedUserData: string | null = null;
-let cachedCredentials: string | null = null;
-let cacheTimestamp = 0;
-const CACHE_DURATION = 5000; // Cache for 5 seconds
-
-const getCachedLocalStorage = (key: string): string | null => {
-  const now = Date.now();
-  if (now - cacheTimestamp > CACHE_DURATION) {
-    // Refresh cache
-    cachedToken = localStorage.getItem('sippar_ii_token');
-    cachedUserData = localStorage.getItem('sippar_ii_user');
-    cachedCredentials = localStorage.getItem('sippar_algorand_credentials');
-    cacheTimestamp = now;
-  }
-  
-  switch (key) {
-    case 'sippar_ii_token': return cachedToken;
-    case 'sippar_ii_user': return cachedUserData;
-    case 'sippar_algorand_credentials': return cachedCredentials;
-    default: return localStorage.getItem(key);
-  }
-};
+// ✅ REMOVED: Manual localStorage caching - replaced by Zustand store
+// Sprint 010: Phase 2 - Manual cache management eliminated in favor of reactive store
 
 // Chain Fusion Backend endpoints - Updated with working XNode2 Sippar server
 const getChainFusionEndpoints = () => {
@@ -84,20 +59,25 @@ const getChainFusionEndpoints = () => {
 };
 
 export const useAlgorandIdentity = () => {
-  const [authState, setAuthState] = useState<AuthState>({
-    user: null,
-    isLoading: false,
-    error: null,
-    credentials: null,
-  });
+  // ✅ MIGRATED: Replace useState with Zustand store
+  const user = useAuthStore(state => state.user);
+  const credentials = useAuthStore(state => state.credentials);
+  const isLoading = useAuthStore(state => state.isLoading);
+  const error = useAuthStore(state => state.error);
+  const setUser = useAuthStore(state => state.setUser);
+  const setCredentials = useAuthStore(state => state.setCredentials);
+  const setLoading = useAuthStore(state => state.setLoading);
+  const setError = useAuthStore(state => state.setError);
+  const logout = useAuthStore(state => state.logout);
 
   const [authClient, setAuthClient] = useState<AuthClient | null>(null);
 
   const checkAuthStatus = useCallback(async () => {
     try {
-      const token = getCachedLocalStorage('sippar_ii_token');
-      const userData = getCachedLocalStorage('sippar_ii_user');
-      const credentials = getCachedLocalStorage('sippar_algorand_credentials');
+      // ✅ MIGRATED: Direct localStorage access instead of manual cache
+      const token = localStorage.getItem('sippar_ii_token');
+      const userData = localStorage.getItem('sippar_ii_user');
+      const storedCredentials = localStorage.getItem('sippar_algorand_credentials');
 
       if (token && userData) {
         const user = JSON.parse(userData) as AuthUser;
@@ -126,18 +106,17 @@ export const useAlgorandIdentity = () => {
                 localStorage.removeItem('sippar_ii_user');
                 localStorage.removeItem('sippar_algorand_credentials');
                 
-                setAuthState(prev => ({
-                  ...prev,
-                  user: {
-                    principal: '',
-                    accountId: '',
-                    isAuthenticated: false,
-                    isPremium: false,
-                    dailyMessagesUsed: parseInt(localStorage.getItem('sippar_daily_messages_used') || '0'),
-                    dailyLimit: DAILY_LIMIT_FREE,
-                  },
-                  isLoading: false,
-                }));
+                // ✅ MIGRATED: Use store actions instead of setAuthState
+                setUser({
+                  principal: '',
+                  accountId: '',
+                  isAuthenticated: false,
+                  isPremium: false,
+                  dailyMessagesUsed: parseInt(localStorage.getItem('sippar_daily_messages_used') || '0'),
+                  dailyLimit: DAILY_LIMIT_FREE,
+                });
+                setCredentials(null);
+                setLoading(false);
                 return;
               }
             } catch (error) {
@@ -147,34 +126,28 @@ export const useAlgorandIdentity = () => {
           }
         }
         
-        setAuthState(prev => ({
-          ...prev,
-          user,
-          credentials: credentials ? JSON.parse(credentials) : null,
-          isLoading: false,
-        }));
+        // ✅ MIGRATED: Use store actions instead of setAuthState
+        setUser(user);
+        setCredentials(storedCredentials ? JSON.parse(storedCredentials) : null);
+        setLoading(false);
       } else {
-        // Set as unauthenticated guest user
-        setAuthState(prev => ({
-          ...prev,
-          user: {
-            principal: '',
-            accountId: '',
-            isAuthenticated: false,
-            isPremium: false,
-            dailyMessagesUsed: parseInt(localStorage.getItem('sippar_daily_messages_used') || '0'),
-            dailyLimit: DAILY_LIMIT_FREE,
-          },
-          isLoading: false,
-        }));
+        // ✅ MIGRATED: Set as unauthenticated guest user using store
+        setUser({
+          principal: '',
+          accountId: '',
+          isAuthenticated: false,
+          isPremium: false,
+          dailyMessagesUsed: parseInt(localStorage.getItem('sippar_daily_messages_used') || '0'),
+          dailyLimit: DAILY_LIMIT_FREE,
+        });
+        setCredentials(null);
+        setLoading(false);
       }
     } catch (error) {
       console.error('Error checking auth status:', error);
-      setAuthState(prev => ({
-        ...prev,
-        error: { code: 'AUTH_CHECK_ERROR', message: 'Failed to check authentication status' },
-        isLoading: false,
-      }));
+      // ✅ MIGRATED: Use store actions for error handling
+      setError({ code: 'AUTH_CHECK_ERROR', message: 'Failed to check authentication status' });
+      setLoading(false);
     }
   }, [authClient]);
 
@@ -215,7 +188,9 @@ export const useAlgorandIdentity = () => {
   }, []); // Remove checkAuthStatus dependency to prevent re-runs
 
   const login = useCallback(async () => {
-    setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
+    // ✅ MIGRATED: Use store actions for loading state
+    setLoading(true);
+    setError(null);
 
     try {
       console.log('🔐 Starting Sippar Algorand Identity authentication...');
@@ -270,24 +245,20 @@ export const useAlgorandIdentity = () => {
       
       await handleSuccessfulAuth(principal.toString(), client);
       
-      setAuthState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: null
-      }));
+      // ✅ MIGRATED: Use store actions for success state
+      setLoading(false);
+      setError(null);
       
       return true;
       
     } catch (error) {
       console.error('❌ Sippar authentication failed:', error);
-      setAuthState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: { 
-          code: 'AUTH_FAILED', 
-          message: `Authentication failed: ${error instanceof Error ? error.message : 'Internet Identity popup failed'}`
-        },
-      }));
+      // ✅ MIGRATED: Use store actions for error state
+      setError({ 
+        code: 'AUTH_FAILED', 
+        message: `Authentication failed: ${error instanceof Error ? error.message : 'Internet Identity popup failed'}`
+      });
+      setLoading(false);
       return false;
     }
   }, [authClient]);
@@ -336,14 +307,13 @@ export const useAlgorandIdentity = () => {
         localStorage.setItem('sippar_ii_user', JSON.stringify(realUser));
         localStorage.removeItem('sippar_algorand_credentials');
 
-        setAuthState({
-          user: realUser,
-          isLoading: false,
-          error: {
-            code: 'CHAIN_FUSION_NOT_READY',
-            message: 'Authentication successful. Algorand credential derivation temporarily unavailable. Please try again or contact support if the issue persists.'
-          },
-          credentials: null,
+        // ✅ MIGRATED: Use store actions for fallback auth state
+        setUser(realUser);
+        setCredentials(null);
+        setLoading(false);
+        setError({
+          code: 'CHAIN_FUSION_NOT_READY',
+          message: 'Authentication successful. Algorand credential derivation temporarily unavailable. Please try again or contact support if the issue persists.'
         });
 
         // Dispatch auth event
@@ -368,12 +338,11 @@ export const useAlgorandIdentity = () => {
       localStorage.setItem('sippar_ii_user', JSON.stringify(realUser));
       localStorage.setItem('sippar_algorand_credentials', JSON.stringify(algorandCredentials));
 
-      setAuthState({
-        user: realUser,
-        isLoading: false,
-        error: null,
-        credentials: algorandCredentials,
-      });
+      // ✅ MIGRATED: Use store actions for successful auth state
+      setUser(realUser);
+      setCredentials(algorandCredentials);
+      setLoading(false);
+      setError(null);
 
       console.log('🎉 Sippar Algorand Identity authentication complete!');
       
@@ -388,7 +357,7 @@ export const useAlgorandIdentity = () => {
     }
   }, []);
 
-  const logout = useCallback(async () => {
+  const handleLogout = useCallback(async () => {
     try {
       console.log('🔐 Logging out from Sippar Algorand Identity...');
       
@@ -398,25 +367,8 @@ export const useAlgorandIdentity = () => {
         console.log('✅ Internet Identity logout successful');
       }
       
-      // Clear local storage
-      localStorage.removeItem('sippar_ii_token');
-      localStorage.removeItem('sippar_ii_user');
-      localStorage.removeItem('sippar_algorand_credentials');
-
-      // Reset to guest state
-      setAuthState({
-        user: {
-          principal: '',
-          accountId: '',
-          isAuthenticated: false,
-          isPremium: false,
-          dailyMessagesUsed: parseInt(localStorage.getItem('sippar_daily_messages_used') || '0'),
-          dailyLimit: DAILY_LIMIT_FREE,
-        },
-        isLoading: false,
-        error: null,
-        credentials: null,
-      });
+      // ✅ MIGRATED: Use store logout action (handles localStorage cleanup and state reset)
+      logout();
 
       console.log('✅ Successfully logged out from Sippar');
       
@@ -427,44 +379,43 @@ export const useAlgorandIdentity = () => {
     } catch (error) {
       console.error('❌ Logout failed:', error);
     }
-  }, [authClient]);
+  }, [authClient, logout]);
 
   const incrementMessageCount = useCallback(() => {
-    if (!authState.user?.isPremium) {
-      const newCount = (authState.user?.dailyMessagesUsed || 0) + 1;
+    if (!user?.isPremium && user) {
+      const newCount = (user.dailyMessagesUsed || 0) + 1;
       localStorage.setItem('sippar_daily_messages_used', newCount.toString());
       
-      setAuthState(prev => ({
-        ...prev,
-        user: prev.user ? { ...prev.user, dailyMessagesUsed: newCount } : null,
-      }));
+      // ✅ MIGRATED: Use store to update user data
+      setUser({ ...user, dailyMessagesUsed: newCount });
     }
-  }, [authState.user]);
+  }, [user, setUser]);
 
   const canSendMessage = useCallback(() => {
-    if (!authState.user) return false;
-    if (authState.user.isPremium) return true;
-    return authState.user.dailyMessagesUsed < authState.user.dailyLimit;
-  }, [authState.user]);
+    if (!user) return false;
+    if (user.isPremium) return true;
+    return user.dailyMessagesUsed < user.dailyLimit;
+  }, [user]);
 
   const getRemainingMessages = useCallback(() => {
-    if (!authState.user || authState.user.isPremium) return -1;
-    return Math.max(0, authState.user.dailyLimit - authState.user.dailyMessagesUsed);
-  }, [authState.user]);
+    if (!user || user.isPremium) return -1;
+    return Math.max(0, user.dailyLimit - user.dailyMessagesUsed);
+  }, [user]);
 
   return {
-    user: authState.user,
-    isLoading: authState.isLoading,
-    error: authState.error,
-    credentials: authState.credentials,
+    // ✅ MIGRATED: Return store values instead of authState
+    user,
+    isLoading,
+    error,
+    credentials,
     login,
-    logout,
+    logout: handleLogout, // Use the wrapped logout function
     checkAuthStatus,
     incrementMessageCount,
     canSendMessage,
     getRemainingMessages,
-    isAuthenticated: !!authState.user?.isAuthenticated,
-    isPremium: !!authState.user?.isPremium,
+    isAuthenticated: !!user?.isAuthenticated,
+    isPremium: !!user?.isPremium,
   };
 };
 

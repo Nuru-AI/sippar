@@ -10,7 +10,7 @@
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, devtools } from 'zustand/middleware';
 import type { AuthUser, AlgorandChainFusionCredentials } from '../hooks/useAlgorandIdentity';
 
 // Auth error interface
@@ -76,9 +76,10 @@ const initialState: AuthState = {
   balancesLastUpdated: 0,
 };
 
-// Create the auth store with persistence
+// Create the auth store with persistence and DevTools
 export const useAuthStore = create<AuthStore>()(
-  persist(
+  devtools(
+    persist(
     (set, get) => ({
       // Initial state
       ...initialState,
@@ -220,6 +221,10 @@ export const useAuthStore = create<AuthStore>()(
       
       // Skip hydration on server-side rendering
       skipHydration: typeof window === 'undefined',
+    }
+    ),
+    {
+      name: 'sippar-auth-store', // DevTools identifier
     }
   )
 );

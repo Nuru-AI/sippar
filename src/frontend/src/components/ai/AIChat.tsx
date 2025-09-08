@@ -7,6 +7,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { AuthUser, AlgorandChainFusionCredentials } from '../../hooks/useAlgorandIdentity';
+import { useAuthStore } from '../../stores/authStore'; // ✅ ADDED: Direct store access
 
 interface AIStatus {
   available: boolean;
@@ -14,12 +15,16 @@ interface AIStatus {
   responseTime?: number;
 }
 
-interface AIChatProps {
-  user: AuthUser | null;
-  credentials: AlgorandChainFusionCredentials | null;
-}
+// ✅ REMOVED: Props interface - now using store directly
+// interface AIChatProps {
+//   user: AuthUser | null;
+//   credentials: AlgorandChainFusionCredentials | null;
+// }
 
-const AIChat: React.FC<AIChatProps> = ({ user, credentials }) => {
+const AIChat: React.FC = () => {
+  // ✅ MIGRATED: Use store instead of props
+  const user = useAuthStore(state => state.user);
+  const credentials = useAuthStore(state => state.credentials);
   const [aiStatus, setAiStatus] = useState<AIStatus | null>(null);
   const [showEmbedded, setShowEmbedded] = useState(false);
   const [authUrl, setAuthUrl] = useState<string | null>(null);
