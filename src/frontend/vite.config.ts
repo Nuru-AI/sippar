@@ -2,6 +2,8 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
+/// <reference types="vitest" />
+
 // COPIED FROM: /projects/rabbi/src/frontend/current/vite.config.ts
 // Adapted for Sippar Algorand Bridge deployment
 export default defineConfig({
@@ -106,5 +108,39 @@ export default defineConfig({
       './src/main.tsx',
       './src/App.tsx'
     ]
+  },
+  
+  // Test configuration for Sprint 010.5 - Frontend Testing Infrastructure
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./src/test-setup.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html', 'lcov'],
+      exclude: [
+        'node_modules/',
+        'src/test-setup.ts',
+        '**/*.d.ts',
+        '**/*.config.*',
+        '**/dist/**'
+      ],
+      thresholds: {
+        global: {
+          branches: 80,
+          functions: 80,
+          lines: 80,
+          statements: 80
+        }
+      }
+    },
+    // Include TypeScript files in testing
+    include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    // Mock Internet Identity and external dependencies for testing
+    server: {
+      deps: {
+        inline: ['@dfinity/auth-client', '@dfinity/principal']
+      }
+    }
   }
 })

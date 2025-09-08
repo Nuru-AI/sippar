@@ -1,0 +1,25 @@
+{
+  "name": "sippar-tests",
+  "version": "1.0.0",
+  "description": "Integration and unit tests for Sippar Chain Fusion",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha --recursive --timeout 30000",
+    "test:integration": "mocha integration/*.test.js --timeout 30000",
+    "test:unit": "mocha unit/*.test.js --timeout 5000",
+    "test:watch": "mocha --recursive --watch --timeout 30000"
+  },
+  "keywords": ["sippar", "chain-fusion", "algorand", "icp", "tests"],
+  "author": "Nuru AI",
+  "license": "MIT",
+  "devDependencies": {
+    "mocha": "^10.2.0",
+    "chai": "^4.3.8",
+    "chai-http": "^4.4.0",
+    "sinon": "^15.2.0"
+  },
+  "dependencies": {
+    "@dfinity/principal": "^0.19.3",
+    "algosdk": "^2.7.0"
+  }
+}

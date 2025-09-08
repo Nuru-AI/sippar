@@ -22,6 +22,77 @@ const app = express();
 // Phase 3 uses same port as production for consistency  
 const PORT = process.env.PORT || 3004;
 
+// Transaction monitoring metrics
+interface TransactionMetrics {
+  totalTransactions: number;
+  totalMints: number;
+  totalRedeems: number;
+  totalChainFusion: number;
+  failedOperations: number;
+  lastOperationTime: Date | null;
+  custodyAddressesGenerated: number;
+  totalProcessingTimeMs: number;
+  errors: Array<{
+    timestamp: Date;
+    operation: string;
+    error: string;
+    principal?: string;
+  }>;
+}
+
+const transactionMetrics: TransactionMetrics = {
+  totalTransactions: 0,
+  totalMints: 0,
+  totalRedeems: 0,
+  totalChainFusion: 0,
+  failedOperations: 0,
+  lastOperationTime: null,
+  custodyAddressesGenerated: 0,
+  totalProcessingTimeMs: 0,
+  errors: []
+};
+
+// Helper function to log operations
+function logOperation(operation: string, success: boolean, processingTime: number, principal?: string, error?: string) {
+  const timestamp = new Date();
+  transactionMetrics.totalTransactions++;
+  transactionMetrics.lastOperationTime = timestamp;
+  transactionMetrics.totalProcessingTimeMs += processingTime;
+  
+  if (success) {
+    switch (operation) {
+      case 'mint':
+        transactionMetrics.totalMints++;
+        break;
+      case 'redeem':
+        transactionMetrics.totalRedeems++;
+        break;
+      case 'chain-fusion':
+        transactionMetrics.totalChainFusion++;
+        break;
+      case 'custody-generation':
+        transactionMetrics.custodyAddressesGenerated++;
+        break;
+    }
+  } else {
+    transactionMetrics.failedOperations++;
+    if (error) {
+      transactionMetrics.errors.push({
+        timestamp,
+        operation,
+        error,
+        principal
+      });
+      // Keep only last 50 errors
+      if (transactionMetrics.errors.length > 50) {
+        transactionMetrics.errors = transactionMetrics.errors.slice(-50);
+      }
+    }
+  }
+  
+  console.log(`[${timestamp.toISOString()}] ${operation.toUpperCase()} - ${success ? 'SUCCESS' : 'FAILED'} - ${processingTime}ms${principal ? ` - Principal: ${principal}` : ''}${error ? ` - Error: ${error}` : ''}`);
+}
+
 // Middleware
 app.use(helmet());
 app.use(cors({
@@ -89,9 +160,13 @@ app.get('/health', async (req, res) => {
         ...canisterStatus
       } : null,
       metrics: {
-        total_transactions: 0,
-        avg_processing_time_ms: 250, // Slightly higher due to threshold signatures
-        success_rate: 1.0
+        total_transactions: transactionMetrics.totalTransactions,
+        avg_processing_time_ms: transactionMetrics.totalTransactions > 0 
+          ? Math.round(transactionMetrics.totalProcessingTimeMs / transactionMetrics.totalTransactions)
+          : 250,
+        success_rate: transactionMetrics.totalTransactions > 0 
+          ? Math.round(((transactionMetrics.totalTransactions - transactionMetrics.failedOperations) / transactionMetrics.totalTransactions) * 100) / 100
+          : 1.0
       },
       timestamp: new Date().toISOString()
     });
@@ -102,6 +177,89 @@ app.get('/health', async (req, res) => {
       service: 'Sippar Algorand Chain Fusion Backend',
       error: 'ICP canister connectivity issues',
       timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Detailed metrics endpoint for monitoring
+app.get('/metrics', (req, res) => {
+  const avgProcessingTime = transactionMetrics.totalTransactions > 0 
+    ? Math.round(transactionMetrics.totalProcessingTimeMs / transactionMetrics.totalTransactions)
+    : 0;
+    
+  const successRate = transactionMetrics.totalTransactions > 0 
+    ? Math.round(((transactionMetrics.totalTransactions - transactionMetrics.failedOperations) / transactionMetrics.totalTransactions) * 100) / 100
+    : 1.0;
+
+  res.json({
+    service: 'Sippar Chain Fusion Metrics',
+    timestamp: new Date().toISOString(),
+    uptime_seconds: process.uptime(),
+    operations: {
+      total_transactions: transactionMetrics.totalTransactions,
+      total_mints: transactionMetrics.totalMints,
+      total_redeems: transactionMetrics.totalRedeems,
+      total_chain_fusion: transactionMetrics.totalChainFusion,
+      custody_addresses_generated: transactionMetrics.custodyAddressesGenerated,
+      failed_operations: transactionMetrics.failedOperations
+    },
+    performance: {
+      avg_processing_time_ms: avgProcessingTime,
+      total_processing_time_ms: transactionMetrics.totalProcessingTimeMs,
+      success_rate: successRate,
+      last_operation_time: transactionMetrics.lastOperationTime
+    },
+    recent_errors: transactionMetrics.errors.slice(-10), // Last 10 errors
+    system: {
+      memory_usage: process.memoryUsage(),
+      node_version: process.version,
+      platform: process.platform,
+      pid: process.pid
+    }
+  });
+});
+
+// Real-time ALGO balance tracking endpoint
+app.get('/balance-monitor/:address', async (req, res) => {
+  const startTime = Date.now();
+  const { address } = req.params;
+  
+  try {
+    if (!algosdk.isValidAddress(address)) {
+      logOperation('balance-check', false, Date.now() - startTime, undefined, 'Invalid address format');
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid Algorand address format',
+        address
+      });
+    }
+
+    const accountInfo = await algorandService.getAccountInfo(address);
+    const processingTime = Date.now() - startTime;
+    
+    logOperation('balance-check', true, processingTime);
+    
+    res.json({
+      success: true,
+      address,
+      balance_algo: accountInfo.balance,
+      min_balance_algo: accountInfo.minBalance,
+      last_updated: new Date().toISOString(),
+      processing_time_ms: processingTime,
+      round: accountInfo.round,
+      status: accountInfo.status
+    });
+  } catch (error) {
+    const processingTime = Date.now() - startTime;
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logOperation('balance-check', false, processingTime, undefined, errorMessage);
+    
+    res.status(500).json({
+      success: false,
+      error: 'Failed to check balance',
+      address,
+      details: errorMessage,
+      processing_time_ms: processingTime
     });
   }
 });
@@ -339,8 +497,11 @@ app.get('/ck-algo/balance/:principal', async (req, res) => {
   try {
     const { principal } = req.params;
     
+    // URL decode the principal parameter to handle encoded characters
+    const decodedPrincipal = decodeURIComponent(principal);
+    
     // Derive threshold-secured address
-    const addressInfo = await icpCanisterService.deriveAlgorandAddress(principal);
+    const addressInfo = await icpCanisterService.deriveAlgorandAddress(decodedPrincipal);
     
     // Get Algorand account information
     let algorandAccount: AlgorandAccount | null = null;
@@ -592,6 +753,7 @@ app.post('/test-address-derivation', async (req, res) => {
 });
 
 app.post('/chain-fusion/transfer-algo', async (req, res) => {
+  const startTime = Date.now();
   try {
     console.log('🔥 Real Chain Fusion: ALGO Transfer Request');
     const { principal, toAddress, amount, note } = req.body;
@@ -734,12 +896,20 @@ app.post('/chain-fusion/transfer-algo', async (req, res) => {
       timestamp: new Date().toISOString()
     });
     
+    // Log successful chain fusion operation
+    logOperation('chain-fusion', true, Date.now() - startTime, principal);
+    
   } catch (error) {
     console.error('❌ Chain Fusion transfer failed:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    
+    // Log failed chain fusion operation
+    logOperation('chain-fusion', false, Date.now() - startTime, req.body.principal, errorMessage);
+    
     res.status(500).json({
       success: false,
       chain_fusion_proven: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred',
+      error: errorMessage,
       timestamp: new Date().toISOString()
     });
   }
@@ -773,6 +943,7 @@ app.get('/api/v1/threshold/status', async (req, res) => {
 });
 
 app.post('/api/v1/threshold/derive-address', async (req, res) => {
+  const startTime = Date.now();
   try {
     const { principal } = req.body;
     console.log(`🔐 Frontend requesting address derivation for principal: ${principal}`);
@@ -785,6 +956,10 @@ app.post('/api/v1/threshold/derive-address', async (req, res) => {
     }
 
     const addressInfo = await icpCanisterService.deriveAlgorandAddress(principal);
+    
+    // Log successful custody address generation
+    logOperation('custody-generation', true, Date.now() - startTime, principal);
+    
     res.json({
       success: true,
       address: addressInfo.address,
@@ -793,9 +968,14 @@ app.post('/api/v1/threshold/derive-address', async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Threshold address derivation failed:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Address derivation failed';
+    
+    // Log failed custody address generation
+    logOperation('custody-generation', false, Date.now() - startTime, req.body.principal, errorMessage);
+    
     res.status(500).json({
       success: false,
-      error: error instanceof Error ? error.message : 'Address derivation failed'
+      error: errorMessage
     });
   }
 });

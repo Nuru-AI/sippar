@@ -45,9 +45,27 @@ const Dashboard: React.FC = () => {
       if (statusResponse.status === 'success') {
         console.log('✅ Sippar API connected:', statusResponse.data?.canister_id);
         
-        // For now, use demo balances as the balance endpoint isn't implemented yet
-        // TODO: Implement actual balance retrieval from Algorand network
-        // ✅ MIGRATED: Use store to set balances (also updates timestamp and loading state)
+        // Get user's derived Algorand address if available
+        if (credentials?.algorandAddress) {
+          try {
+            // Query real balance from our balance monitor endpoint
+            const balanceResponse = await fetch(`https://nuru.network/api/sippar/balance-monitor/${credentials.algorandAddress}`);
+            
+            if (balanceResponse.ok) {
+              const balanceData = await balanceResponse.json();
+              if (balanceData.success) {
+                console.log('✅ Real balance loaded:', balanceData.balance_algo, 'ALGO');
+                // Set real ALGO balance and demo ckALGO balance
+                setBalances(balanceData.balance_algo, 10.5);
+                return;
+              }
+            }
+          } catch (balanceError) {
+            console.warn('⚠️ Failed to load real balance, using demo values:', balanceError);
+          }
+        }
+        
+        // Fallback to demo balances if real balance loading fails
         setBalances(0.0, 10.5);
       } else {
         throw new Error(statusResponse.error || 'API connection failed');

@@ -119,7 +119,9 @@ export class ICPCanisterService {
    */
   async deriveAlgorandAddress(userPrincipal: string): Promise<AlgorandAddress> {
     try {
+      console.log('🔍 deriveAlgorandAddress called with:', userPrincipal);
       const principal = Principal.fromText(userPrincipal);
+      console.log('🔍 Principal.fromText result:', principal.toString());
       const result: SigningResult = await this.actor.derive_algorand_address(principal);
       
       if ('Ok' in result) {
