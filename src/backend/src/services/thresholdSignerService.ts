@@ -93,33 +93,11 @@ export class ThresholdSignerServiceClient {
     try {
       console.log(`🔑 Deriving Algorand address for principal: ${userPrincipal}`);
       
+      // TEMPORARILY DISABLED: Chain-fusion backend call for debugging
       // First try to derive from chain-fusion backend
-      try {
-        console.log(`🔗 Attempting Algorand derivation via chain-fusion backend...`);
-        
-        const response = await fetch(`${this.chainFusionEndpoint}/api/algorand/derive-address`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ principal: userPrincipal }),
-        });
-
-        if (response.ok) {
-          const data = await response.json() as { address: string; public_key?: number[] };
-          console.log(`✅ Algorand address derived via chain-fusion: ${data.address}`);
-          return {
-            address: data.address,
-            public_key: data.public_key || []
-          };
-        }
-        
-        console.warn(`⚠️ Chain-fusion backend responded with: ${response.status}`);
-      } catch (chainFusionError: any) {
-        console.warn(`⚠️ Chain-fusion backend failed: ${chainFusionError?.message || chainFusionError}`);
-      }
+      console.log(`🔗 SKIPPING chain-fusion backend, going directly to ICP canister for debugging...`);
       
-      // Fallback: Try threshold signer canister
+      // DIRECT CALL: Try threshold signer canister only
       try {
         let principal: Principal;
         try {

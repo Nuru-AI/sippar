@@ -8,6 +8,7 @@
 
 import express from 'express';
 import { sipparAIOracleService, initializeOracleService, DEFAULT_INDEXER_CONFIG } from '../services/sipparAIOracleService.js';
+import { oracleMonitoringService } from '../services/oracleMonitoringService.js';
 
 const router = express.Router();
 
@@ -59,18 +60,27 @@ router.post('/initialize', async (req, res) => {
     if (oracleAppId) {
       service.setOracleAppId(parseInt(oracleAppId));
     }
+
+    // Initialize Oracle backend account for callback transactions
+    await service.initializeOracleAccount();
     
-    console.log('Oracle service initialized successfully');
+    console.log('Oracle service and account initialized successfully');
+    
+    const oracleAccount = service.getOracleAccount();
     
     res.json({
       success: true,
-      message: 'Oracle service initialized',
+      message: 'Oracle service and account initialized',
       config: {
         server: config.server,
         port: config.port,
         tokenConfigured: !!config.token
       },
-      oracleAppId: oracleAppId || null
+      oracleAppId: oracleAppId || null,
+      oracleAccount: oracleAccount ? {
+        address: oracleAccount.address,
+        principal: oracleAccount.principal
+      } : null
     });
   } catch (error) {
     console.error('Error initializing oracle service:', error);
@@ -364,6 +374,74 @@ router.get('/docs', (req, res) => {
   };
 
   res.json(docs);
+});
+
+/**
+ * GET /api/v1/ai-oracle/metrics
+ * Get Oracle performance metrics and statistics
+ */
+router.get('/metrics', async (req, res) => {
+  try {
+    const performanceStats = oracleMonitoringService.getPerformanceStats();
+    
+    res.json({
+      success: true,
+      metrics: performanceStats,
+      timestamp: Date.now()
+    });
+  } catch (error) {
+    console.error('Error getting Oracle metrics:', error);
+    res.status(500).json({
+      error: 'Failed to get Oracle metrics',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
+ * GET /api/v1/ai-oracle/health-detailed  
+ * Get detailed Oracle system health status
+ */
+router.get('/health-detailed', async (req, res) => {
+  try {
+    const healthStatus = await oracleMonitoringService.getHealthStatus();
+    
+    res.json({
+      success: true,
+      health: healthStatus,
+      timestamp: Date.now()
+    });
+  } catch (error) {
+    console.error('Error getting Oracle health status:', error);
+    res.status(500).json({
+      error: 'Failed to get Oracle health status',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
+ * GET /api/v1/ai-oracle/errors
+ * Get recent Oracle errors for debugging
+ */
+router.get('/errors', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit as string) || 20;
+    const errors = oracleMonitoringService.getErrorSummary(limit);
+    
+    res.json({
+      success: true,
+      errors,
+      count: errors.length,
+      timestamp: Date.now()
+    });
+  } catch (error) {
+    console.error('Error getting Oracle errors:', error);
+    res.status(500).json({
+      error: 'Failed to get Oracle errors',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
 });
 
 export default router;

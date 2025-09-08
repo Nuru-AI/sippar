@@ -5,6 +5,7 @@ use ic_cdk::api::management_canister::ecdsa::{
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256, Sha512, Sha512_256};
+use sha2::Sha512_256 as ForcedSha512_256;
 use std::collections::HashMap;
 
 #[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
@@ -119,16 +120,32 @@ fn get_canister_status() -> HashMap<String, String> {
     status.insert("canister_type".to_string(), "algorand_threshold_signer".to_string());
     status.insert("supported_curves".to_string(), "secp256k1 (converted to Ed25519)".to_string());
     status.insert("network_support".to_string(), "Algorand Testnet, Mainnet".to_string());
+    
+    // DEBUG: Test SHA implementations to see what's actually happening
+    let test_data = b"test";
+    let sha256_result = Sha256::digest(test_data);
+    let sha512_256_result = Sha512_256::digest(test_data);
+    
+    status.insert("debug_sha256".to_string(), hex::encode(&sha256_result[28..32]));
+    status.insert("debug_sha512_256".to_string(), hex::encode(&sha512_256_result[28..32]));
+    status.insert("debug_sha_equal".to_string(), if sha256_result[28..32] == sha512_256_result[28..32] { "YES".to_string() } else { "NO".to_string() });
+    
     status
 }
 
 /// Convert secp256k1 public key to proper Algorand address format
 /// Follows Algorand's official address generation specification
 fn ed25519_public_key_to_algorand_address(public_key: &[u8]) -> String {
-    // Handle secp256k1 public key format (33 bytes with compression prefix or 32 bytes raw)
+    // Handle secp256k1 public key format
     let raw_public_key = if public_key.len() == 33 {
-        // Remove compression prefix (0x02 or 0x03)
+        // Remove compression prefix (0x02 or 0x03) from 33-byte key
         &public_key[1..]
+    } else if public_key.len() == 32 && (public_key[0] == 0x02 || public_key[0] == 0x03 || public_key[0] == 0x21) {
+        // Remove compression prefix from 32-byte key and pad to 32 bytes
+        let mut padded = [0u8; 32];
+        let remaining = &public_key[1..];
+        padded[32 - remaining.len()..].copy_from_slice(remaining);
+        return algorand_base32_encode_with_checksum(&padded);
     } else if public_key.len() == 32 {
         // Already raw 32-byte key
         public_key
@@ -151,24 +168,21 @@ fn ed25519_public_key_to_algorand_address(public_key: &[u8]) -> String {
     algorand_base32_encode_with_checksum(address_bytes)
 }
 
-/// Encode address bytes with checksum using Algorand's base32 format
-/// Uses the exact algorithm from algosdk: SHA-512/256 hash, then bytes [28:32] as checksum
+/// Encode address bytes with checksum using Algorand's base32 format  
+/// Uses SHA-512/256 algorithm matching Node.js crypto.createHash('sha512-256')
 fn algorand_base32_encode_with_checksum(address_bytes: &[u8]) -> String {
-    // Step 1: Calculate checksum using SHA-512/256 (algosdk's genericHash)
-    let mut checksum_hasher = Sha512_256::new();
-    checksum_hasher.update(address_bytes);
-    let checksum_hash = checksum_hasher.finalize();
+    // Step 1: Calculate SHA-512/256 checksum - FORCE EXPLICIT IMPLEMENTATION
+    let sha512_256_hash = ForcedSha512_256::digest(address_bytes);
     
-    // Step 2: Take bytes [28:32] as checksum (PUBLIC_KEY_LENGTH - ALGORAND_CHECKSUM_BYTE_LENGTH)
-    // PUBLIC_KEY_LENGTH = 32, ALGORAND_CHECKSUM_BYTE_LENGTH = 4, so [32-4:32] = [28:32]
-    let checksum = &checksum_hash[28..32];
+    // Use SHA-512/256 (the correct one)
+    let checksum = &sha512_256_hash[28..32];
     
-    // Step 3: Combine address + checksum (32 + 4 = 36 bytes total)
+    // Step 2: Combine address + checksum (32 + 4 = 36 bytes total)
     let mut address_with_checksum = Vec::with_capacity(36);
     address_with_checksum.extend_from_slice(address_bytes);
     address_with_checksum.extend_from_slice(checksum);
     
-    // Step 4: Encode with base32 using Algorand's alphabet
+    // Step 3: Encode with base32 using Algorand's alphabet
     algorand_base32_encode(&address_with_checksum)
 }
 

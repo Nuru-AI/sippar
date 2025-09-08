@@ -253,6 +253,168 @@ export class AlgorandService {
       throw error;
     }
   }
+
+  /**
+   * Create application call transaction for Oracle callbacks
+   * Used by Oracle system to send AI responses back to smart contracts
+   */
+  async createApplicationCallTransaction({
+    from,
+    appIndex,
+    appArgs = [],
+    accounts = [],
+    foreignApps = [],
+    foreignAssets = [],
+    note,
+    lease,
+    rekeyTo
+  }: {
+    from: string;
+    appIndex: number;
+    appArgs?: Uint8Array[];
+    accounts?: string[];
+    foreignApps?: number[];
+    foreignAssets?: number[];
+    note?: Uint8Array;
+    lease?: Uint8Array;
+    rekeyTo?: string;
+  }): Promise<any> {
+    try {
+      const suggestedParams = await this.getSuggestedParams();
+      
+      const txn = algosdk.makeApplicationCallTxnFromObject({
+        from,
+        appIndex,
+        onComplete: algosdk.OnApplicationComplete.NoOpOC,
+        appArgs,
+        accounts,
+        foreignApps,
+        foreignAssets,
+        suggestedParams,
+        note,
+        lease,
+        rekeyTo
+      });
+
+      console.log(`Created application call transaction for app ${appIndex}`);
+      return txn;
+    } catch (error) {
+      console.error('Error creating application call transaction:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Submit signed transaction to the network
+   */
+  async submitTransaction(signedTxn: Uint8Array): Promise<{ txId: string; confirmedRound?: number }> {
+    try {
+      const { txId } = await this.algodClient.sendRawTransaction(signedTxn).do();
+      console.log(`Transaction submitted: ${txId}`);
+      
+      // Wait for confirmation
+      const confirmedTxn = await algosdk.waitForConfirmation(this.algodClient, txId, 4);
+      console.log(`Transaction confirmed in round: ${confirmedTxn['confirmed-round']}`);
+      
+      return {
+        txId,
+        confirmedRound: confirmedTxn['confirmed-round']
+      };
+    } catch (error) {
+      console.error('Error submitting transaction:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get application information by ID
+   */
+  async getApplicationInfo(appId: number): Promise<any> {
+    try {
+      return await this.algodClient.getApplicationByID(appId).do();
+    } catch (error) {
+      console.error(`Error getting application info for ${appId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Search for application transactions using indexer
+   */
+  async getApplicationTransactions(
+    appId: number, 
+    notePrefix?: string, 
+    minRound?: number, 
+    limit: number = 100
+  ): Promise<any[]> {
+    try {
+      let query = this.indexerClient
+        .searchForTransactions()
+        .applicationID(appId);
+
+      if (notePrefix) {
+        query = query.notePrefix(Buffer.from(notePrefix).toString('base64'));
+      }
+
+      if (minRound) {
+        query = query.minRound(minRound);
+      }
+
+      query = query.limit(limit);
+
+      const response = await query.do();
+      return response.transactions || [];
+    } catch (error) {
+      console.error(`Error searching application transactions for app ${appId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Format AI response data for Algorand application arguments
+   */
+  formatAIResponseForContract(aiResponse: {
+    text: string;
+    confidence?: number;
+    processingTimeMs?: number;
+    requestId?: string;
+  }): Uint8Array[] {
+    try {
+      const args: Uint8Array[] = [];
+
+      // Method name for callback
+      args.push(new Uint8Array(Buffer.from('ai_response_callback')));
+
+      // Request ID
+      if (aiResponse.requestId) {
+        args.push(new Uint8Array(Buffer.from(aiResponse.requestId)));
+      }
+
+      // AI response text (truncate if too long for Algorand)
+      const maxTextLength = 1000; // Algorand app arg limit consideration
+      const responseText = aiResponse.text.length > maxTextLength 
+        ? aiResponse.text.substring(0, maxTextLength) + '...'
+        : aiResponse.text;
+      args.push(new Uint8Array(Buffer.from(responseText)));
+
+      // Confidence score (as integer 0-100)
+      if (aiResponse.confidence !== undefined) {
+        const confidenceInt = Math.round(aiResponse.confidence * 100);
+        args.push(new Uint8Array(Buffer.from(confidenceInt.toString())));
+      }
+
+      // Processing time in milliseconds
+      if (aiResponse.processingTimeMs !== undefined) {
+        args.push(new Uint8Array(Buffer.from(aiResponse.processingTimeMs.toString())));
+      }
+
+      console.log(`Formatted AI response for contract: ${args.length} arguments`);
+      return args;
+    } catch (error) {
+      console.error('Error formatting AI response for contract:', error);
+      throw error;
+    }
+  }
 }
 
 // Default service instance for testnet

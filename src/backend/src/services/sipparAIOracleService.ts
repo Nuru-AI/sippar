@@ -14,6 +14,9 @@
 
 import algosdk from 'algosdk';
 import { SipparAIService, AIResponse } from './sipparAIService.js';
+import { thresholdSignerService } from './thresholdSignerService.js';
+import { algorandService } from './algorandService.js';
+import { oracleMonitoringService } from './oracleMonitoringService.js';
 
 export interface AlgorandOracleRequest {
   transactionId: string;
@@ -46,6 +49,7 @@ export class SipparAIOracleService extends SipparAIService {
   private isMonitoring: boolean = false;
   private monitoringInterval: NodeJS.Timeout | null = null;
   private lastProcessedRound: number = 0;
+  private oracleAccount: { address: string; publicKey: number[]; principal: string } | null = null;
   
   // Oracle-specific constants
   private readonly ORACLE_NOTE_PREFIX = 'sippar-ai-oracle';
@@ -72,6 +76,54 @@ export class SipparAIOracleService extends SipparAIService {
   setOracleAppId(appId: number): void {
     this.oracleAppId = appId;
     console.log(`Oracle monitoring set for application ID: ${appId}`);
+  }
+
+  /**
+   * Initialize Oracle backend account using threshold signatures
+   * This account will be used to sign callback transactions
+   */
+  async initializeOracleAccount(): Promise<void> {
+    try {
+      console.log('Initializing Oracle backend account...');
+      
+      // Use a fixed deterministic principal for the Oracle backend (valid ICP Principal format)
+      const oraclePrincipal = '2vxsx-fae'; // Valid ICP Principal for Oracle backend
+      
+      // Derive Algorand address using threshold signatures
+      const derivedAddress = await thresholdSignerService.deriveAlgorandAddress(oraclePrincipal);
+      
+      this.oracleAccount = {
+        address: derivedAddress.address,
+        publicKey: Array.from(derivedAddress.public_key),
+        principal: oraclePrincipal
+      };
+
+      console.log(`Oracle account initialized: ${this.oracleAccount.address}`);
+      console.log(`Oracle principal: ${oraclePrincipal}`);
+      
+      // Check account balance
+      try {
+        const accountInfo = await algorandService.getAccountInfo(this.oracleAccount.address);
+        console.log(`Oracle account balance: ${accountInfo.balance} ALGO`);
+        
+        if (accountInfo.balance < 0.1) {
+          console.warn('Oracle account has low balance. Consider funding for transaction fees.');
+        }
+      } catch (error) {
+        console.warn('Oracle account not yet funded. Will need funding for callback transactions.');
+      }
+      
+    } catch (error) {
+      console.error('Failed to initialize Oracle account:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get Oracle account information
+   */
+  getOracleAccount(): { address: string; publicKey: number[]; principal: string } | null {
+    return this.oracleAccount;
   }
 
   /**
@@ -338,37 +390,164 @@ export class SipparAIOracleService extends SipparAIService {
   }
 
   /**
-   * Send callback response to smart contract
+   * Send callback response to smart contract with monitoring and retry logic
    */
   private async sendCallbackResponse(
     request: AlgorandOracleRequest, 
-    aiResponse: OracleAIResponse
+    aiResponse: OracleAIResponse,
+    retryCount: number = 0
   ): Promise<void> {
+    const startTime = Date.now();
+    const maxRetries = 3;
+    
     try {
-      console.log(`Sending callback response to app ${request.callbackAppId}`);
+      console.log(`Sending callback response to app ${request.callbackAppId} (attempt ${retryCount + 1})`);
       console.log(`Callback method: ${request.callbackMethod}`);
       console.log(`AI Response: ${aiResponse.formattedForContract.substring(0, 100)}...`);
 
-      // TODO: Implement actual Algorand transaction to call callback contract
-      // This would require:
-      // 1. Create application call transaction
-      // 2. Sign transaction with backend account
-      // 3. Submit to Algorand network
-      // 4. Wait for confirmation
+      // Ensure Oracle account is initialized
+      if (!this.oracleAccount) {
+        const error = 'Oracle account not initialized. Call initializeOracleAccount() first.';
+        oracleMonitoringService.recordFailedRequest(
+          request.transactionId, 
+          'TRANSACTION_CREATION', 
+          error, 
+          { callbackAppId: request.callbackAppId }, 
+          retryCount
+        );
+        throw new Error(error);
+      }
 
-      // For now, just log the callback details
-      console.log('Callback response prepared:', {
+      // 1. Create application call transaction
+      let transaction;
+      try {
+        const appArgs = algorandService.formatAIResponseForContract({
+          text: aiResponse.formattedForContract,
+          confidence: aiResponse.confidenceScore,
+          processingTimeMs: aiResponse.processingTimeMs,
+          requestId: request.transactionId
+        });
+
+        transaction = await algorandService.createApplicationCallTransaction({
+          from: this.oracleAccount.address,
+          appIndex: request.callbackAppId,
+          appArgs,
+          note: new Uint8Array(Buffer.from(`sippar-oracle-callback-${request.transactionId}`))
+        });
+
+        console.log(`Created callback transaction for app ${request.callbackAppId}`);
+      } catch (error) {
+        oracleMonitoringService.recordFailedRequest(
+          request.transactionId, 
+          'TRANSACTION_CREATION', 
+          error instanceof Error ? error.message : 'Transaction creation failed', 
+          { callbackAppId: request.callbackAppId, oracleAccount: this.oracleAccount.address }, 
+          retryCount
+        );
+        throw error;
+      }
+
+      // 2. Sign transaction with backend account using threshold signatures
+      let signedTransaction;
+      try {
+        const txnBytes = transaction.toByte();
+        signedTransaction = await thresholdSignerService.signAlgorandTransaction(
+          this.oracleAccount.principal,
+          txnBytes
+        );
+
+        console.log(`Transaction signed: ${signedTransaction.signed_tx_id}`);
+      } catch (error) {
+        oracleMonitoringService.recordFailedRequest(
+          request.transactionId, 
+          'SIGNING', 
+          error instanceof Error ? error.message : 'Transaction signing failed', 
+          { principal: this.oracleAccount.principal }, 
+          retryCount
+        );
+        
+        // Retry signing errors as they might be transient ICP issues
+        if (retryCount < maxRetries) {
+          console.log(`Retrying signing after error: ${error}`);
+          await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // Exponential backoff
+          return this.sendCallbackResponse(request, aiResponse, retryCount + 1);
+        }
+        
+        throw error;
+      }
+
+      // 3. Submit to Algorand network and 4. Wait for confirmation  
+      let result;
+      try {
+        const signatureBytes = Array.isArray(signedTransaction.signature) 
+          ? new Uint8Array(signedTransaction.signature)
+          : signedTransaction.signature;
+        result = await algorandService.submitTransaction(signatureBytes);
+
+        console.log(`Callback transaction confirmed: ${result.txId} in round ${result.confirmedRound}`);
+      } catch (error) {
+        oracleMonitoringService.recordFailedRequest(
+          request.transactionId, 
+          'NETWORK_SUBMISSION', 
+          error instanceof Error ? error.message : 'Network submission failed', 
+          { txId: signedTransaction.signed_tx_id }, 
+          retryCount
+        );
+        
+        // Retry network errors as they might be transient
+        if (retryCount < maxRetries) {
+          console.log(`Retrying network submission after error: ${error}`);
+          await new Promise(resolve => setTimeout(resolve, 2000 * (retryCount + 1))); // Longer backoff for network
+          return this.sendCallbackResponse(request, aiResponse, retryCount + 1);
+        }
+        
+        throw error;
+      }
+
+      // Record successful callback
+      const totalTime = Date.now() - startTime;
+      oracleMonitoringService.recordSuccessfulRequest(
+        request.transactionId, 
+        totalTime, 
+        aiResponse.processingTimeMs, 
+        result.confirmedRound ? (result.confirmedRound * 3300) : 0 // Estimate confirmation time
+      );
+
+      // Log success details
+      console.log('Callback response delivered successfully:', {
         requestId: request.transactionId,
         callbackAppId: request.callbackAppId,
-        callbackMethod: request.callbackMethod,
+        callbackTxId: result.txId,
+        confirmedRound: result.confirmedRound,
         confidence: aiResponse.confidenceScore,
-        processingTime: aiResponse.processingTimeMs
+        processingTime: aiResponse.processingTimeMs,
+        totalTime,
+        retryCount
       });
 
-      console.log(`Oracle request ${request.transactionId} processed successfully`);
-
     } catch (error) {
-      console.error('Error sending callback response:', error);
+      console.error(`Error sending callback response (attempt ${retryCount + 1}):`, error);
+      
+      // Log detailed error for debugging
+      console.error('Callback error details:', {
+        requestId: request.transactionId,
+        callbackAppId: request.callbackAppId,
+        oracleAccount: this.oracleAccount?.address,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        retryCount
+      });
+      
+      // Final failure after all retries
+      if (retryCount >= maxRetries) {
+        oracleMonitoringService.recordFailedRequest(
+          request.transactionId, 
+          'CONFIRMATION', 
+          'Max retries exceeded', 
+          { originalError: error instanceof Error ? error.message : 'Unknown error' }, 
+          retryCount
+        );
+      }
+      
       throw error;
     }
   }
