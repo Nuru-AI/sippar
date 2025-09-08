@@ -305,6 +305,33 @@ export class AlgorandService {
   }
 
   /**
+   * Create a payment transaction
+   */
+  async createPaymentTransaction(
+    fromAddress: string,
+    toAddress: string,
+    amount: number,
+    note?: string
+  ): Promise<algosdk.Transaction> {
+    try {
+      const suggestedParams = await this.getSuggestedParams();
+      
+      const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+        from: fromAddress,
+        to: toAddress,
+        amount: Math.floor(amount * 1_000_000), // Convert ALGO to microALGO
+        suggestedParams,
+        note: note ? new TextEncoder().encode(note) : undefined
+      });
+      
+      return txn;
+    } catch (error) {
+      console.error('Error creating payment transaction:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Submit signed transaction to the network
    */
   async submitTransaction(signedTxn: Uint8Array): Promise<{ txId: string; confirmedRound?: number }> {

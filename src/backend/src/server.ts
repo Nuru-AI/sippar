@@ -463,6 +463,288 @@ app.get('/algorand/deposits/:address', async (req, res) => {
   }
 });
 
+// Real Chain Fusion: Actual Algorand Transaction Control
+// TEST ENDPOINT: Try submitting working AlgoSDK transaction
+app.post('/test-algosdk-submit', async (req, res) => {
+  try {
+    // Create funded test account (this won't work but will test our submission method)
+    const testAccount = algosdk.generateAccount();
+    
+    const suggestedParams = await algorandService.getSuggestedParams();
+    const testTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+      from: testAccount.addr,
+      to: testAccount.addr,
+      amount: 100000,
+      suggestedParams
+    });
+    
+    // Sign with AlgoSDK
+    const signedTxn = testTxn.signTxn(testAccount.sk);
+    
+    // Try to submit (should fail due to no funds, but we'll see the error type)
+    try {
+      const result = await algorandService.submitTransaction(signedTxn);
+      res.json({ success: true, result });
+    } catch (submitError) {
+      res.json({ 
+        success: false, 
+        error: submitError instanceof Error ? submitError.message : 'Submit error',
+        note: "This tests our submission method with a known good signature"
+      });
+    }
+    
+  } catch (error) {
+    res.status(500).json({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+  }
+});
+
+// TEST ENDPOINT: Debug signature verification
+app.post('/debug-signature', async (req, res) => {
+  try {
+    const { principal } = req.body;
+    
+    // Get custody info
+    const custodyInfo = await icpCanisterService.deriveAlgorandAddress(principal);
+    
+    // Create a simple test transaction
+    const suggestedParams = await algorandService.getSuggestedParams();
+    const testTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+      from: custodyInfo.address,
+      to: custodyInfo.address,
+      amount: 100000, // 0.1 ALGO
+      suggestedParams
+    });
+    
+    // Get transaction bytes that should be signed
+    const txnBytes = testTxn.bytesToSign();
+    console.log(`Debug: Transaction bytes: ${txnBytes.length} bytes`);
+    console.log(`Debug: First 32 bytes: [${Array.from(txnBytes.slice(0, 32))}]`);
+    
+    // Get raw transaction encoding
+    const rawTxnEncoding = algosdk.encodeObj(testTxn.get_obj_for_encoding());
+    console.log(`Debug: Raw transaction encoding: ${rawTxnEncoding.length} bytes`);
+    console.log(`Debug: Raw first 32 bytes: [${Array.from(rawTxnEncoding.slice(0, 32))}]`);
+    
+    // Sign with ICP canister
+    const signResult = await icpCanisterService.signAlgorandTransaction(principal, txnBytes);
+    console.log(`Debug: ICP signature: ${signResult.signature.length} bytes`);
+    
+    res.json({
+      success: true,
+      txn_bytes_length: txnBytes.length,
+      raw_encoding_length: rawTxnEncoding.length,
+      signature_length: signResult.signature.length,
+      bytes_match: Buffer.compare(txnBytes, rawTxnEncoding) === 0,
+      debug: "Check if transaction bytes match raw encoding"
+    });
+    
+  } catch (error) {
+    console.error('Debug signature error:', error);
+    res.status(500).json({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+  }
+});
+
+// TEST ENDPOINT: Verify address derivation correctness
+app.post('/test-address-derivation', async (req, res) => {
+  try {
+    const { principal } = req.body;
+    
+    // Get custody info from ICP canister
+    const custodyInfo = await icpCanisterService.deriveAlgorandAddress(principal);
+    console.log(`ICP derived address: ${custodyInfo.address}`);
+    console.log(`ICP public key length: ${custodyInfo.public_key.length} bytes`);
+    console.log(`ICP public key first 8 bytes: ${Array.from(custodyInfo.public_key.slice(0, 8))}`);
+    
+    // Try to manually derive Algorand address from the public key
+    let manualAddress: string;
+    try {
+      // If it's a 33-byte secp256k1 key, remove the prefix
+      const keyForAddress = custodyInfo.public_key.length === 33 
+        ? custodyInfo.public_key.slice(1) 
+        : custodyInfo.public_key;
+      
+      // Use AlgoSDK to derive address from public key
+      manualAddress = algosdk.encodeAddress(keyForAddress);
+      console.log(`Manually derived address: ${manualAddress}`);
+    } catch (error) {
+      manualAddress = `Error: ${error instanceof Error ? error.message : 'Unknown'}`;
+    }
+    
+    // Check if addresses match
+    const addressesMatch = custodyInfo.address === manualAddress;
+    console.log(`Addresses match: ${addressesMatch}`);
+    
+    res.json({
+      success: true,
+      icp_derived_address: custodyInfo.address,
+      manual_derived_address: manualAddress,
+      addresses_match: addressesMatch,
+      public_key_length: custodyInfo.public_key.length,
+      public_key_format: custodyInfo.public_key.length === 33 ? "secp256k1 compressed" : 
+                          custodyInfo.public_key.length === 32 ? "Ed25519" : "unknown",
+      debug_info: "This tests if ICP address derivation matches AlgoSDK address derivation"
+    });
+    
+  } catch (error) {
+    console.error('Test address derivation error:', error);
+    res.status(500).json({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+  }
+});
+
+app.post('/chain-fusion/transfer-algo', async (req, res) => {
+  try {
+    console.log('🔥 Real Chain Fusion: ALGO Transfer Request');
+    const { principal, toAddress, amount, note } = req.body;
+    
+    // Validate inputs
+    if (!principal || !toAddress || !amount) {
+      return res.status(400).json({
+        success: false,
+        error: 'principal, toAddress, and amount are required'
+      });
+    }
+    
+    if (!algosdk.isValidAddress(toAddress)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid destination address format'
+      });
+    }
+    
+    // Safety limits for real transactions
+    const MAX_TRANSFER_AMOUNT = 5.0; // 5 ALGO max for safety
+    const MIN_TRANSFER_AMOUNT = 0.001; // 0.001 ALGO minimum
+    
+    if (amount > MAX_TRANSFER_AMOUNT) {
+      return res.status(400).json({
+        success: false,
+        error: `Maximum transfer amount is ${MAX_TRANSFER_AMOUNT} ALGO`,
+        requested_amount: amount,
+        max_allowed: MAX_TRANSFER_AMOUNT
+      });
+    }
+    
+    if (amount < MIN_TRANSFER_AMOUNT) {
+      return res.status(400).json({
+        success: false,
+        error: `Minimum transfer amount is ${MIN_TRANSFER_AMOUNT} ALGO`,
+        requested_amount: amount,
+        min_required: MIN_TRANSFER_AMOUNT
+      });
+    }
+    
+    console.log(`🏗️ Chain Fusion Transfer: ${amount} ALGO from ${principal} to ${toAddress}`);
+    
+    // Step 1: Derive custody address from principal
+    const custodyInfo = await icpCanisterService.deriveAlgorandAddress(principal);
+    console.log(`📍 Custody Address: ${custodyInfo.address}`);
+    
+    // Step 2: Check custody address balance
+    const custodyAccount = await algorandService.getAccountInfo(custodyInfo.address);
+    console.log(`💰 Custody Balance: ${custodyAccount.balance} ALGO`);
+    
+    if (custodyAccount.balance < amount + 0.001) { // +0.001 for fee
+      return res.status(400).json({
+        success: false,
+        error: 'Insufficient balance in custody address',
+        custody_balance: custodyAccount.balance,
+        requested_amount: amount,
+        required_amount: amount + 0.001
+      });
+    }
+    
+    // Step 3: Create real Algorand payment transaction
+    const transferNote = note || `Chain Fusion Transfer via ICP Threshold Signatures - ${Date.now()}`;
+    const paymentTxn = await algorandService.createPaymentTransaction(
+      custodyInfo.address,
+      toAddress,
+      amount,
+      transferNote
+    );
+    
+    console.log('📋 Transaction Created:', {
+      from: paymentTxn.from.toString(),
+      to: paymentTxn.to.toString(),
+      amount: paymentTxn.amount,
+      fee: paymentTxn.fee
+    });
+    
+    // Step 4: Get the actual public key that will sign
+    console.log(`🔑 Custody public key: ${Array.from(custodyInfo.public_key).slice(0, 8)}... (${custodyInfo.public_key.length} bytes)`);
+    
+    // Final attempt: Use original bytesToSign() - maybe it was correct
+    const bytesToSign = paymentTxn.bytesToSign();
+    console.log(`🔐 Using original bytesToSign(): ${bytesToSign.length} bytes`);
+    console.log(`🔐 First 8 bytes: [${Array.from(bytesToSign.slice(0, 8))}]`);
+    
+    // Check what the canister status shows about Ed25519 conversion
+    console.log(`🔐 Canister claims: "secp256k1 (converted to Ed25519)"`);
+    console.log(`🔐 Debug SHA equal: NO (using SHA-256 instead of SHA-512/256)`);
+    
+    // Try one more time with the original approach but double-check signature format
+    const signedResult = await icpCanisterService.signAlgorandTransaction(principal, bytesToSign);
+    console.log(`✅ Signature generated: ${Array.from(signedResult.signature.slice(0, 8))}... (${signedResult.signature.length} bytes)`);
+    
+    // Create signed transaction with the correct signature
+    const signature = new Uint8Array(signedResult.signature);
+    console.log(`📏 Signature: ${signature.length} bytes`);
+    
+    const signedTxnData = {
+      sig: signature,
+      txn: paymentTxn.get_obj_for_encoding()
+    };
+    
+    const encodedSignedTxn = algosdk.encodeObj(signedTxnData);
+    console.log(`📦 Signed transaction: ${encodedSignedTxn.length} bytes`);
+    
+    // Step 6: Submit to Algorand network
+    console.log('🚀 Broadcasting transaction to Algorand testnet...');
+    const submissionResult = await algorandService.submitTransaction(encodedSignedTxn);
+    
+    console.log('🎉 REAL ALGORAND TRANSACTION CONFIRMED!', {
+      txId: submissionResult.txId,
+      confirmedRound: submissionResult.confirmedRound
+    });
+    
+    // Step 7: Verify balance changes
+    const newCustodyBalance = await algorandService.getAccountInfo(custodyInfo.address);
+    const destinationBalance = await algorandService.getAccountInfo(toAddress);
+    
+    res.json({
+      success: true,
+      chain_fusion_proven: true,
+      real_transaction: true,
+      algorand_tx_id: submissionResult.txId,
+      confirmed_round: submissionResult.confirmedRound,
+      threshold_signature_id: signedResult.signed_tx_id,
+      transfer_details: {
+        from: custodyInfo.address,
+        to: toAddress,
+        amount: amount,
+        note: transferNote
+      },
+      balance_changes: {
+        custody_before: custodyAccount.balance,
+        custody_after: newCustodyBalance.balance,
+        destination_after: destinationBalance.balance,
+        algo_moved: custodyAccount.balance - newCustodyBalance.balance
+      },
+      icp_canister: icpCanisterService.getCanisterId(),
+      proof_of_control: 'Real ALGO moved via ICP threshold signatures',
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('❌ Chain Fusion transfer failed:', error);
+    res.status(500).json({
+      success: false,
+      chain_fusion_proven: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Frontend compatibility endpoints (Phase 3 adaptations)
 app.get('/api/v1/threshold/status', async (req, res) => {
   try {
@@ -629,6 +911,7 @@ app.use('*', (req, res) => {
       'GET /canister/test',
       'GET /algorand/account/:address',
       'GET /algorand/deposits/:address',
+      'POST /chain-fusion/transfer-algo',
       'GET /api/v1/threshold/status',
       'POST /api/v1/threshold/derive-address',
       'POST /api/v1/sippar/mint/prepare',
