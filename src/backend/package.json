@@ -6,10 +6,10 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "dev:phase3": "tsx watch src/server-phase3.ts",
+    "dev:phase1-2": "tsx watch src/server-phase1-2.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "start:phase3": "node dist/server-phase3.js",
+    "start:phase1-2": "node dist/server-phase1-2.js",
     "test": "jest",
     "type-check": "tsc --noEmit"
   },

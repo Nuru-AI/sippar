@@ -189,8 +189,8 @@ export class ICPCanisterService {
 
 // Export singleton instance for the deployed canister
 export const icpCanisterService = new ICPCanisterService(
-  'bkyz2-fmaaa-aaaaa-qaaaq-cai', // Deployed canister ID
-  'http://127.0.0.1:4943' // Local ICP replica
+  'vj7ly-diaaa-aaaae-abvoq-cai', // Production threshold signer canister ID
+  'https://ic0.app' // ICP mainnet
 );
 
 export default icpCanisterService;
