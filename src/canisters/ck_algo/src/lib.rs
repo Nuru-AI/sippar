@@ -1579,7 +1579,7 @@ fn upgrade_user_tier(tier: UserTier) -> Result<String, String> {
     let caller = caller();
     
     // Get tier configuration
-    let tier_config = TIER_CONFIGS.with(|configs| {
+    let _tier_config = TIER_CONFIGS.with(|configs| {
         configs.borrow().get(&tier).cloned()
     }).ok_or("Invalid tier")?;
     
@@ -3968,7 +3968,7 @@ fn get_revenue_analytics_dashboard() -> String {
         PERFORMANCE_METRICS.with(|metrics| {
             metrics.borrow().get("system_health").cloned().unwrap_or(95.0)
         }),
-        COMPLIANCE_FRAMEWORK_CONFIG.with(|config| {
+        COMPLIANCE_FRAMEWORK_CONFIG.with(|_config| {
             // Calculate compliance score based on recent audit entries
             90.5 // Simplified calculation
         }),
@@ -4062,7 +4062,7 @@ async fn create_enhanced_audit_entry(
 
 async fn perform_compliance_checks(
     operation_type: &AuditOperationType,
-    principal: &Principal,
+    _principal: &Principal,
     financial_impact: Option<&Nat>,
 ) -> Result<Vec<ComplianceCheck>, String> {
     let mut checks = Vec::new();
@@ -4354,6 +4354,37 @@ fn get_enhanced_audit_summary(
 // ============================================================================
 // COMPLIANCE FRAMEWORK FOUNDATION (Day 14)
 // ============================================================================
+
+#[update]
+async fn initialize_compliance_framework() -> Result<String, String> {
+    let caller_principal = caller();
+    
+    // Only allow Enterprise users to initialize compliance framework
+    let user_tier = USER_ACCOUNTS.with(|accounts| {
+        accounts.borrow().get(&caller_principal)
+            .map(|account| account.tier.clone())
+            .unwrap_or(UserTier::Free)
+    });
+    
+    if user_tier != UserTier::Enterprise {
+        return Err("Only Enterprise users can initialize compliance framework".to_string());
+    }
+
+    COMPLIANCE_FRAMEWORK_CONFIG.with(|config| {
+        let mut config_ref = config.borrow_mut();
+        config_ref.last_updated = time();
+        config_ref.compliance_thresholds.insert(ComplianceCheckType::AntiMoneyLaundering, 95.0);
+        config_ref.compliance_thresholds.insert(ComplianceCheckType::DataProtection, 100.0);
+        config_ref.compliance_thresholds.insert(ComplianceCheckType::AIEthics, 90.0);
+        config_ref.compliance_thresholds.insert(ComplianceCheckType::CrossBorderTransfer, 98.0);
+        config_ref.compliance_thresholds.insert(ComplianceCheckType::KnowYourCustomer, 99.0);
+        config_ref.compliance_thresholds.insert(ComplianceCheckType::FinancialRegulation, 97.0);
+        config_ref.compliance_thresholds.insert(ComplianceCheckType::SmartContractAudit, 95.0);
+        config_ref.compliance_thresholds.insert(ComplianceCheckType::AccessControl, 100.0);
+    });
+
+    Ok("Compliance framework initialized successfully".to_string())
+}
 
 #[update]
 fn configure_compliance_framework(

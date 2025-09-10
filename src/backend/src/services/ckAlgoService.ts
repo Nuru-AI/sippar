@@ -17,6 +17,7 @@ const ckAlgoIdl = ({ IDL }: any) => {
     'icrc1_transfer': IDL.Func([IDL.Principal, IDL.Nat], [IDL.Variant({ 'Ok': IDL.Nat, 'Err': IDL.Text })], []),
     'mint_ck_algo': IDL.Func([IDL.Principal, IDL.Nat], [IDL.Variant({ 'Ok': IDL.Nat, 'Err': IDL.Text })], []),
     'redeem_ck_algo': IDL.Func([IDL.Nat, IDL.Text], [IDL.Variant({ 'Ok': IDL.Text, 'Err': IDL.Text })], []),
+    'admin_burn_from': IDL.Func([IDL.Principal, IDL.Nat], [IDL.Variant({ 'Ok': IDL.Nat, 'Err': IDL.Text })], []),
     'get_reserves': IDL.Func([], [IDL.Nat, IDL.Nat, IDL.Float32], ['query']),
     'get_caller': IDL.Func([], [IDL.Principal], ['query'])
   });
@@ -123,7 +124,7 @@ export class CkAlgoService {
   }
 
   /**
-   * Burn (redeem) ckALGO tokens - TEMPORARY SIMULATION
+   * Burn (redeem) ckALGO tokens by transferring to canister (burn address)
    * @param principal - User's Internet Identity principal (the token owner)
    * @param microAlgos - Amount in microckALGO (6 decimals) to burn  
    * @param destinationAddress - Algorand address to send unlocked ALGO to
@@ -131,7 +132,7 @@ export class CkAlgoService {
    */
   async burnCkAlgo(principal: string, microAlgos: number, destinationAddress: string) {
     try {
-      console.log(`🔥 ATTEMPTING to burn ${microAlgos} microckALGO from ${principal} (destination: ${destinationAddress})`);
+      console.log(`🔥 Burning ${microAlgos} microckALGO from ${principal} by transferring to canister (burn)`);
       
       // First, check what the actual balance is
       const currentBalance = await this.getBalance(principal);
@@ -142,18 +143,32 @@ export class CkAlgoService {
         throw new Error(`Insufficient balance: User has ${currentBalance} ckALGO but trying to burn ${requestedAmount} ckALGO`);
       }
       
-      // PROBLEM: We can't call the canister as the user from the backend without their private key
-      // For now, let's simulate the burn operation and focus on the ALGO unlocking part
-      console.log(`⚠️ SIMULATION: Would burn ${requestedAmount} ckALGO (backend can't authenticate as user)`);
+      // Use admin function to burn tokens directly from user's balance
+      const principalObj = Principal.fromText(principal);
       
-      return {
-        success: true,
-        amount_burned: requestedAmount,
-        raw_amount: microAlgos,
-        principal,
-        tx_id: `SIMULATED-BURN-${Date.now()}`,
-        note: "SIMULATION: Real ckALGO burning requires frontend-to-canister call"
-      };
+      console.log(`🔥 Admin burning ${microAlgos} microckALGO from ${principal} balance`);
+      
+      const burnResult = await this.actor.admin_burn_from(principalObj, BigInt(microAlgos));
+      console.log('✅ ckALGO admin burn result:', burnResult);
+      
+      // Handle Rust Result type: { Ok: value } or { Err: error }
+      if (burnResult && typeof burnResult === 'object' && 'Ok' in burnResult) {
+        const burnedAmount = microAlgos / 1_000_000; // Convert to ALGO
+        console.log(`✅ Successfully burned ${burnedAmount} ckALGO via admin function`);
+        return {
+          success: true,
+          amount_burned: burnedAmount,
+          raw_amount: microAlgos,
+          principal,
+          tx_id: `ADMIN-BURN-${(burnResult as any).Ok}`,
+          method: "admin_burn_from"
+        };
+      } else if (burnResult && typeof burnResult === 'object' && 'Err' in burnResult) {
+        console.error('❌ ckALGO admin burning failed:', (burnResult as any).Err);
+        throw new Error(`ckALGO burning failed: ${(burnResult as any).Err}`);
+      } else {
+        throw new Error('Unknown result format from ckALGO canister admin burn');
+      }
       
     } catch (error) {
       console.error('❌ Failed to burn ckALGO:', error);
