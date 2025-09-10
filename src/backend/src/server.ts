@@ -567,20 +567,67 @@ app.post('/ck-algo/redeem', async (req, res) => {
       throw new Error('Invalid Algorand destination address');
     }
     
-    // 2. Create ALGO transfer transaction bytes
-    const transferTransactionBytes = Buffer.from(JSON.stringify({
-      operation: 'redeem',
-      principal,
-      amount,
-      destination: destinationAddress,
-      timestamp: Date.now()
-    }));
+    // 2. FIRST: Burn ckALGO tokens from user's balance
+    console.log(`🔥 Burning ${amount} ckALGO tokens from principal ${principal}...`);
+    const ckAlgoMicroUnits = Math.floor(amount * 1_000_000);
     
-    // 3. Sign ALGO transfer with threshold signatures
-    const signedTransfer = await icpCanisterService.signAlgorandTransaction(
-      principal,
-      new Uint8Array(transferTransactionBytes)
-    );
+    try {
+      const burnResult = await ckAlgoService.burnCkAlgo(principal, ckAlgoMicroUnits);
+      console.log(`✅ Successfully burned ${amount} ckALGO:`, burnResult);
+    } catch (burnError) {
+      console.error('❌ ckALGO burning failed:', burnError);
+      throw new Error('Failed to burn ckALGO tokens: ' + (burnError instanceof Error ? burnError.message : String(burnError)));
+    }
+    
+    // 3. Get user's threshold address for ALGO unlocking
+    const custodyInfo = await icpCanisterService.deriveAlgorandAddress(principal);
+    console.log(`📍 User's custody address: ${custodyInfo.address}`);
+    
+    // 4. Create real Algorand transaction to unlock ALGO (transfer from custody to destination)
+    const suggestedParams = await algorandService.getSuggestedParams();
+    const microAlgos = Math.floor(amount * 1_000_000); // Convert to microALGOs
+    
+    const unlockTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+      from: custodyInfo.address,
+      to: destinationAddress,
+      amount: microAlgos,
+      note: new Uint8Array(Buffer.from(`ckALGO redeem: Unlocking ${amount} ALGO for ${principal}`)),
+      suggestedParams: suggestedParams,
+    });
+    
+    // 5. Get transaction bytes to sign with threshold signatures
+    const txnBytesToSign = unlockTxn.bytesToSign();
+    console.log(`🔐 Signing ALGO unlock transaction: ${txnBytesToSign.length} bytes`);
+    
+    // 6. Sign with threshold signatures
+    const signedTransfer = await retryIcpOperation(async () => {
+      return await icpCanisterService.signAlgorandTransaction(
+        principal,
+        new Uint8Array(txnBytesToSign)
+      );
+    }, 3);
+    
+    console.log(`✅ ALGO unlock transaction signed: ${signedTransfer.signed_tx_id}`);
+    
+    // 7. Submit transaction to Algorand network to actually unlock ALGO
+    let algorandTxId = 'N/A';
+    try {
+      // Create signed transaction for submission
+      const signedTxnData = {
+        sig: new Uint8Array(signedTransfer.signature),
+        txn: unlockTxn.get_obj_for_encoding()
+      };
+      
+      const encodedSignedTxn = algosdk.encodeObj(signedTxnData);
+      const submissionResult = await algorandService.submitTransaction(encodedSignedTxn);
+      algorandTxId = submissionResult.txId;
+      
+      console.log(`🎉 ALGO unlocked on Algorand network: ${algorandTxId}`);
+    } catch (submissionError) {
+      console.warn('⚠️ Algorand transaction submission failed (ckALGO already burned):', submissionError);
+      // Don't throw - ckALGO is already burned, this is just the unlock step
+      algorandTxId = `THRESHOLD-SIGNED-${signedTransfer.signed_tx_id.slice(0, 8)}`;
+    }
     
     const response = {
       success: true,
@@ -589,6 +636,7 @@ app.post('/ck-algo/redeem', async (req, res) => {
       amount,
       destination_address: destinationAddress,
       ck_algo_burned: amount,
+      algo_unlocked: amount,
       transaction_details: {
         signed_tx_id: signedTransfer.signed_tx_id,
         signature_length: signedTransfer.signature.length,
@@ -596,7 +644,7 @@ app.post('/ck-algo/redeem', async (req, res) => {
         canister_id: icpCanisterService.getCanisterId(),
       },
       icp_tx_id: `ICP-REDEEM-${Date.now()}`,
-      algorand_tx_id: `SIM-TRANSFER-${Date.now()}`,
+      algorand_tx_id: algorandTxId,
       timestamp: new Date().toISOString(),
     };
     

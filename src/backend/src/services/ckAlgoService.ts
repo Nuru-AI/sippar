@@ -123,6 +123,44 @@ export class CkAlgoService {
   }
 
   /**
+   * Burn (redeem) ckALGO tokens from a user's principal
+   * @param principal - User's Internet Identity principal (string)
+   * @param microAlgos - Amount in microckALGO (6 decimals) to burn
+   * @returns Redemption result with success/error info
+   */
+  async burnCkAlgo(principal: string, microAlgos: number) {
+    try {
+      console.log(`🔥 Burning ${microAlgos} microckALGO from principal: ${principal}`);
+      
+      const result = await this.actor.redeem_ck_algo(BigInt(microAlgos), principal);
+      
+      console.log('✅ ckALGO burn result from canister:', result);
+      
+      // Handle Rust Result type: { Ok: value } or { Err: error }
+      if ('Ok' in result) {
+        const burnedAmount = microAlgos / 1_000_000; // Convert to ALGO
+        console.log(`✅ Successfully burned ${burnedAmount} ckALGO`);
+        return {
+          success: true,
+          amount_burned: burnedAmount,
+          raw_amount: microAlgos,
+          principal,
+          tx_id: result.Ok
+        };
+      } else if ('Err' in result) {
+        console.error('❌ ckALGO burning failed:', result.Err);
+        throw new Error(`ckALGO burning failed: ${result.Err}`);
+      } else {
+        throw new Error('Unknown result format from ckALGO canister');
+      }
+      
+    } catch (error) {
+      console.error('❌ Failed to burn ckALGO:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Mint ckALGO tokens to a user's principal
    * @param principal - User's Internet Identity principal (string)
    * @param microAlgos - Amount in microALGO (6 decimals)
