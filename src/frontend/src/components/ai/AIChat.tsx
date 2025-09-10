@@ -28,6 +28,7 @@ const AIChat: React.FC = () => {
   const [aiStatus, setAiStatus] = useState<AIStatus | null>(null);
   const [showEmbedded, setShowEmbedded] = useState(false);
   const [authUrl, setAuthUrl] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState<boolean>(false);
 
   // Load AI status only when authenticated
   useEffect(() => {
@@ -74,6 +75,7 @@ const AIChat: React.FC = () => {
   };
 
   const getAuthenticatedUrl = async () => {
+    setAuthLoading(true);
     try {
       const response = await fetch('https://nuru.network/api/ai/auth-url', {
         method: 'POST',
@@ -102,6 +104,8 @@ const AIChat: React.FC = () => {
       // Silently handle missing AI auth endpoint - it's optional
       console.log('AI authentication not available - continuing without AI auth');
       setAuthUrl(null);
+    } finally {
+      setAuthLoading(false);
     }
   };
 
@@ -146,12 +150,21 @@ const AIChat: React.FC = () => {
 
         {/* Embedded OpenWebUI Interface */}
         <div className="relative">
-          <iframe
-            src={authUrl || aiStatus?.endpoint || ''}
-            className="w-full h-96 rounded border border-gray-600 bg-white"
-            title="OpenWebUI Chat Interface"
-            sandbox="allow-same-origin allow-scripts allow-forms"
-          />
+          {authLoading ? (
+            <div className="w-full h-96 rounded border border-gray-600 bg-gray-900 flex items-center justify-center">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+                <p className="text-gray-400 text-sm">Loading authenticated chat...</p>
+              </div>
+            </div>
+          ) : (
+            <iframe
+              src={authUrl || aiStatus?.endpoint || ''}
+              className="w-full h-96 rounded border border-gray-600 bg-white"
+              title="OpenWebUI Chat Interface"
+              sandbox="allow-same-origin allow-scripts allow-forms"
+            />
+          )}
           <div className="absolute top-2 right-2">
             <button
               onClick={openOpenWebUI}

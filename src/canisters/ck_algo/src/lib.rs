@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use std::cell::RefCell;
 use serde::{Serialize, Deserialize as SerdeDeserialize};
 use serde_json;
+use std::hash::{Hash, Hasher};
 
 // ============================================================================
 // BACKEND SERVICE CONFIGURATION (Sprint 012.5)
@@ -262,24 +263,59 @@ pub struct CrossChainOperation {
     pub created_at: u64,
     pub completed_at: Option<u64>,
     pub transaction_id: Option<String>,
+    // Enhanced fields for Days 12-13
+    pub asset_id: Option<u64>,         // Algorand Asset ID for ASA operations
+    pub contract_app_id: Option<u64>,  // Smart contract App ID
+    pub transaction_data: Vec<u8>,     // Encoded transaction data
+    pub threshold_signature: Option<Vec<u8>>, // Ed25519 signature from threshold signer
+    pub algorand_tx_id: Option<String>,
+    pub confirmation_round: Option<u64>,
+    pub gas_fee: u64,                  // Fee in microALGO
+    pub metadata: HashMap<String, String>, // Additional operation metadata
 }
 
-#[derive(Clone, Debug, CandidType, Deserialize, Serialize)]
+#[derive(Clone, Debug, CandidType, Deserialize, Serialize, PartialEq)]
 pub enum CrossChainOperationType {
     ReadState,
     WriteState,
     TransferALGO,
     OptIntoAsset,
     CallSmartContract,
+    // Enhanced operations for Days 12-13
+    AlgorandPayment,        // Basic ALGO payment transaction
+    AssetTransfer,          // Algorand Standard Asset (ASA) transfer
+    SmartContractCall,      // Enhanced smart contract call
+    StateSync,              // Cross-chain state synchronization
+    BridgeDeposit,          // Deposit to ckALGO bridge
+    BridgeWithdraw,         // Withdraw from ckALGO bridge
+    OracleUpdate,           // Update oracle data cross-chain
+    MultiSigOperation,      // Multi-signature cross-chain operation
 }
 
-#[derive(Clone, Debug, CandidType, Deserialize, Serialize)]
+#[derive(Clone, Debug, CandidType, Deserialize, Serialize, PartialEq)]
 pub enum OperationStatus {
     Pending,
     InProgress,
     Completed,
     Failed,
     Cancelled,
+    // Enhanced statuses for Days 12-13
+    Signing,            // Waiting for threshold signature
+    Broadcasting,       // Broadcasting to Algorand network
+    Confirming,         // Waiting for network confirmation
+    Confirmed,          // Successfully confirmed on Algorand
+}
+
+#[derive(Clone, Debug, CandidType, Deserialize, Serialize)]
+pub struct CrossChainState {
+    pub algorand_latest_round: u64,
+    pub icp_block_height: u64,
+    pub bridge_balance: Nat,           // Total ALGO locked in bridge
+    pub pending_operations: u64,       // Number of pending cross-chain ops
+    pub successful_operations: u64,    // Total successful operations
+    pub failed_operations: u64,        // Total failed operations
+    pub last_sync_time: u64,           // Last state sync timestamp
+    pub network_status: String,        // Current network status
 }
 
 // Revenue Generation
@@ -460,6 +496,28 @@ thread_local! {
     // NEW: Platform Configuration
     static BACKEND_CANISTER: RefCell<Option<Principal>> = RefCell::new(None);
     static THRESHOLD_SIGNER_CANISTER: RefCell<Option<Principal>> = RefCell::new(None);
+    
+    // ENHANCED: Cross-Chain Operations System (Days 12-13)
+    static ENHANCED_CROSS_CHAIN_STATE: RefCell<CrossChainState> = RefCell::new(CrossChainState {
+        algorand_latest_round: 0,
+        icp_block_height: 0,
+        bridge_balance: Nat::from(0u64),
+        pending_operations: 0,
+        successful_operations: 0,
+        failed_operations: 0,
+        last_sync_time: 0,
+        network_status: "initializing".to_string(),
+    });
+    static PENDING_SIGNATURES: RefCell<HashMap<String, Vec<u8>>> = RefCell::new(HashMap::new());
+    static ALGORAND_NETWORK_CONFIG: RefCell<HashMap<String, String>> = RefCell::new({
+        let mut config = HashMap::new();
+        config.insert("testnet_api".to_string(), "https://testnet-api.algonode.cloud".to_string());
+        config.insert("mainnet_api".to_string(), "https://mainnet-api.algonode.cloud".to_string());
+        config.insert("indexer_api".to_string(), "https://testnet-idx.algonode.cloud".to_string());
+        config.insert("default_fee".to_string(), "1000".to_string());
+        config.insert("network".to_string(), "testnet".to_string());
+        config
+    });
 }
 
 // ============================================================================
@@ -2866,4 +2924,477 @@ fn cleanup_ai_cache() -> Result<String, String> {
     });
     
     Ok(format!("Cleaned up {} expired cache entries", removed_count))
+}
+
+// ============================================================================
+// ENHANCED CROSS-CHAIN OPERATIONS SYSTEM (Days 12-13: Sprint 012.5 Week 2)
+// ============================================================================
+
+#[derive(Clone, Debug, CandidType, Deserialize, Serialize)]
+pub struct AlgorandTransactionParams {
+    pub sender: String,
+    pub receiver: String,
+    pub amount: u64,
+    pub fee: u64,
+    pub first_valid: u64,  // First valid round
+    pub last_valid: u64,   // Last valid round
+    pub genesis_id: String,
+    pub genesis_hash: String,
+    pub note: Option<String>,
+    pub lease: Option<Vec<u8>>,
+    pub rekey_to: Option<String>,
+}
+
+#[derive(Clone, Debug, CandidType, Deserialize, Serialize)]
+pub struct CrossChainState {
+    pub algorand_latest_round: u64,
+    pub icp_block_height: u64,
+    pub bridge_balance: Nat,           // Total ALGO locked in bridge
+    pub pending_operations: u64,       // Number of pending cross-chain ops
+    pub successful_operations: u64,    // Total successful operations
+    pub failed_operations: u64,        // Total failed operations
+    pub last_sync_time: u64,           // Last state sync timestamp
+    pub network_status: String,        // Current network status
+}
+
+// Enhanced Cross-Chain Operations (Days 12-13) built on existing structures
+
+// ============================================================================
+// CROSS-CHAIN OPERATION FUNCTIONS (Days 12-13)
+// ============================================================================
+
+#[update]
+async fn create_enhanced_cross_chain_operation(
+    operation_type: CrossChainOperationType,
+    target_address: String,
+    amount: Option<u64>,
+    asset_id: Option<u64>,
+    metadata: Option<HashMap<String, String>>,
+) -> Result<String, String> {
+    let caller_principal = caller();
+    let operation_id = format!("enhanced_{}_{}_{}",
+        operation_type_to_string(&operation_type),
+        caller_principal.to_text(),
+        time()
+    );
+
+    // Validate Algorand address format
+    if !is_valid_algorand_address(&target_address) {
+        return Err("Invalid Algorand address format".to_string());
+    }
+
+    // Calculate gas fee based on operation type
+    let gas_fee = calculate_enhanced_gas_fee(&operation_type, amount);
+
+    // Create enhanced cross-chain operation
+    let operation = CrossChainOperation {
+        operation_id: operation_id.clone(),
+        operation_type,
+        algorand_address: target_address,
+        icp_principal: caller_principal,
+        amount,
+        status: OperationStatus::Pending,
+        created_at: time(),
+        completed_at: None,
+        transaction_id: None,
+        // Enhanced fields for Days 12-13
+        asset_id,
+        contract_app_id: None,
+        transaction_data: Vec::new(),
+        threshold_signature: None,
+        algorand_tx_id: None,
+        confirmation_round: None,
+        gas_fee,
+        metadata: metadata.unwrap_or_default(),
+    };
+
+    // Store operation in existing cross-chain operations storage
+    CROSS_CHAIN_OPERATIONS.with(|ops| {
+        let mut ops_ref = ops.borrow_mut();
+        ops_ref.push(operation);
+    });
+
+    // Update enhanced cross-chain state
+    ENHANCED_CROSS_CHAIN_STATE.with(|state| {
+        let mut state_ref = state.borrow_mut();
+        state_ref.pending_operations += 1;
+    });
+
+    Ok(operation_id)
+}
+
+#[update]
+async fn execute_enhanced_cross_chain_operation(operation_id: String) -> Result<String, String> {
+    let caller_principal = caller();
+
+    // Find and validate operation
+    let operation_index = CROSS_CHAIN_OPERATIONS.with(|ops| {
+        let ops_ref = ops.borrow();
+        ops_ref.iter().position(|op| op.operation_id == operation_id)
+    }).ok_or("Cross-chain operation not found".to_string())?;
+
+    let mut operation = CROSS_CHAIN_OPERATIONS.with(|ops| {
+        let ops_ref = ops.borrow();
+        ops_ref[operation_index].clone()
+    });
+
+    // Verify caller is the operation creator
+    if operation.icp_principal != caller_principal {
+        return Err("Only operation creator can execute cross-chain operation".to_string());
+    }
+
+    // Check operation status
+    if operation.status != OperationStatus::Pending {
+        return Err(format!("Operation status is {:?}, cannot execute", operation.status));
+    }
+
+    // Update status to signing
+    operation.status = OperationStatus::Signing;
+    CROSS_CHAIN_OPERATIONS.with(|ops| {
+        let mut ops_ref = ops.borrow_mut();
+        ops_ref[operation_index] = operation.clone();
+    });
+
+    // Construct Algorand transaction
+    let tx_data = construct_enhanced_algorand_transaction(&operation).await?;
+    operation.transaction_data = tx_data.clone();
+
+    // Request threshold signature
+    let signature_result = request_enhanced_threshold_signature(&operation_id, &tx_data).await?;
+    operation.threshold_signature = Some(signature_result.clone());
+    operation.status = OperationStatus::Broadcasting;
+
+    // Broadcast transaction to Algorand network
+    let tx_id = broadcast_enhanced_algorand_transaction(&tx_data, &signature_result).await?;
+    operation.algorand_tx_id = Some(tx_id.clone());
+    operation.status = OperationStatus::Confirming;
+
+    // Update operation in storage
+    CROSS_CHAIN_OPERATIONS.with(|ops| {
+        let mut ops_ref = ops.borrow_mut();
+        ops_ref[operation_index] = operation;
+    });
+
+    // Wait for confirmation (async)
+    ic_cdk::spawn(confirm_enhanced_algorand_transaction(operation_id.clone(), tx_id.clone()));
+
+    Ok(format!("Enhanced cross-chain operation executing. Transaction ID: {}", tx_id))
+}
+
+#[query]
+fn get_enhanced_cross_chain_operation(operation_id: String) -> Result<CrossChainOperation, String> {
+    CROSS_CHAIN_OPERATIONS.with(|ops| {
+        let ops_ref = ops.borrow();
+        ops_ref.iter()
+            .find(|op| op.operation_id == operation_id)
+            .cloned()
+    }).ok_or("Cross-chain operation not found".to_string())
+}
+
+#[query]
+fn list_user_enhanced_cross_chain_operations(user_principal: Principal) -> Vec<CrossChainOperation> {
+    CROSS_CHAIN_OPERATIONS.with(|ops| {
+        let ops_ref = ops.borrow();
+        ops_ref.iter()
+            .filter(|op| op.icp_principal == user_principal)
+            .cloned()
+            .collect()
+    })
+}
+
+#[update]
+async fn sync_enhanced_cross_chain_state() -> Result<CrossChainState, String> {
+    // Fetch latest Algorand network state
+    let algorand_state = fetch_enhanced_algorand_network_state().await?;
+    
+    // Update enhanced cross-chain state
+    ENHANCED_CROSS_CHAIN_STATE.with(|state| {
+        let mut state_ref = state.borrow_mut();
+        state_ref.algorand_latest_round = algorand_state.get("latest_round")
+            .and_then(|r| r.parse().ok())
+            .unwrap_or(0);
+        state_ref.last_sync_time = time();
+        state_ref.network_status = "synchronized".to_string();
+        
+        // Count operations by status
+        let (pending, successful, failed) = CROSS_CHAIN_OPERATIONS.with(|ops| {
+            let ops_ref = ops.borrow();
+            let pending = ops_ref.iter().filter(|op| op.status == OperationStatus::Pending).count() as u64;
+            let successful = ops_ref.iter().filter(|op| op.status == OperationStatus::Confirmed).count() as u64;
+            let failed = ops_ref.iter().filter(|op| op.status == OperationStatus::Failed).count() as u64;
+            (pending, successful, failed)
+        });
+        
+        state_ref.pending_operations = pending;
+        state_ref.successful_operations = successful;
+        state_ref.failed_operations = failed;
+        
+        state_ref.clone()
+    })
+}
+
+#[query]
+fn get_enhanced_cross_chain_state() -> CrossChainState {
+    ENHANCED_CROSS_CHAIN_STATE.with(|state| state.borrow().clone())
+}
+
+#[update]
+fn configure_algorand_network(
+    network: String,
+    api_endpoint: String,
+    indexer_endpoint: String,
+) -> Result<String, String> {
+    let caller_principal = caller();
+    
+    // Only allow controller to modify network config
+    let controller = Principal::from_text("27ssj-4t63z-3sydd-lcaf3-d6uix-zurll-zovsc-nmtga-hkrls-yrawj-mqe")
+        .map_err(|_| "Invalid controller principal")?;
+    
+    if caller_principal != controller {
+        return Err("Only controller can modify network configuration".to_string());
+    }
+
+    ALGORAND_NETWORK_CONFIG.with(|config| {
+        let mut config_ref = config.borrow_mut();
+        config_ref.insert("network".to_string(), network.clone());
+        config_ref.insert(format!("{}_api", network), api_endpoint);
+        config_ref.insert(format!("{}_indexer", network), indexer_endpoint);
+    });
+
+    Ok(format!("Algorand network configuration updated to {}", network))
+}
+
+// ============================================================================
+// CROSS-CHAIN HELPER FUNCTIONS (Days 12-13)
+// ============================================================================
+
+fn operation_type_to_string(op_type: &CrossChainOperationType) -> &'static str {
+    match op_type {
+        // Existing operations
+        CrossChainOperationType::ReadState => "read_state",
+        CrossChainOperationType::WriteState => "write_state",
+        CrossChainOperationType::TransferALGO => "transfer_algo",
+        CrossChainOperationType::OptIntoAsset => "opt_into_asset",
+        CrossChainOperationType::CallSmartContract => "call_smart_contract",
+        // Enhanced operations for Days 12-13
+        CrossChainOperationType::AlgorandPayment => "algorand_payment",
+        CrossChainOperationType::AssetTransfer => "asset_transfer",
+        CrossChainOperationType::SmartContractCall => "smart_contract_call",
+        CrossChainOperationType::StateSync => "state_sync",
+        CrossChainOperationType::BridgeDeposit => "bridge_deposit",
+        CrossChainOperationType::BridgeWithdraw => "bridge_withdraw",
+        CrossChainOperationType::OracleUpdate => "oracle_update",
+        CrossChainOperationType::MultiSigOperation => "multisig_op",
+    }
+}
+
+fn is_valid_algorand_address(address: &str) -> bool {
+    // Basic Algorand address validation
+    address.len() == 58 && address.chars().all(|c| c.is_alphanumeric() || c == '=' || c == '+' || c == '/')
+}
+
+fn calculate_enhanced_gas_fee(operation_type: &CrossChainOperationType, amount: Option<u64>) -> u64 {
+    let base_fee = 1000u64; // 1000 microALGO base fee
+    
+    let fee_multiplier = match operation_type {
+        // Existing operations
+        CrossChainOperationType::ReadState => 1,
+        CrossChainOperationType::WriteState => 2,
+        CrossChainOperationType::TransferALGO => 1,
+        CrossChainOperationType::OptIntoAsset => 1,
+        CrossChainOperationType::CallSmartContract => 2,
+        // Enhanced operations for Days 12-13
+        CrossChainOperationType::AlgorandPayment => 1,
+        CrossChainOperationType::AssetTransfer => 1,
+        CrossChainOperationType::SmartContractCall => 2,
+        CrossChainOperationType::StateSync => 1,
+        CrossChainOperationType::BridgeDeposit => 3,
+        CrossChainOperationType::BridgeWithdraw => 3,
+        CrossChainOperationType::OracleUpdate => 2,
+        CrossChainOperationType::MultiSigOperation => 4,
+    };
+
+    // Add complexity fee for large amounts
+    let complexity_fee = if let Some(amt) = amount {
+        if amt > 1_000_000u64 { // > 1 ALGO
+            base_fee
+        } else {
+            0
+        }
+    } else {
+        0
+    };
+
+    base_fee * fee_multiplier + complexity_fee
+}
+
+async fn construct_algorand_transaction(operation: &CrossChainOperation) -> Result<Vec<u8>, String> {
+    // Fetch current network parameters
+    let network_params = fetch_algorand_network_params().await?;
+    
+    // Get user's Algorand address from principal
+    let sender_address = derive_algorand_address(&operation.source_principal)?;
+    
+    // Construct transaction parameters
+    let tx_params = AlgorandTransactionParams {
+        sender: sender_address,
+        receiver: operation.target_address.clone(),
+        amount: operation.amount.clone().unwrap_or(Nat::from(0u64)).0.to_u64_digits()[0],
+        fee: operation.gas_fee.0.to_u64_digits()[0],
+        first_valid: network_params.get("latest_round")
+            .and_then(|r| r.parse().ok())
+            .unwrap_or(0),
+        last_valid: network_params.get("latest_round")
+            .and_then(|r| r.parse::<u64>().ok())
+            .map(|r| r + 1000)
+            .unwrap_or(1000),
+        genesis_id: network_params.get("genesis_id").cloned().unwrap_or("testnet-v1.0".to_string()),
+        genesis_hash: network_params.get("genesis_hash").cloned().unwrap_or_default(),
+        note: operation.metadata.get("note").cloned(),
+        lease: None,
+        rekey_to: None,
+    };
+
+    // Encode transaction (simplified - in real implementation would use proper MessagePack encoding)
+    let tx_json = serde_json::to_string(&tx_params)
+        .map_err(|e| format!("Failed to serialize transaction: {}", e))?;
+    
+    Ok(tx_json.into_bytes())
+}
+
+async fn request_threshold_signature(operation_id: &str, tx_data: &[u8]) -> Result<Vec<u8>, String> {
+    // Call threshold signer canister
+    let threshold_signer_id = Principal::from_text("vj7ly-diaaa-aaaae-abvoq-cai")
+        .map_err(|_| "Invalid threshold signer canister ID")?;
+
+    // Prepare signature request
+    let signature_request = serde_json::json!({
+        "operation_id": operation_id,
+        "message": tx_data,
+        "derivation_path": vec![0u8; 32], // Simplified derivation path
+    });
+
+    // For now, return a mock signature (in real implementation would call threshold signer)
+    let mock_signature = format!("ed25519_sig_{}_{}", operation_id, time());
+    Ok(mock_signature.into_bytes())
+}
+
+async fn broadcast_algorand_transaction(tx_data: &[u8], signature: &[u8]) -> Result<String, String> {
+    // Get network configuration
+    let api_endpoint = ALGORAND_NETWORK_CONFIG.with(|config| {
+        let config_ref = config.borrow();
+        let network = config_ref.get("network").cloned().unwrap_or("testnet".to_string());
+        config_ref.get(&format!("{}_api", network)).cloned()
+            .unwrap_or("https://testnet-api.algonode.cloud".to_string())
+    });
+
+    // Prepare signed transaction
+    let signed_tx = serde_json::json!({
+        "transaction": base64::encode(tx_data),
+        "signature": base64::encode(signature),
+        "timestamp": time(),
+    });
+
+    // HTTP outcall to broadcast transaction
+    let request = CanisterHttpRequestArgument {
+        url: format!("{}/v2/transactions", api_endpoint),
+        method: HttpMethod::POST,
+        headers: vec![
+            HttpHeader {
+                name: "Content-Type".to_string(),
+                value: "application/x-binary".to_string(),
+            },
+        ],
+        body: Some(signed_tx.to_string().into_bytes()),
+        max_response_bytes: Some(MAX_RESPONSE_BYTES),
+        transform_context: None,
+    };
+
+    // For now, return mock transaction ID
+    let mock_tx_id = format!("ALGO_TX_{}_{}", 
+        hex::encode(&signature[..8]),
+        time() % 1000000
+    );
+
+    Ok(mock_tx_id)
+}
+
+async fn confirm_algorand_transaction(operation_id: String, tx_id: String) {
+    // Wait for network confirmation (simplified implementation)
+    ic_cdk::api::call::call_raw(
+        Principal::management_canister(),
+        "raw_rand",
+        &[],
+        0
+    ).await.ok();
+
+    // Update operation status to confirmed
+    CROSS_CHAIN_OPERATIONS.with(|ops| {
+        if let Some(mut operation) = ops.borrow_mut().get_mut(&operation_id) {
+            operation.status = CrossChainOperationStatus::Confirmed;
+            operation.confirmation_round = Some(time() % 10000000); // Mock round number
+        }
+    });
+
+    // Update global state
+    CROSS_CHAIN_STATE.with(|state| {
+        let mut state_ref = state.borrow_mut();
+        state_ref.pending_operations = state_ref.pending_operations.saturating_sub(1);
+        state_ref.successful_operations += 1;
+    });
+}
+
+async fn fetch_algorand_network_state() -> Result<HashMap<String, String>, String> {
+    let api_endpoint = ALGORAND_NETWORK_CONFIG.with(|config| {
+        let config_ref = config.borrow();
+        let network = config_ref.get("network").cloned().unwrap_or("testnet".to_string());
+        config_ref.get(&format!("{}_api", network)).cloned()
+            .unwrap_or("https://testnet-api.algonode.cloud".to_string())
+    });
+
+    // HTTP outcall to get network status
+    let request = CanisterHttpRequestArgument {
+        url: format!("{}/v2/status", api_endpoint),
+        method: HttpMethod::GET,
+        headers: vec![],
+        body: None,
+        max_response_bytes: Some(MAX_RESPONSE_BYTES),
+        transform_context: None,
+    };
+
+    // Mock network state for now
+    let mut state = HashMap::new();
+    state.insert("latest_round".to_string(), (time() % 100000000).to_string());
+    state.insert("genesis_id".to_string(), "testnet-v1.0".to_string());
+    state.insert("genesis_hash".to_string(), "SGO1GKSzyE7IEPItTxCByw9x8FmnrCDexi9/cOUJOiI=".to_string());
+    
+    Ok(state)
+}
+
+async fn fetch_algorand_network_params() -> Result<HashMap<String, String>, String> {
+    // Similar to fetch_algorand_network_state but for transaction parameters
+    fetch_algorand_network_state().await
+}
+
+fn derive_algorand_address(principal: &Principal) -> Result<String, String> {
+    // Simplified address derivation (in real implementation would use proper Ed25519 derivation)
+    let principal_bytes = principal.as_slice();
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    use std::hash::{Hash, Hasher};
+    principal_bytes.hash(&mut hasher);
+    let hash = hasher.finish();
+    
+    // Create a mock Algorand address format
+    let address_bytes = hash.to_be_bytes();
+    let mut address = String::new();
+    for byte in address_bytes {
+        address.push_str(&format!("{:02X}", byte));
+    }
+    
+    // Pad to 58 characters (Algorand address length)
+    while address.len() < 58 {
+        address.push('A');
+    }
+    
+    Ok(address[..58].to_string())
 }

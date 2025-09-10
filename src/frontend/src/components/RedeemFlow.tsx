@@ -135,8 +135,8 @@ const RedeemFlow: React.FC = () => {
           },
           body: JSON.stringify({
             amount: parseFloat(redeemAmount),
-            targetAddress: destinationAddress,
-            userPrincipal: user.principal
+            destinationAddress: destinationAddress,
+            principal: user.principal
           })
         });
         
