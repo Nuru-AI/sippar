@@ -198,8 +198,10 @@ fn update_algorand_balance(balance: Nat) -> Result<(), String> {
 #[update]
 fn add_authorized_minter(principal: Principal) -> Result<(), String> {
     let caller = caller();
-    if caller != Principal::management_canister() {
-        return Err("Only management canister can add authorized minters".to_string());
+    // Allow canister controller to add minters
+    let controller = Principal::from_text("27ssj-4t63z-3sydd-lcaf3-d6uix-zurll-zovsc-nmtga-hkrls-yrawj-mqe").unwrap();
+    if caller != controller && caller != Principal::management_canister() {
+        return Err("Only canister controller or management canister can add authorized minters".to_string());
     }
     
     AUTHORIZED_MINTERS.with(|minters| {

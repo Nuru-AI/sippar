@@ -1,8 +1,10 @@
-use candid::{CandidType, Principal};
+use candid::{CandidType, Principal, Nat};
 use ic_cdk::api::management_canister::schnorr::{
-    schnorr_public_key, sign_with_schnorr, SchnorrAlgorithm, SchnorrKeyId, SchnorrPublicKeyArgument,
-    SignWithSchnorrArgument,
+    SchnorrAlgorithm, SchnorrKeyId, SchnorrPublicKeyArgument,
+    SignWithSchnorrArgument, SchnorrPublicKeyResponse, SignWithSchnorrResponse,
 };
+use hex;
+use ic_cdk::api::call::call_with_payment;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256, Sha512_256};
 use sha2::Sha512_256 as ForcedSha512_256;
@@ -29,7 +31,7 @@ pub struct SigningError {
 
 type SigningResult<T> = Result<T, SigningError>;
 
-// Key ID name for threshold Schnorr signatures (mainnet key)
+// Key ID name for threshold Schnorr signatures (mainnet Ed25519 key)
 const KEY_NAME: &str = "key_1";
 
 // Create Schnorr Key ID for Ed25519 signatures (native Algorand support)
@@ -43,17 +45,28 @@ fn get_schnorr_key_id() -> SchnorrKeyId {
 /// Derive a unique Algorand address for a user principal using threshold Ed25519
 #[ic_cdk::update]
 async fn derive_algorand_address(user_principal: Principal) -> SigningResult<AlgorandAddress> {
+    // Convert principal to 4-byte big-endian format for Ed25519 derivation
+    // Hash principal bytes and take first 4 bytes as derivation path
+    let principal_hash = Sha256::digest(user_principal.as_slice());
+    let derivation_key = &principal_hash[0..4];
+    
     let derivation_path = vec![
-        user_principal.as_slice().to_vec(),
+        derivation_key.to_vec(),
         b"algorand".to_vec(),
         b"sippar".to_vec(),
     ];
 
-    match schnorr_public_key(SchnorrPublicKeyArgument {
-        canister_id: None,
-        derivation_path,
-        key_id: get_schnorr_key_id(),
-    })
+    // Call management canister with cycles for threshold operations
+    match call_with_payment::<(SchnorrPublicKeyArgument,), (SchnorrPublicKeyResponse,)>(
+        Principal::management_canister(),
+        "schnorr_public_key",
+        (SchnorrPublicKeyArgument {
+            canister_id: None,
+            derivation_path,
+            key_id: get_schnorr_key_id(),
+        },),
+        15_000_000_000, // 15 billion cycles for public key derivation
+    )
     .await
     {
         Ok((public_key_response,)) => {
@@ -71,31 +84,85 @@ async fn derive_algorand_address(user_principal: Principal) -> SigningResult<Alg
     }
 }
 
-/// Sign an Algorand transaction using threshold Ed25519 signatures
-#[ic_cdk::update]
-async fn sign_algorand_transaction(
+/// MIGRATION: Sign transaction using old derivation method for address migration
+#[ic_cdk::update] 
+async fn sign_migration_transaction(
     user_principal: Principal,
     transaction_bytes: Vec<u8>,
 ) -> SigningResult<SignedTransaction> {
+    // Use OLD derivation method (raw principal bytes) for migration
     let derivation_path = vec![
         user_principal.as_slice().to_vec(),
         b"algorand".to_vec(),
         b"sippar".to_vec(),
     ];
 
-    // Use transaction_bytes directly - it already contains "TX" + encoded_transaction from AlgoSDK
-    match sign_with_schnorr(SignWithSchnorrArgument {
-        message: transaction_bytes.clone(),
-        derivation_path,
-        key_id: get_schnorr_key_id(),
-    })
+    // Call management canister with cycles for threshold signature operations  
+    match call_with_payment::<(SignWithSchnorrArgument,), (SignWithSchnorrResponse,)>(
+        Principal::management_canister(),
+        "sign_with_schnorr", 
+        (SignWithSchnorrArgument {
+            message: transaction_bytes.clone(),
+            derivation_path,
+            key_id: get_schnorr_key_id(),
+        },),
+        30_000_000_000, // 30 billion cycles for signing
+    )
+    .await
+    {
+        Ok((response,)) => {
+            let tx_id = hex::encode(Sha256::digest(&transaction_bytes));
+            Ok(SignedTransaction {
+                transaction_bytes: transaction_bytes,
+                signature: response.signature,
+                signed_tx_id: tx_id,
+            })
+        }
+        Err((rejection_code, msg)) => Err(SigningError {
+            code: rejection_code as u32,
+            message: format!("Failed to sign transaction: {}", msg),
+        }),
+    }
+}
+
+/// Sign an Algorand transaction using threshold Ed25519 signatures
+#[ic_cdk::update]
+async fn sign_algorand_transaction(
+    user_principal: Principal,
+    transaction_bytes: Vec<u8>,
+) -> SigningResult<SignedTransaction> {
+    // Use same principal hashing as address derivation for consistency
+    let principal_hash = Sha256::digest(user_principal.as_slice());
+    let derivation_key = &principal_hash[0..4];
+    
+    let derivation_path = vec![
+        derivation_key.to_vec(),
+        b"algorand".to_vec(),
+        b"sippar".to_vec(),
+    ];
+
+    // Call management canister with cycles for threshold signature operations  
+    match call_with_payment::<(SignWithSchnorrArgument,), (SignWithSchnorrResponse,)>(
+        Principal::management_canister(),
+        "sign_with_schnorr",
+        (SignWithSchnorrArgument {
+            message: transaction_bytes.clone(),
+            derivation_path,
+            key_id: get_schnorr_key_id(),
+        },),
+        30_000_000_000, // 30 billion cycles for signing (increased for actual requirements)
+    )
     .await
     {
         Ok((signature_response,)) => {
             let signed_tx_id = generate_transaction_id(&transaction_bytes, &signature_response.signature);
             
+            // Return the original transaction_bytes and signature as separate components
+            // Let the backend handle the signed transaction construction using AlgoSDK
+            // This is the working approach from our breakthrough
+            
             Ok(SignedTransaction {
-                transaction_bytes,
+                transaction_bytes: transaction_bytes,
                 signature: signature_response.signature,
                 signed_tx_id,
             })
@@ -210,4 +277,50 @@ fn verify_signature(
 #[ic_cdk::query]
 fn greet(name: String) -> String {
     format!("Hello, {}! This is the Sippar Algorand Threshold Signer.", name)
+}
+
+/// Sign Algorand transaction and mint ckALGO tokens in one atomic operation
+/// This combines threshold signature generation with ckALGO minting
+#[ic_cdk::update]
+async fn sign_and_mint_ck_algo(
+    user_principal: Principal,
+    transaction_bytes: Vec<u8>,
+    ck_algo_amount: u64, // Amount in microALGO (6 decimals)
+) -> SigningResult<SignedTransaction> {
+    // Step 1: Generate threshold signature for the transaction
+    let signed_transaction = sign_algorand_transaction(user_principal, transaction_bytes).await?;
+    
+    // Step 2: Mint ckALGO tokens using inter-canister call
+    let ck_algo_canister_id = Principal::from_text("gbmxj-yiaaa-aaaak-qulqa-cai")
+        .map_err(|e| SigningError {
+            code: 3,
+            message: format!("Invalid ckALGO canister ID: {}", e),
+        })?;
+    
+    // Call ckALGO canister to mint tokens
+    match ic_cdk::api::call::call::<(Principal, Nat), (Result<Nat, String>,)>(
+        ck_algo_canister_id,
+        "mint_ck_algo",
+        (user_principal, Nat::from(ck_algo_amount)),
+    ).await {
+        Ok((Ok(minted_amount),)) => {
+            // Minting successful
+            ic_cdk::println!("✅ Minted {} microckALGO for {}", minted_amount, user_principal);
+        },
+        Ok((Err(mint_error),)) => {
+            return Err(SigningError {
+                code: 4,
+                message: format!("ckALGO minting failed: {}", mint_error),
+            });
+        },
+        Err((rejection_code, msg)) => {
+            return Err(SigningError {
+                code: 5,
+                message: format!("Failed to call ckALGO canister: {:?} - {}", rejection_code, msg),
+            });
+        }
+    }
+    
+    // Return the signed transaction (minting was successful)
+    Ok(signed_transaction)
 }

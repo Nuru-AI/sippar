@@ -106,14 +106,12 @@ export class ThresholdSignerServiceClient {
           throw new Error('Principal parsing failed');
         }
         
-        const result = await this.actor.derive_algorand_address(principal);
+        // Use the working icpCanisterService instead of direct actor call
+        const icpCanisterService = require('./icpCanisterService').icpCanisterService;
+        const result = await icpCanisterService.deriveAlgorandAddress(userPrincipal);
         
-        if ('Ok' in result) {
-          console.log(`✅ Algorand address derived via threshold signer: ${result.Ok.address}`);
-          return result.Ok;
-        } else {
-          throw new Error(`Threshold signer error: ${result.Err.message} (code: ${result.Err.code})`);
-        }
+        console.log(`✅ Algorand address derived via working ICP service: ${result.address}`);
+        return result;
       } catch (thresholdError: any) {
         console.warn(`⚠️ Threshold signer failed: ${thresholdError?.message || thresholdError}`);
         throw new Error('Both chain-fusion backend and threshold signer failed');
@@ -132,15 +130,12 @@ export class ThresholdSignerServiceClient {
     try {
       console.log(`✍️ Signing Algorand transaction for principal: ${userPrincipal}`);
       
-      const principal = Principal.fromText(userPrincipal);
-      const result = await this.actor.sign_algorand_transaction(principal, transactionBytes);
+      // Use the working icpCanisterService instead of direct actor call
+      const icpCanisterService = require('./icpCanisterService').icpCanisterService;
+      const result = await icpCanisterService.signAlgorandTransaction(userPrincipal, transactionBytes);
       
-      if ('Ok' in result) {
-        console.log(`✅ Transaction signed: ${result.Ok.signed_tx_id}`);
-        return result.Ok;
-      } else {
-        throw new Error(`Transaction signing error: ${result.Err.message} (code: ${result.Err.code})`);
-      }
+      console.log(`✅ Transaction signed via working ICP service: ${result.signed_tx_id}`);
+      return result;
     } catch (error) {
       console.error('❌ Failed to sign Algorand transaction:', error);
       throw error;

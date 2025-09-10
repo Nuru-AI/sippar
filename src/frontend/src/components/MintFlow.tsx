@@ -155,25 +155,39 @@ const MintFlow: React.FC = () => {
             console.log(`🔍 Monitoring Algorand transaction attempt ${attempts + 1}:`, txId);
             
             // Call the real mint endpoint which verifies transaction and mints ckALGO
-            const response = await fetch('https://nuru.network/api/sippar/ck-algo/mint-confirmed', {
+            const response = await fetch('https://nuru.network/api/sippar/ck-algo/mint', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({
                 algorandTxId: txId,
-                userPrincipal: user.principal,
-                amount: parseFloat(mintAmount)
+                principal: user.principal,
+                amount: parseFloat(mintAmount),
+                depositAddress: depositAddress
               })
             });
             
             const mintResult = await response.json();
             
-            if (mintResult.success) {
-              console.log('🪙 ckALGO minted successfully (Phase 3):', mintResult);
+            // Check both HTTP status and response success field
+            if (response.ok && mintResult.success) {
+              console.log('✅ ckALGO minting completed successfully:', mintResult);
               setTransactionResult(mintResult);
               setIsMonitoring(false);
               setCurrentStep(4); // Success
+              
+              // Trigger balance refresh in Dashboard
+              window.dispatchEvent(new CustomEvent('sipparBalanceRefresh'));
+              return;
+            }
+            
+            // Handle API errors (like ICP canister failures)
+            if (!response.ok || !mintResult.success) {
+              console.error('❌ ckALGO minting failed (API error):', mintResult);
+              alert(`Minting failed: ${mintResult.error || 'Unknown error'}`);
+              setIsMonitoring(false);
+              setCurrentStep(2); // Go back to transaction review, not step 1
               return;
             }
             
@@ -228,7 +242,10 @@ const MintFlow: React.FC = () => {
     console.log(`🔍 Starting deposit monitoring for ${depositAddress}`);
     setMonitoringTimeLeft(300); // Reset timer to 5 minutes
     
-    const checkForDeposit = async () => {
+    // Store interval reference in state that can be accessed by error handlers
+    let currentPollInterval: NodeJS.Timeout | null = null;
+    
+    const checkForDeposit = async (): Promise<boolean> => {
       try {
         // Try Phase 3 first (threshold signatures), then Phase 2 fallback
         let response;
@@ -243,17 +260,23 @@ const MintFlow: React.FC = () => {
           return false;
         }
         
-        const deposits = await response.json();
-        console.log('📥 Checking for deposits:', deposits);
+        const depositsResponse = await response.json();
+        console.log('📥 Checking deposits to address:', depositsResponse.address);
+        console.log('🔍 Found', depositsResponse.deposits?.length || 0, 'deposits available');
         
-        // Check if we have a deposit matching our expected amount
+        // Check if we have a deposit with sufficient amount (>=) for minting
         const expectedAmountMicroAlgo = Math.floor(parseFloat(mintAmount) * 1000000);
+        const deposits = depositsResponse.deposits || [];
         const matchingDeposit = deposits.find((deposit: any) => 
-          Math.abs(deposit.amount - expectedAmountMicroAlgo) < 1000 // Allow 1000 microAlgo tolerance
+          deposit.amount >= expectedAmountMicroAlgo // Allow any deposit >= expected amount
         );
         
         if (matchingDeposit) {
-          console.log('✅ Matching deposit found:', matchingDeposit);
+          console.log('✅ Sufficient deposit found:', {
+            available_microalgos: matchingDeposit.amount,
+            available_algos: (matchingDeposit.amount / 1000000).toFixed(6),
+            needed_for_mint: (expectedAmountMicroAlgo / 1000000).toFixed(6)
+          });
           
           // Phase 3: Real ckALGO minting via confirmed transaction endpoint
           if (user?.principal && matchingDeposit.txId) {
@@ -261,40 +284,58 @@ const MintFlow: React.FC = () => {
               console.log('🪙 Manual deposit confirmed, minting ckALGO via real endpoint:', matchingDeposit);
               
               // Use the same real endpoint as direct wallet flow
-              const response = await fetch('https://nuru.network/api/sippar/ck-algo/mint-confirmed', {
+              const response = await fetch('https://nuru.network/api/sippar/ck-algo/mint', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
                   algorandTxId: matchingDeposit.txId,
-                  userPrincipal: user.principal,
-                  amount: parseFloat(mintAmount)
+                  principal: user.principal,
+                  amount: parseFloat(mintAmount),
+                  depositAddress: depositAddress
                 })
               });
               
               const mintResult = await response.json();
               
-              if (mintResult.success) {
-                console.log('✅ ckALGO minted successfully via manual deposit (Phase 3):', mintResult);
+              // Check both HTTP status and response success field
+              if (response.ok && mintResult.success) {
+                console.log('✅ Manual deposit: ckALGO minting completed successfully:', mintResult);
                 setTransactionResult(mintResult);
                 setCurrentStep(4);
                 setIsMonitoring(false);
-                return;
+                
+                // Trigger balance refresh in Dashboard
+                window.dispatchEvent(new CustomEvent('sipparBalanceRefresh'));
+                
+                if (currentPollInterval) clearInterval(currentPollInterval);
+                return true; // Stop further polling
               } else {
-                console.error('❌ Manual deposit minting failed:', mintResult);
-                // Continue monitoring in case there are other deposits
+                console.error('❌ Manual deposit minting failed (API error):', mintResult);
+                alert(`Minting failed: ${mintResult.error || 'Unknown error'}`);
+                if (currentPollInterval) clearInterval(currentPollInterval);
+                setIsMonitoring(false);
+                setCurrentStep(2); // Go back to transaction review
+                return false; // Stop further polling
               }
               
             } catch (error) {
               console.error('❌ Manual deposit minting error:', error);
-              // Continue monitoring in case there are other deposits
+              if (currentPollInterval) clearInterval(currentPollInterval);
+              setIsMonitoring(false);
+              setCurrentStep(2); // Go back to transaction review
+              alert('Minting failed due to network error. Please try again.');
+              return false;
             }
           } else {
-            // Fallback for deposits without transaction ID
-            console.log('⚠️ Deposit found but missing transaction ID, using fallback success');
-            setCurrentStep(4);
+            // Fallback for deposits without transaction ID - DO NOT show success without actual minting
+            console.log('⚠️ Deposit found but missing transaction ID - cannot proceed without proper minting');
+            alert('Deposit detected but minting verification failed. Please try again.');
+            if (currentPollInterval) clearInterval(currentPollInterval);
             setIsMonitoring(false);
+            setCurrentStep(2); // Go back to transaction review
+            return false;
           }
           return true;
         }
@@ -314,13 +355,13 @@ const MintFlow: React.FC = () => {
     let attempts = 0;
     const maxAttempts = 60; // 5 minutes
 
-    const pollInterval = setInterval(async () => {
+    currentPollInterval = setInterval(async () => {
       attempts++;
       const timeLeft = Math.max(0, 300 - (attempts * 5));
       setMonitoringTimeLeft(timeLeft);
       
       if (attempts >= maxAttempts || timeLeft <= 0) {
-        clearInterval(pollInterval);
+        if (currentPollInterval) clearInterval(currentPollInterval);
         setIsMonitoring(false);
         setMonitoringTimeLeft(0);
         alert('Deposit monitoring timed out. Please check your transaction and try again.');
@@ -329,9 +370,9 @@ const MintFlow: React.FC = () => {
 
       const found = await checkForDeposit();
       if (found) {
-        clearInterval(pollInterval);
+        if (currentPollInterval) clearInterval(currentPollInterval);
       }
-    }, 5000);
+    }, 30000); // Check every 30 seconds instead of 5 seconds
   };
 
   // Cleanup effect
@@ -762,7 +803,7 @@ const MintFlow: React.FC = () => {
       )}
 
       {/* Step 4: Success */}
-      {currentStep === 4 && (
+      {currentStep === 4 && transactionResult && transactionResult.success && (
         <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
           <h3 className="text-lg font-semibold text-white mb-4">
             Step 4: Minting Complete! 🎉

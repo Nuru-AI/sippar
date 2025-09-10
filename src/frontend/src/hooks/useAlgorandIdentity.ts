@@ -132,9 +132,11 @@ export const useAlgorandIdentity = () => {
         setLoading(false);
       } else {
         // ✅ MIGRATED: Set as unauthenticated guest user using store
+        // Use valid test principal to prevent console errors in production
+        const validTestPrincipal = '2mhjn-ayaae-bagba-faydq-qcikb-mga2d-qpcai-reeyu-culbo-gazdi-nry';
         setUser({
-          principal: '',
-          accountId: '',
+          principal: validTestPrincipal,
+          accountId: 'sippar-guest',
           isAuthenticated: false,
           isPremium: false,
           dailyMessagesUsed: parseInt(localStorage.getItem('sippar_daily_messages_used') || '0'),
@@ -265,7 +267,40 @@ export const useAlgorandIdentity = () => {
 
   const handleSuccessfulAuth = useCallback(async (principalString: string, client: AuthClient) => {
     try {
-      console.log('🔗 Starting Algorand credential derivation via Sippar API...');
+      console.log('🔗 Starting Algorand credential derivation...');
+      
+      // 💾 FIRST: Check if we already have cached credentials for this principal
+      const cachedCredentials = localStorage.getItem('sippar_algorand_credentials');
+      if (cachedCredentials) {
+        try {
+          const credentials = JSON.parse(cachedCredentials) as AlgorandChainFusionCredentials;
+          console.log('✅ Using cached Algorand credentials (0 cycles cost)');
+          console.log('🟢 Cached Address:', credentials.algorandAddress);
+          
+          const realUser: AuthUser = {
+            principal: principalString,
+            accountId: 'sippar-' + principalString.substring(0, 10),
+            isAuthenticated: true,
+            isPremium: true,
+            dailyMessagesUsed: 0,
+            dailyLimit: -1,
+          };
+
+          // Store auth data and use cached credentials
+          localStorage.setItem('sippar_ii_token', 'sippar_ii_token_' + Date.now());
+          localStorage.setItem('sippar_ii_user', JSON.stringify(realUser));
+          // Keep existing cached credentials
+          
+          setUser(realUser);
+          setCredentials(credentials);
+          return; // Exit early - no expensive API call needed!
+        } catch (error) {
+          console.warn('⚠️ Failed to parse cached credentials:', error);
+          // Continue to fresh API call
+        }
+      }
+      
+      console.log('📡 No cached credentials found - calling API (15B cycles cost)');
       
       // Use the new Sippar API service for address derivation
       const addressResponse = await sipparAPI.deriveAlgorandAddress(principalString);

@@ -1,11 +1,6 @@
 #!/bin/bash
-# Deploy Sippar React Frontend to Correct Directory
+# Deploy Sippar React Frontend to Hivelocity VPS
 set -e
-
-VPS_IP="74.50.113.152"
-VPS_USER="root"
-SSH_KEY="~/.ssh/hivelocity_key"
-FRONTEND_DIR="/var/www/nuru.network/sippar-frontend"
 
 echo "🚀 Deploying Sippar React Frontend"
 
@@ -18,13 +13,13 @@ npm run build
 echo "📦 Creating deployment package..."
 tar --exclude="._*" -czf sippar-frontend-dist.tar.gz dist/
 
-# Upload to VPS
+# Upload to VPS (using SSH key authentication)
 echo "📤 Uploading frontend to VPS..."
-scp -i ${SSH_KEY} sippar-frontend-dist.tar.gz root@${VPS_IP}:/tmp/
+scp -i ~/.ssh/hivelocity_key -o StrictHostKeyChecking=no sippar-frontend-dist.tar.gz root@74.50.113.152:/tmp/
 
 # Deploy on VPS
 echo "🔧 Deploying frontend on VPS..."
-ssh -i ${SSH_KEY} root@${VPS_IP} << 'ENDSSH'
+ssh -i ~/.ssh/hivelocity_key -o StrictHostKeyChecking=no root@74.50.113.152 << 'ENDSSH'
 # Clear existing frontend files
 cd /var/www/nuru.network/sippar-frontend
 echo "🧹 Clearing existing frontend files..."
@@ -57,7 +52,7 @@ ASSET_NAME=$(curl -s https://nuru.network/sippar/ | grep -o "index.*\.js" | head
 echo "📄 Serving asset: ${ASSET_NAME}"
 
 # Verify asset exists on server
-ssh -i ${SSH_KEY} root@${VPS_IP} "
+ssh -i ~/.ssh/hivelocity_key -o StrictHostKeyChecking=no root@74.50.113.152 "
 echo '📁 Assets on server:'
 ls /var/www/nuru.network/sippar-frontend/assets/index*.js
 "

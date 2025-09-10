@@ -108,10 +108,11 @@
 
 ## 🚀 **Sippar Integration Opportunities**
 
-### **Sprint 012: X402 Protocol Integration** *(RENUMBERED)* 
-**Timeline**: Q1 2026  
+### **Sprint 016: X402 Protocol Integration** *(RENUMBERED)* 
+**Timeline**: Q3 2026  
 **Priority**: High  
 **Foundation**: Algorand's agentic payment toolkit
+**Dependencies**: Sprint 012.5 (ckALGO Smart Contract Enhancement)
 
 #### **Technical Foundation**
 *(Source: ALGORAND-AI-ECOSYSTEM.md, Part II.1)*
@@ -198,10 +199,11 @@
 
 ---
 
-### **Sprint 016: ARC-0058 Account Abstraction** *(RENUMBERED)*
-**Timeline**: Q2-Q3 2026  
+### **Sprint 018: ARC-0058 Account Abstraction** *(RENUMBERED)*
+**Timeline**: Q1 2027  
 **Priority**: Medium (High Impact)  
 **Foundation**: ARC-0058 Plugin-Based Account Abstraction
+**Dependencies**: Sprint 012.5 (ckALGO), Sprint 014 (Decentralization), Sprint 015 (Multi-Chain)
 
 #### **Account Abstraction Innovation**
 **ARC-0058 Overview**: Plugin-based account abstraction enabling smart contract control of Algorand accounts with flexible delegation patterns
@@ -221,7 +223,7 @@
 
 **Expected Outcome**: Sippar becomes first cross-chain account abstraction bridge with superior user experience
 
-**Documentation**: [sprint016-arc-0058-account-abstraction.md](/working/sprint-016/sprint016-arc-0058-account-abstraction.md)
+**Documentation**: [sprint018-arc-0058-account-abstraction.md](/working/sprint-018-arc-0058/sprint018-arc-0058-account-abstraction.md)
 
 ---
 

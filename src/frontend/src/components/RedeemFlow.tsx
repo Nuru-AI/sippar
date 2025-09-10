@@ -77,9 +77,15 @@ const RedeemFlow: React.FC = () => {
         const response = await fetch(`https://nuru.network/api/sippar/ck-algo/balance/${user.principal}`);
         const balanceData = await response.json();
         
-        if (response.ok && balanceData.ck_algo_balance !== undefined) {
-          setCkAlgoBalance(balanceData.ck_algo_balance);
-          console.log('✅ Loaded real ckALGO balance:', balanceData.ck_algo_balance);
+        if (response.ok && balanceData.success && balanceData.balances?.ck_algo_balance !== undefined) {
+          setCkAlgoBalance(balanceData.balances.ck_algo_balance);
+          console.log('✅ Loaded real ckALGO balance:', balanceData.balances.ck_algo_balance);
+        } else if (balanceData.error === 'INVALID_PRINCIPAL_DEMO_DATA') {
+          console.warn('⚠️ Demo Principal ID detected:', balanceData.message);
+          console.warn('💡 Solution:', balanceData.details.solution);
+          setCkAlgoBalance(0); // Show 0 balance for demo data
+          // Show user-friendly message about authentication
+          alert('Please authenticate with Internet Identity to access real account data. Demo accounts are not supported in production.');
         } else {
           console.error('❌ Failed to load balance:', balanceData);
           setCkAlgoBalance(0); // Show 0 balance on error instead of fake placeholder

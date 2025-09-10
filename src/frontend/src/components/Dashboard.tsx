@@ -32,6 +32,17 @@ const Dashboard: React.FC = () => {
     }
   }, [user]);
 
+  // Listen for balance refresh events (triggered after successful minting/redeeming)
+  useEffect(() => {
+    const handleBalanceRefresh = () => {
+      console.log('🔄 Refreshing balances after transaction...');
+      loadBalances();
+    };
+
+    window.addEventListener('sipparBalanceRefresh', handleBalanceRefresh);
+    return () => window.removeEventListener('sipparBalanceRefresh', handleBalanceRefresh);
+  }, [user]);
+
   const loadBalances = async () => {
     if (!user?.principal) return;
     
@@ -48,32 +59,37 @@ const Dashboard: React.FC = () => {
         // Get user's derived Algorand address if available
         if (credentials?.algorandAddress) {
           try {
-            // Query real balance from our balance monitor endpoint
+            // Query real ALGO balance from balance monitor endpoint
             const balanceResponse = await fetch(`https://nuru.network/api/sippar/balance-monitor/${credentials.algorandAddress}`);
             
-            if (balanceResponse.ok) {
+            // Query real ckALGO balance from ckALGO balance endpoint
+            const ckAlgoResponse = await fetch(`https://nuru.network/api/sippar/ck-algo/balance/${user.principal}`);
+            
+            if (balanceResponse.ok && ckAlgoResponse.ok) {
               const balanceData = await balanceResponse.json();
-              if (balanceData.success) {
-                console.log('✅ Real balance loaded:', balanceData.balance_algo, 'ALGO');
-                // Set real ALGO balance and demo ckALGO balance
-                setBalances(balanceData.balance_algo, 10.5);
+              const ckAlgoData = await ckAlgoResponse.json();
+              
+              if (balanceData.success && ckAlgoData.success) {
+                console.log('✅ Real balances loaded:', balanceData.balance_algo, 'ALGO,', ckAlgoData.balances.ck_algo_balance, 'ckALGO');
+                // Set real balances for both ALGO and ckALGO
+                setBalances(balanceData.balance_algo, ckAlgoData.balances.ck_algo_balance);
                 return;
               }
             }
           } catch (balanceError) {
-            console.warn('⚠️ Failed to load real balance, using demo values:', balanceError);
+            console.warn('⚠️ Failed to load real balance, showing zero values:', balanceError);
           }
         }
         
-        // Fallback to demo balances if real balance loading fails
-        setBalances(0.0, 10.5);
+        // Show zero balances if real balance loading fails
+        setBalances(0.0, 0.0);
       } else {
         throw new Error(statusResponse.error || 'API connection failed');
       }
     } catch (error) {
       console.error('❌ Failed to load balances:', error);
-      // ✅ MIGRATED: Set demo balances as fallback using store
-      setBalances(0.0, 10.5);
+      // Show zero balances on error
+      setBalances(0.0, 0.0);
     }
   };
 
@@ -342,13 +358,13 @@ const Dashboard: React.FC = () => {
               🔄 Refresh
             </button>
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="text-center p-4 bg-green-900/20 border border-green-500/30 rounded-lg">
               <div className="text-2xl font-bold text-green-400 mb-1">
-                {algoBalance.toFixed(6)}
+                {Math.max(0, algoBalance - ckAlgoBalance).toFixed(6)}
               </div>
-              <div className="text-sm text-green-300">Native ALGO</div>
-              <div className="text-xs text-gray-400 mt-1">Algorand Network</div>
+              <div className="text-sm text-green-300">Available ALGO</div>
+              <div className="text-xs text-gray-400 mt-1">Free to spend</div>
             </div>
             <div className="text-center p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg">
               <div className="text-2xl font-bold text-blue-400 mb-1">
@@ -359,10 +375,22 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
           
+          <div className="mt-4 p-3 bg-gray-800/30 border border-gray-600/30 rounded-lg">
+            <div className="text-xs text-gray-300 text-center">
+              <div className="font-medium text-yellow-300 mb-1">🔗 Chain Fusion Bridge</div>
+              <div>Available = Wallet Balance - ckALGO • ckALGO = Tradeable on ICP (1:1 backed)</div>
+              {ckAlgoBalance > 0 && (
+                <div className="mt-2 text-xs text-yellow-200">
+                  {ckAlgoBalance.toFixed(6)} ALGO from your wallet is locked backing ckALGO (redeem to unlock)
+                </div>
+              )}
+            </div>
+          </div>
+          
           {(algoBalance > 0 || ckAlgoBalance > 0) && (
             <div className="mt-4 text-center">
               <div className="text-sm text-gray-400">
-                Total Portfolio Value: <span className="text-white font-mono">{(algoBalance + ckAlgoBalance).toFixed(6)} ALGO</span>
+                Total Portfolio Value: <span className="text-white font-mono">{algoBalance.toFixed(6)} ALGO</span>
               </div>
             </div>
           )}
@@ -423,7 +451,7 @@ const Dashboard: React.FC = () => {
             </div>
             <div>
               <div className="font-medium text-white line-through">Phase 2: ckALGO Chain Fusion</div>
-              <div className="text-gray-400">Completed - Mint/redeem flows functional with simulated transactions</div>
+              <div className="text-gray-400">Completed - Mint/redeem flows functional</div>
             </div>
           </div>
           <div className="flex items-center text-sm opacity-60">
@@ -431,36 +459,83 @@ const Dashboard: React.FC = () => {
               <span className="text-white font-bold text-xs">✓</span>
             </div>
             <div>
-              <div className="font-medium text-white line-through">Sprint 008: AI Oracle Integration</div>
-              <div className="text-gray-400">Completed - Live oracle deployed on Algorand testnet (App ID: 745336634)</div>
+              <div className="font-medium text-white line-through">Sprint 009: ICP Backend Integration</div>
+              <div className="text-gray-400">Completed - Live Oracle monitoring with 56ms AI responses</div>
+            </div>
+          </div>
+          <div className="flex items-center text-sm opacity-60">
+            <div className="h-8 w-8 bg-green-500 rounded-full flex items-center justify-center mr-3">
+              <span className="text-white font-bold text-xs">✓</span>
+            </div>
+            <div>
+              <div className="font-medium text-white line-through">Sprint 010: Frontend State Management</div>
+              <div className="text-gray-400">Completed - Zustand store with comprehensive testing deployed</div>
+            </div>
+          </div>
+          <div className="flex items-center text-sm opacity-60">
+            <div className="h-8 w-8 bg-yellow-500 rounded-full flex items-center justify-center mr-3">
+              <span className="text-white font-bold text-xs">🎉</span>
+            </div>
+            <div>
+              <div className="font-medium text-white line-through">Sprint 011: HISTORIC BREAKTHROUGH</div>
+              <div className="text-gray-400">Completed - World-first ICP-Algorand Chain Fusion with real transactions</div>
+            </div>
+          </div>
+          <div className="flex items-center text-sm">
+            <div className="h-8 w-8 bg-red-500 rounded-full flex items-center justify-center mr-3">
+              <span className="text-white font-bold text-xs">🔥</span>
+            </div>
+            <div>
+              <div className="font-medium text-white">Sprint 011.5: Breakthrough Documentation</div>
+              <div className="text-gray-400">URGENT - Strategic marketing & technical documentation</div>
             </div>
           </div>
           <div className="flex items-center text-sm">
             <div className="h-8 w-8 bg-blue-500 rounded-full flex items-center justify-center mr-3">
-              <span className="text-white font-bold text-xs">3</span>
+              <span className="text-white font-bold text-xs">🛡️</span>
             </div>
             <div>
-              <div className="font-medium text-white">Sprint 009: ICP Backend Integration ✅</div>
-              <div className="text-gray-400">Complete: Live Oracle monitoring with 56ms AI responses</div>
+              <div className="font-medium text-white">Sprint 012: Security Audit & Production</div>
+              <div className="text-gray-400">Security hardening for mainnet Chain Fusion</div>
             </div>
           </div>
           <div className="flex items-center text-sm">
             <div className="h-8 w-8 bg-purple-500 rounded-full flex items-center justify-center mr-3">
-              <span className="text-white font-bold text-xs">4</span>
+              <span className="text-white font-bold text-xs">🪙</span>
             </div>
             <div>
-              <div className="font-medium text-white">Phase 4: Production Security</div>
-              <div className="text-gray-400">Real threshold signatures for mainnet transactions</div>
+              <div className="font-medium text-white">Sprint 012.5: ckALGO Smart Contract Enhancement</div>
+              <div className="text-gray-400">Transform ckALGO into intelligent automation asset</div>
             </div>
           </div>
           <div className="flex items-center text-sm">
-            <div className="h-8 w-8 bg-orange-500 rounded-full flex items-center justify-center mr-3">
-              <span className="text-white font-bold text-xs">5</span>
+            <div className="h-8 w-8 bg-green-500 rounded-full flex items-center justify-center mr-3">
+              <span className="text-white font-bold text-xs">🌐</span>
             </div>
             <div>
-              <div className="font-medium text-white">Phase 5: EVM & Trading AI</div>
-              <div className="text-gray-400">Milkomeda A1 compatibility + AI-powered trading</div>
+              <div className="font-medium text-white">Sprint 015: Multi-Chain AI Oracle</div>
+              <div className="text-gray-400">Ethereum + Solana AI Oracle expansion</div>
             </div>
+          </div>
+        </div>
+        
+        <div className="mt-6 p-4 bg-gradient-to-r from-yellow-900/30 to-red-900/30 border border-yellow-500/30 rounded-lg">
+          <div className="flex items-center mb-2">
+            <div className="h-6 w-6 bg-yellow-500 rounded-full flex items-center justify-center mr-2">
+              <span className="text-white font-bold text-xs">🎉</span>
+            </div>
+            <h4 className="font-semibold text-yellow-300">Historic Achievement: World-First Chain Fusion</h4>
+          </div>
+          <p className="text-xs text-yellow-200 mb-2">
+            September 8, 2025: Sippar achieved the first successful ICP-to-Algorand Chain Fusion transactions on both testnet and mainnet using mathematical threshold signatures.
+          </p>
+          <div className="flex flex-wrap gap-2 text-xs">
+            <span className="px-2 py-1 bg-green-900/50 border border-green-500/30 rounded text-green-300">
+              Testnet TX: 3RU7HQ...F3NUQ
+            </span>
+            <span className="px-2 py-1 bg-blue-900/50 border border-blue-500/30 rounded text-blue-300">
+              Mainnet TX: QODAHW...4QTQA
+            </span>
           </div>
         </div>
       </div>

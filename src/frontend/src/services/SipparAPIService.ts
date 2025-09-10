@@ -111,7 +111,8 @@ class SipparAPIService extends BaseAPIService {
       {
         ...options,
         useCache: true,
-        cacheTTL: SERVICE_CACHE_TTL.LONG // Cache addresses for 5 minutes
+        cacheTTL: SERVICE_CACHE_TTL.LONG, // Cache addresses for 5 minutes
+        retries: 1 // Reduce retries for authentication calls to prevent console spam
       }
     );
   }
@@ -171,7 +172,7 @@ class SipparAPIService extends BaseAPIService {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ user_principal: principal, amount }),
+          body: JSON.stringify({ user_principal: principal, amount_micro_algos: amount }),
         });
 
         if (!response.ok) {

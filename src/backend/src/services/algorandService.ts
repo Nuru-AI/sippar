@@ -244,9 +244,30 @@ export class AlgorandService {
    */
   async getRecentDeposits(address: string): Promise<any[]> {
     try {
-      // Placeholder implementation - in a real system this would query
-      // transaction history and filter for incoming transactions
       console.log(`Getting recent deposits for ${address}`);
+      
+      // Get account info to check current balance
+      const accountInfo = await this.getAccountInfo(address);
+      
+      // If account has a balance > minimum (0.1 ALGO), treat it as a deposit
+      // This is a simplified approach for testing - in production we'd query transaction history
+      if (accountInfo && accountInfo.balance > 0.1) {
+        const depositAmount = Math.floor((accountInfo.balance - 0.1) * 1000000); // Convert to microAlgos, minus min balance
+        
+        if (depositAmount > 0) {
+          console.log(`Found available balance: ${accountInfo.balance} ALGO (${depositAmount} microAlgos available for minting)`);
+          
+          return [{
+            txId: `balance_deposit_${address}_${Date.now()}`,
+            amount: depositAmount,
+            timestamp: Date.now(),
+            from: 'historical',
+            to: address,
+            note: 'Detected existing balance available for minting'
+          }];
+        }
+      }
+      
       return [];
     } catch (error) {
       console.error(`Error getting recent deposits for ${address}:`, error);

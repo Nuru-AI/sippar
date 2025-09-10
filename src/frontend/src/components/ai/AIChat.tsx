@@ -29,14 +29,16 @@ const AIChat: React.FC = () => {
   const [showEmbedded, setShowEmbedded] = useState(false);
   const [authUrl, setAuthUrl] = useState<string | null>(null);
 
-  // Load AI status on component mount
+  // Load AI status only when authenticated
   useEffect(() => {
-    checkAIStatus();
-  }, []);
+    if (user?.isAuthenticated) {
+      checkAIStatus();
+    }
+  }, [user?.isAuthenticated]);
 
   // Get authenticated URL when user changes
   useEffect(() => {
-    if (user?.principal && credentials?.algorandAddress) {
+    if (user?.isAuthenticated && user?.principal && credentials?.algorandAddress) {
       getAuthenticatedUrl();
     }
   }, [user, credentials]);
@@ -44,6 +46,9 @@ const AIChat: React.FC = () => {
   const checkAIStatus = async () => {
     try {
       const response = await fetch('/api/ai/status');
+      if (!response.ok) {
+        throw new Error(`AI status endpoint not available (${response.status})`);
+      }
       const data = await response.json();
       
       if (data.success && data.openwebui) {
@@ -59,7 +64,8 @@ const AIChat: React.FC = () => {
         });
       }
     } catch (error) {
-      console.error('Failed to check AI status:', error);
+      // Silently handle missing AI endpoints - they're optional features
+      console.log('AI integration not available - continuing without AI features');
       setAiStatus({
         available: false,
         endpoint: 'unknown'
@@ -81,15 +87,20 @@ const AIChat: React.FC = () => {
         })
       });
 
+      if (!response.ok) {
+        throw new Error(`AI auth endpoint not available (${response.status})`);
+      }
+
       const data = await response.json();
       if (data.success) {
         setAuthUrl(data.authUrl);
       } else {
-        console.error('Failed to get authenticated URL:', data.error);
+        console.log('AI authentication not configured');
         setAuthUrl(null);
       }
     } catch (error) {
-      console.error('Error getting authenticated URL:', error);
+      // Silently handle missing AI auth endpoint - it's optional
+      console.log('AI authentication not available - continuing without AI auth');
       setAuthUrl(null);
     }
   };
@@ -102,6 +113,11 @@ const AIChat: React.FC = () => {
       window.open(aiStatus.endpoint, '_blank');
     }
   };
+
+  // Don't render AI chat if AI services are confirmed unavailable
+  if (aiStatus !== null && !aiStatus.available) {
+    return null;
+  }
 
   if (showEmbedded) {
     return (

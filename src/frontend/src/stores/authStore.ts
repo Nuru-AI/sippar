@@ -127,9 +127,11 @@ export const useAuthStore = create<AuthStore>()(
       // Authentication actions
       logout: () => {
         // Reset to initial state but keep guest user structure
+        // Use valid test principal to prevent console errors in production
+        const validTestPrincipal = '2mhjn-ayaae-bagba-faydq-qcikb-mga2d-qpcai-reeyu-culbo-gazdi-nry';
         const guestUser: AuthUser = {
-          principal: '',
-          accountId: '',
+          principal: validTestPrincipal,
+          accountId: 'sippar-guest',
           isAuthenticated: false,
           isPremium: false,
           dailyMessagesUsed: parseInt(localStorage.getItem('sippar_daily_messages_used') || '0'),
