@@ -148,22 +148,27 @@ Each sprint gets a dedicated working directory with standardized organization:
 
 ### **🚀 ACTIVE SPRINT**
 
-#### **Sprint 012: Security Audit & Production Hardening** 🛡️ **HIGH PRIORITY**
+#### **Sprint 012.5: ckALGO Smart Contract Enhancement** 🪙 **CRITICAL FOUNDATION**
 - **Status**: 📋 **READY TO START** (September 10, 2025)
-- **Timeline**: September 11-18, 2025 (7 days)
-- **Priority**: **HIGH** - Secure and scale the breakthrough
-- **Working Directory**: `/working/sprint-012/`
-- **Documentation**: [sprint012-security-audit-production-hardening.md](/working/sprint-012/sprint012-security-audit-production-hardening.md)
-- **Foundation**: Built on proven Chain Fusion breakthrough from Sprint 011
+- **Timeline**: 3-4 weeks (September 11 - October 2, 2025)
+- **Priority**: **CRITICAL FOUNDATION** - Transform breakthrough into revenue-generating utility
+- **Working Directory**: `/working/sprint-012.5/`
+- **Documentation**: [sprint012.5-ckALGO-smart-contract-enhancement.md](/working/sprint-012.5/sprint012.5-ckALGO-smart-contract-enhancement.md)
+- **Foundation**: Built on proven Chain Fusion breakthrough - now add real utility
 
 **Core Objectives**:
-1. **Professional Security Audit**: Third-party audit of threshold signature implementation
-2. **Graduated Transaction Limits**: Safe scaling with monitored transaction limits  
-3. **Advanced Monitoring**: Real-time monitoring for mainnet threshold signature operations
-4. **Emergency Procedures**: Incident response and rollback procedures for mainnet
-5. **Legal & Compliance**: Legal review and potential insurance for mainnet operations
+1. **Enhanced ckALGO Canister**: Advanced smart contract capabilities with AI integration
+2. **Cross-Chain State Management**: Enable ckALGO contracts to read/write Algorand state seamlessly
+3. **Revenue Generation**: Multiple revenue streams (AI service fees, transaction volume)
+4. **Developer SDK**: Unified development kit for hybrid Algorand-ICP applications
+5. **Enterprise Platform**: Compliant AI decision-making with audit trails
 
-**Success Criteria**: Production-hardened Chain Fusion system ready for broader ecosystem adoption with professional-grade security controls.
+**Success Criteria**: ckALGO transformed from simple bridge token to intelligent automation asset with $1M+ TVL target.
+
+#### **Deferred Sprint 012: Security Audit & Production Hardening** 🛡️ **HIGH PRIORITY**
+- **Status**: 📋 **DEFERRED** - Will proceed after Sprint 012.5 completes
+- **Rationale**: ckALGO utility more important than security audit at this stage
+- **Working Directory**: `/working/sprint-012/` (prepared but not active)
 
 ---
 
