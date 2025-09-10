@@ -3266,7 +3266,7 @@ async fn construct_enhanced_algorand_transaction(operation: &CrossChainOperation
 
 async fn request_enhanced_threshold_signature(operation_id: &str, tx_data: &[u8]) -> Result<Vec<u8>, String> {
     // Call threshold signer canister
-    let threshold_signer_id = Principal::from_text("vj7ly-diaaa-aaaae-abvoq-cai")
+    let _threshold_signer_id = Principal::from_text("vj7ly-diaaa-aaaae-abvoq-cai")
         .map_err(|_| "Invalid threshold signer canister ID")?;
 
     // Prepare signature request
@@ -3306,7 +3306,7 @@ async fn broadcast_enhanced_algorand_transaction(tx_data: &[u8], signature: &[u8
     });
 
     // HTTP outcall to broadcast transaction (simplified for now)
-    let request = CanisterHttpRequestArgument {
+    let _request = CanisterHttpRequestArgument {
         url: format!("{}/v2/transactions", api_endpoint),
         method: HttpMethod::POST,
         headers: vec![
@@ -3886,8 +3886,8 @@ async fn calculate_churn_analysis() -> Result<ChurnAnalysis, String> {
 async fn calculate_projected_growth() -> Result<f64, String> {
     // Simple growth calculation based on last 3 months
     let current_time = time();
-    let one_month_ago = current_time.saturating_sub(30 * 24 * 60 * 60 * 1_000_000_000);
-    let two_months_ago = current_time.saturating_sub(60 * 24 * 60 * 60 * 1_000_000_000);
+    let _one_month_ago = current_time.saturating_sub(30 * 24 * 60 * 60 * 1_000_000_000);
+    let _two_months_ago = current_time.saturating_sub(60 * 24 * 60 * 60 * 1_000_000_000);
     let three_months_ago = current_time.saturating_sub(90 * 24 * 60 * 60 * 1_000_000_000);
 
     let growth_rates = REVENUE_FORECASTING_DATA.with(|data| data.borrow().clone());
@@ -3989,7 +3989,7 @@ async fn create_enhanced_audit_entry(
     ai_confidence_score: Option<f64>,
     financial_impact: Option<Nat>,
     cross_chain_data: Option<CrossChainAuditData>,
-    additional_context: String,
+    _additional_context: String,
 ) -> Result<String, String> {
     let caller_principal = caller();
     let current_time = time();
@@ -4600,7 +4600,7 @@ async fn sync_revenue_analytics_with_backend() -> Result<String, String> {
     let analytics_data = prepare_analytics_data_for_sync().await?;
     
     // HTTP outcall to backend analytics endpoint
-    let request = CanisterHttpRequestArgument {
+    let _request = CanisterHttpRequestArgument {
         url: format!("{}/analytics", integration.analytics_endpoint),
         method: HttpMethod::POST,
         headers: vec![
