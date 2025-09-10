@@ -70,7 +70,8 @@ const Dashboard: React.FC = () => {
               const ckAlgoData = await ckAlgoResponse.json();
               
               if (balanceData.success && ckAlgoData.success) {
-                console.log('✅ Real balances loaded:', balanceData.balance_algo, 'ALGO,', ckAlgoData.balances.ck_algo_balance, 'ckALGO');
+                const availableAlgo = Math.max(0, balanceData.balance_algo - ckAlgoData.balances.ck_algo_balance);
+                console.log('✅ Real balances loaded:', availableAlgo.toFixed(6), 'ALGO available,', ckAlgoData.balances.ck_algo_balance, 'ckALGO');
                 // Set real balances for both ALGO and ckALGO
                 setBalances(balanceData.balance_algo, ckAlgoData.balances.ck_algo_balance);
                 return;
@@ -390,7 +391,7 @@ const Dashboard: React.FC = () => {
           {(algoBalance > 0 || ckAlgoBalance > 0) && (
             <div className="mt-4 text-center">
               <div className="text-sm text-gray-400">
-                Total Portfolio Value: <span className="text-white font-mono">{algoBalance.toFixed(6)} ALGO</span>
+                Available ALGO Balance: <span className="text-white font-mono">{Math.max(0, algoBalance - ckAlgoBalance).toFixed(6)} ALGO</span>
               </div>
             </div>
           )}
