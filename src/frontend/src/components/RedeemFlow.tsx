@@ -127,8 +127,8 @@ const RedeemFlow: React.FC = () => {
       if (user?.principal) {
         console.log('💸 Starting real ckALGO redemption (Phase 3)...');
         
-        // Phase 3: Real redemption via confirmed endpoint
-        const response = await fetch('https://nuru.network/api/sippar/ck-algo/redeem-confirmed', {
+        // Phase 3: Real redemption via production endpoint
+        const response = await fetch('https://nuru.network/api/sippar/ck-algo/redeem', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

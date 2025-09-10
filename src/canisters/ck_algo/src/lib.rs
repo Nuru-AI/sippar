@@ -2238,3 +2238,632 @@ fn list_contract_templates() -> Vec<ContractTemplate> {
         templates.borrow().values().cloned().collect()
     })
 }
+
+// ============================================================================
+// ENHANCED AI SERVICE INTEGRATION (Days 10-11: Sprint 012.5 Week 2)
+// ============================================================================
+
+// AI Service Performance Metrics
+#[derive(Clone, Debug, CandidType, Deserialize, Serialize)]
+pub struct AIServiceMetrics {
+    pub service_type: AIServiceType,
+    pub total_requests: u64,
+    pub successful_requests: u64,
+    pub failed_requests: u64,
+    pub average_response_time_ms: u64,
+    pub total_revenue: Nat,
+    pub last_updated: u64,
+    pub model_usage: HashMap<String, u64>,
+    pub error_rate: f64,
+}
+
+// Enhanced AI Response with Caching
+#[derive(Clone, Debug, CandidType, Deserialize, Serialize)]
+pub struct EnhancedAIResponse {
+    pub response_id: String,
+    pub request_id: String,
+    pub service_type: AIServiceType,
+    pub model_used: String,
+    pub query: String,
+    pub response: String,
+    pub confidence_score: f64,
+    pub processing_time_ms: u64,
+    pub tokens_used: Option<u64>,
+    pub cost: Nat,
+    pub cached: bool,
+    pub cache_key: String,
+    pub timestamp: u64,
+    pub metadata: HashMap<String, String>,
+}
+
+// AI Service Health Status
+#[derive(Clone, Debug, CandidType, Deserialize, Serialize)]
+pub struct AIServiceHealth {
+    pub service_type: AIServiceType,
+    pub status: ServiceHealthStatus,
+    pub last_check: u64,
+    pub response_time_ms: u64,
+    pub uptime_percentage: f64,
+    pub error_count_24h: u64,
+    pub available_models: Vec<String>,
+    pub rate_limit_remaining: Option<u64>,
+}
+
+#[derive(Clone, Debug, CandidType, Deserialize, Serialize, PartialEq)]
+pub enum ServiceHealthStatus {
+    Healthy,
+    Degraded,
+    Unhealthy,
+    Maintenance,
+    Unknown,
+}
+
+// Thread-local storage for enhanced AI services (add to existing thread_local! block)
+thread_local! {
+    // NEW: Enhanced AI service management (Days 10-11)
+    static AI_SERVICE_METRICS: RefCell<HashMap<AIServiceType, AIServiceMetrics>> = RefCell::new(HashMap::new());
+    static ENHANCED_AI_RESPONSE_CACHE: RefCell<HashMap<String, EnhancedAIResponse>> = RefCell::new(HashMap::new());
+    static AI_SERVICE_HEALTH: RefCell<HashMap<AIServiceType, AIServiceHealth>> = RefCell::new(HashMap::new());
+    static AI_CACHE_CONFIG: RefCell<CacheConfig> = RefCell::new(CacheConfig::default());
+}
+
+// AI Cache Configuration
+#[derive(Clone, Debug, CandidType, Deserialize, Serialize)]
+pub struct CacheConfig {
+    pub enabled: bool,
+    pub max_cache_size: usize,
+    pub cache_ttl_seconds: u64,
+    pub cache_hit_threshold: f64, // Similarity threshold for cache hits
+    pub auto_cleanup_enabled: bool,
+}
+
+impl Default for CacheConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            max_cache_size: 10000,
+            cache_ttl_seconds: 3600, // 1 hour
+            cache_hit_threshold: 0.85, // 85% similarity
+            auto_cleanup_enabled: true,
+        }
+    }
+}
+
+// Enhanced AI request processing with caching and metrics
+#[update]
+async fn enhanced_ai_request(
+    service_type: AIServiceType,
+    query: String,
+    model: Option<String>,
+    use_cache: Option<bool>,
+    metadata: Option<HashMap<String, String>>,
+) -> Result<EnhancedAIResponse, String> {
+    let caller = caller();
+    let current_time = time();
+    let request_id = format!("enhanced_ai_{}_{}", current_time, caller.to_text());
+    
+    // Generate cache key
+    let model_str = model.clone().unwrap_or_else(|| "default".to_string());
+    let cache_key = generate_cache_key(&service_type, &query, &model_str);
+    let should_use_cache = use_cache.unwrap_or(true);
+    
+    // Check cache first
+    if should_use_cache {
+        if let Some(cached_response) = check_ai_cache(&cache_key).await {
+            // Update metrics for cache hit
+            update_service_metrics(&service_type, true, 0, cached_response.cost.clone());
+            
+            // Return cached response with updated timestamp
+            let mut response = cached_response;
+            response.cached = true;
+            response.timestamp = current_time;
+            response.response_id = request_id;
+            
+            return Ok(response);
+        }
+    }
+    
+    // Get service configuration
+    let service_config = AI_SERVICES.with(|services| {
+        services.borrow().get(&service_type).cloned()
+    }).ok_or("AI service not available")?;
+    
+    // Health check
+    if let Some(health) = get_service_health(&service_type) {
+        if health.status == ServiceHealthStatus::Unhealthy {
+            return Err("AI service currently unavailable due to health issues".to_string());
+        }
+    }
+    
+    // Validate request
+    if query.len() > service_config.max_query_length {
+        return Err("Query exceeds maximum length".to_string());
+    }
+    
+    // Apply tier-based pricing
+    let caller_tier = get_principal_user_tier(caller);
+    let fee = calculate_ai_fee(&service_type, &caller_tier);
+    
+    // Check and deduct payment
+    let caller_str = principal_to_string(&caller);
+    let caller_balance = get_balance_internal(&caller_str);
+    
+    if caller_balance < fee {
+        return Err("Insufficient ckALGO balance for AI service".to_string());
+    }
+    
+    // Deduct payment
+    let new_balance = caller_balance - fee.clone();
+    set_balance_internal(&caller_str, new_balance);
+    
+    // Make AI service request with enhanced error handling
+    let start_time = time();
+    match make_enhanced_ai_request(
+        service_type.clone(),
+        query.clone(),
+        model.clone(),
+        request_id.clone(),
+        metadata.clone().unwrap_or_default(),
+    ).await {
+        Ok(ai_response) => {
+            let processing_time = time() - start_time;
+            
+            // Create enhanced response
+            let enhanced_response = EnhancedAIResponse {
+                response_id: request_id.clone(),
+                request_id: request_id.clone(),
+                service_type: service_type.clone(),
+                model_used: model_str.clone(),
+                query: query.clone(),
+                response: ai_response.clone(),
+                confidence_score: 0.95, // Default confidence, can be extracted from AI response
+                processing_time_ms: processing_time,
+                tokens_used: None, // Can be extracted from detailed AI response
+                cost: fee.clone(),
+                cached: false,
+                cache_key: cache_key.clone(),
+                timestamp: current_time,
+                metadata: metadata.unwrap_or_default(),
+            };
+            
+            // Cache the response
+            if should_use_cache {
+                cache_ai_response(cache_key, enhanced_response.clone()).await;
+            }
+            
+            // Update metrics
+            update_service_metrics(&service_type, true, processing_time, fee.clone());
+            
+            // Record audit trail
+            record_audit_entry(
+                "ENHANCED_AI_REQUEST".to_string(),
+                caller,
+                true,
+                vec!["ai_request_processed".to_string(), "cache_updated".to_string()],
+                format!("Enhanced AI request processed: {} with model {}", service_type_to_string(&service_type), model_str),
+            );
+            
+            Ok(enhanced_response)
+        },
+        Err(e) => {
+            // Refund on failure
+            let new_balance = get_balance_internal(&caller_str) + fee.clone();
+            set_balance_internal(&caller_str, new_balance);
+            
+            // Update metrics for failure
+            update_service_metrics(&service_type, false, 0, Nat::from(0u64));
+            
+            Err(format!("Enhanced AI service request failed: {}", e))
+        }
+    }
+}
+
+// Enhanced AI service request with better error handling and model selection
+async fn make_enhanced_ai_request(
+    service_type: AIServiceType,
+    query: String,
+    model: Option<String>,
+    request_id: String,
+    metadata: HashMap<String, String>,
+) -> Result<String, String> {
+    let selected_model = optimize_model_selection(service_type.clone(), model, &query).await?;
+    
+    let endpoint = match service_type {
+        AIServiceType::AlgorandOracle => format!("{}/api/v1/ai-oracle/enhanced-query", BACKEND_BASE_URL),
+        AIServiceType::OpenWebUIChat => format!("{}/api/sippar/ai/enhanced-chat", BACKEND_BASE_URL),
+        _ => format!("{}/api/sippar/ai/enhanced-query", BACKEND_BASE_URL),
+    };
+    
+    // Enhanced request payload with metadata
+    let payload = serde_json::json!({
+        "query": query,
+        "model": selected_model,
+        "request_id": request_id,
+        "service_type": service_type_to_string(&service_type),
+        "enhanced": true,
+        "metadata": metadata,
+        "temperature": 0.7,
+        "max_tokens": 1000,
+        "stream": false,
+        "timestamp": time()
+    });
+    
+    let request_body = payload.to_string().into_bytes();
+    
+    let request = CanisterHttpRequestArgument {
+        url: endpoint,
+        method: HttpMethod::POST,
+        body: Some(request_body),
+        max_response_bytes: Some(MAX_RESPONSE_BYTES),
+        transform: None,
+        headers: vec![
+            HttpHeader {
+                name: "Content-Type".to_string(),
+                value: "application/json".to_string(),
+            },
+            HttpHeader {
+                name: "User-Agent".to_string(),
+                value: "ckALGO-Enhanced/1.0".to_string(),
+            },
+            HttpHeader {
+                name: "X-Request-ID".to_string(),
+                value: request_id,
+            },
+        ],
+    };
+    
+    match ic_cdk::api::management_canister::http_request::http_request(request, HTTP_REQUEST_CYCLES).await {
+        Ok((response,)) => {
+            let response_body = String::from_utf8_lossy(&response.body);
+            
+            // Enhanced response parsing
+            match serde_json::from_str::<serde_json::Value>(&response_body) {
+                Ok(json_response) => {
+                    if let Some(success) = json_response.get("success").and_then(|v| v.as_bool()) {
+                        if success {
+                            if let Some(ai_response) = json_response.get("response").and_then(|v| v.as_str()) {
+                                Ok(ai_response.to_string())
+                            } else if let Some(content) = json_response.get("content").and_then(|v| v.as_str()) {
+                                Ok(content.to_string())
+                            } else {
+                                Err("No response content in AI service response".to_string())
+                            }
+                        } else {
+                            let error_msg = json_response.get("error")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("Unknown AI service error");
+                            Err(error_msg.to_string())
+                        }
+                    } else {
+                        Err("Invalid response format from AI service".to_string())
+                    }
+                },
+                Err(e) => Err(format!("Failed to parse AI service response: {}", e)),
+            }
+        },
+        Err((code, msg)) => Err(format!("HTTP request failed: {:?} - {}", code, msg)),
+    }
+}
+
+// AI response caching functions
+async fn check_ai_cache(cache_key: &str) -> Option<EnhancedAIResponse> {
+    ENHANCED_AI_RESPONSE_CACHE.with(|cache| {
+        let cache_ref = cache.borrow();
+        if let Some(response) = cache_ref.get(cache_key) {
+            // Check if cache entry is still valid
+            let cache_config = AI_CACHE_CONFIG.with(|config| config.borrow().clone());
+            let age_seconds = (time() - response.timestamp) / 1_000_000_000;
+            
+            if age_seconds <= cache_config.cache_ttl_seconds {
+                Some(response.clone())
+            } else {
+                None // Cache expired
+            }
+        } else {
+            None
+        }
+    })
+}
+
+async fn cache_ai_response(cache_key: String, response: EnhancedAIResponse) {
+    ENHANCED_AI_RESPONSE_CACHE.with(|cache| {
+        let mut cache_ref = cache.borrow_mut();
+        
+        // Check cache size limits
+        let cache_config = AI_CACHE_CONFIG.with(|config| config.borrow().clone());
+        if cache_ref.len() >= cache_config.max_cache_size {
+            // Remove oldest entry
+            if let Some(oldest_key) = find_oldest_cache_entry(&cache_ref) {
+                cache_ref.remove(&oldest_key);
+            }
+        }
+        
+        cache_ref.insert(cache_key, response);
+    });
+}
+
+fn find_oldest_cache_entry(cache: &HashMap<String, EnhancedAIResponse>) -> Option<String> {
+    cache.iter()
+        .min_by_key(|(_, response)| response.timestamp)
+        .map(|(key, _)| key.clone())
+}
+
+// Generate cache key based on query content and parameters
+fn generate_cache_key(service_type: &AIServiceType, query: &str, model: &str) -> String {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+    
+    let mut hasher = DefaultHasher::new();
+    service_type.hash(&mut hasher);
+    query.hash(&mut hasher);
+    model.hash(&mut hasher);
+    
+    format!("cache_{:x}", hasher.finish())
+}
+
+// AI service health monitoring
+#[update]
+async fn check_ai_service_health(service_type: AIServiceType) -> Result<AIServiceHealth, String> {
+    let start_time = time();
+    
+    let endpoint = match service_type {
+        AIServiceType::AlgorandOracle => format!("{}/api/v1/ai-oracle/health", BACKEND_BASE_URL),
+        AIServiceType::OpenWebUIChat => format!("{}/api/sippar/ai/health", BACKEND_BASE_URL),
+        _ => format!("{}/api/sippar/ai/health", BACKEND_BASE_URL),
+    };
+    
+    let request = CanisterHttpRequestArgument {
+        url: endpoint,
+        method: HttpMethod::GET,
+        body: None,
+        max_response_bytes: Some(1_000_000), // 1MB for health check
+        transform: None,
+        headers: vec![
+            HttpHeader {
+                name: "User-Agent".to_string(),
+                value: "ckALGO-Health-Check/1.0".to_string(),
+            },
+        ],
+    };
+    
+    let response_time = match ic_cdk::api::management_canister::http_request::http_request(request, HTTP_REQUEST_CYCLES).await {
+        Ok((response,)) => {
+            let response_time_ms = time() - start_time;
+            
+            let health_status = if response.status == 200u32 {
+                ServiceHealthStatus::Healthy
+            } else {
+                ServiceHealthStatus::Degraded
+            };
+            
+            let health = AIServiceHealth {
+                service_type: service_type.clone(),
+                status: health_status,
+                last_check: time(),
+                response_time_ms,
+                uptime_percentage: 99.5, // Can be calculated from historical data
+                error_count_24h: 0, // Can be retrieved from metrics
+                available_models: get_service_models(&service_type),
+                rate_limit_remaining: Some(1000), // Can be parsed from response headers
+            };
+            
+            // Update health cache
+            AI_SERVICE_HEALTH.with(|health_cache| {
+                health_cache.borrow_mut().insert(service_type, health.clone());
+            });
+            
+            Ok(health)
+        },
+        Err(_) => {
+            let health = AIServiceHealth {
+                service_type: service_type.clone(),
+                status: ServiceHealthStatus::Unhealthy,
+                last_check: time(),
+                response_time_ms: time() - start_time,
+                uptime_percentage: 0.0,
+                error_count_24h: 1,
+                available_models: vec![],
+                rate_limit_remaining: None,
+            };
+            
+            AI_SERVICE_HEALTH.with(|health_cache| {
+                health_cache.borrow_mut().insert(service_type, health.clone());
+            });
+            
+            Ok(health)
+        }
+    };
+    
+    response_time
+}
+
+// Model optimization based on query analysis
+async fn optimize_model_selection(
+    _service_type: AIServiceType,
+    preferred_model: Option<String>,
+    query: &str,
+) -> Result<String, String> {
+    // If user has preference, use it
+    if let Some(model) = preferred_model {
+        return Ok(model);
+    }
+    
+    // Analyze query to select optimal model
+    let query_lower = query.to_lowercase();
+    
+    let optimal_model = if query_lower.contains("code") || query_lower.contains("program") {
+        "deepseek-r1".to_string() // Best for coding tasks
+    } else if query_lower.contains("math") || query_lower.contains("calculation") {
+        "qwen2.5:0.5b".to_string() // Best for mathematical tasks
+    } else if query_lower.len() > 500 {
+        "mistral".to_string() // Best for long context
+    } else {
+        "phi-3".to_string() // Best general purpose model
+    };
+    
+    Ok(optimal_model)
+}
+
+// Service metrics management
+fn update_service_metrics(service_type: &AIServiceType, success: bool, processing_time: u64, cost: Nat) {
+    AI_SERVICE_METRICS.with(|metrics| {
+        let mut metrics_ref = metrics.borrow_mut();
+        let entry = metrics_ref.entry(service_type.clone()).or_insert_with(|| AIServiceMetrics {
+            service_type: service_type.clone(),
+            total_requests: 0,
+            successful_requests: 0,
+            failed_requests: 0,
+            average_response_time_ms: 0,
+            total_revenue: Nat::from(0u64),
+            last_updated: time(),
+            model_usage: HashMap::new(),
+            error_rate: 0.0,
+        });
+        
+        entry.total_requests += 1;
+        if success {
+            entry.successful_requests += 1;
+        } else {
+            entry.failed_requests += 1;
+        }
+        
+        // Update average response time
+        if processing_time > 0 {
+            entry.average_response_time_ms = 
+                (entry.average_response_time_ms + processing_time) / 2;
+        }
+        
+        entry.total_revenue = entry.total_revenue.clone() + cost;
+        entry.last_updated = time();
+        entry.error_rate = (entry.failed_requests as f64) / (entry.total_requests as f64);
+    });
+}
+
+// Helper functions
+fn get_service_health(service_type: &AIServiceType) -> Option<AIServiceHealth> {
+    AI_SERVICE_HEALTH.with(|health| {
+        health.borrow().get(service_type).cloned()
+    })
+}
+
+fn get_service_models(service_type: &AIServiceType) -> Vec<String> {
+    AI_SERVICES.with(|services| {
+        services.borrow().get(service_type)
+            .map(|config| config.supported_models.clone())
+            .unwrap_or_default()
+    })
+}
+
+fn service_type_to_string(service_type: &AIServiceType) -> String {
+    format!("{:?}", service_type)
+}
+
+fn calculate_ai_fee(service_type: &AIServiceType, user_tier: &UserTier) -> Nat {
+    let base_fee = AI_SERVICES.with(|services| {
+        services.borrow().get(service_type)
+            .map(|config| config.fee_per_request.clone())
+            .unwrap_or(Nat::from(10_000_000u64)) // Default 0.01 ckALGO
+    });
+    
+    // Apply tier discount
+    match user_tier {
+        UserTier::Free => base_fee,
+        UserTier::Developer => base_fee * Nat::from(75u64) / Nat::from(100u64), // 25% discount
+        UserTier::Professional => base_fee / Nat::from(2u64), // 50% discount
+        UserTier::Enterprise => base_fee / Nat::from(4u64), // 75% discount
+    }
+}
+
+fn get_principal_user_tier(principal: Principal) -> UserTier {
+    USER_ACCOUNTS.with(|accounts| {
+        accounts.borrow().get(&principal)
+            .map(|account| account.tier.clone())
+            .unwrap_or(UserTier::Free)
+    })
+}
+
+// Query functions for enhanced AI services
+#[query]
+fn get_ai_service_metrics(service_type: AIServiceType) -> Option<AIServiceMetrics> {
+    AI_SERVICE_METRICS.with(|metrics| {
+        metrics.borrow().get(&service_type).cloned()
+    })
+}
+
+#[query]
+fn get_all_ai_service_metrics() -> Vec<AIServiceMetrics> {
+    AI_SERVICE_METRICS.with(|metrics| {
+        metrics.borrow().values().cloned().collect()
+    })
+}
+
+#[query]
+fn get_ai_cache_stats() -> String {
+    let (cache_size, cache_hits, cache_config) = ENHANCED_AI_RESPONSE_CACHE.with(|cache| {
+        let cache_ref = cache.borrow();
+        let size = cache_ref.len();
+        let hits = cache_ref.values().filter(|response| response.cached).count();
+        let config = AI_CACHE_CONFIG.with(|c| c.borrow().clone());
+        (size, hits, config)
+    });
+    
+    format!(
+        "AI Cache Statistics:\nTotal Entries: {}\nCache Hits: {}\nMax Size: {}\nTTL: {}s\nEnabled: {}",
+        cache_size, cache_hits, cache_config.max_cache_size, 
+        cache_config.cache_ttl_seconds, cache_config.enabled
+    )
+}
+
+#[update]
+fn configure_ai_cache(
+    enabled: bool,
+    max_size: usize,
+    ttl_seconds: u64,
+    hit_threshold: f64,
+) -> Result<String, String> {
+    let caller = caller();
+    
+    // Only allow controller to modify cache config
+    let controller = Principal::from_text("27ssj-4t63z-3sydd-lcaf3-d6uix-zurll-zovsc-nmtga-hkrls-yrawj-mqe")
+        .map_err(|_| "Invalid controller principal")?;
+    
+    if caller != controller {
+        return Err("Only controller can modify AI cache configuration".to_string());
+    }
+    
+    let config = CacheConfig {
+        enabled,
+        max_cache_size: max_size,
+        cache_ttl_seconds: ttl_seconds,
+        cache_hit_threshold: hit_threshold,
+        auto_cleanup_enabled: true,
+    };
+    
+    AI_CACHE_CONFIG.with(|cache_config| {
+        *cache_config.borrow_mut() = config;
+    });
+    
+    Ok("AI cache configuration updated successfully".to_string())
+}
+
+// Cache maintenance function
+#[update]
+fn cleanup_ai_cache() -> Result<String, String> {
+    let removed_count = ENHANCED_AI_RESPONSE_CACHE.with(|cache| {
+        let mut cache_ref = cache.borrow_mut();
+        let current_time = time();
+        let cache_config = AI_CACHE_CONFIG.with(|config| config.borrow().clone());
+        
+        let initial_size = cache_ref.len();
+        
+        // Remove expired entries
+        cache_ref.retain(|_, response| {
+            let age_seconds = (current_time - response.timestamp) / 1_000_000_000;
+            age_seconds <= cache_config.cache_ttl_seconds
+        });
+        
+        initial_size - cache_ref.len()
+    });
+    
+    Ok(format!("Cleaned up {} expired cache entries", removed_count))
+}
