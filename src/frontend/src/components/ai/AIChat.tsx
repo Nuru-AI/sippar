@@ -45,7 +45,7 @@ const AIChat: React.FC = () => {
 
   const checkAIStatus = async () => {
     try {
-      const response = await fetch('https://nuru.network/api/sippar/ai/status');
+      const response = await fetch('https://nuru.network/api/ai/status');
       if (!response.ok) {
         throw new Error(`AI status endpoint not available (${response.status})`);
       }
@@ -75,7 +75,7 @@ const AIChat: React.FC = () => {
 
   const getAuthenticatedUrl = async () => {
     try {
-      const response = await fetch('https://nuru.network/api/sippar/ai/auth-url', {
+      const response = await fetch('https://nuru.network/api/ai/auth-url', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
