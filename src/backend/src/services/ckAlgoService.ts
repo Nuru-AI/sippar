@@ -123,21 +123,37 @@ export class CkAlgoService {
   }
 
   /**
-   * Burn (redeem) ckALGO tokens from a user's principal
-   * @param principal - User's Internet Identity principal (string)
-   * @param microAlgos - Amount in microckALGO (6 decimals) to burn
+   * Burn (redeem) ckALGO tokens from specific user's balance
+   * @param principal - User's Internet Identity principal (the token owner)
+   * @param microAlgos - Amount in microckALGO (6 decimals) to burn  
+   * @param destinationAddress - Algorand address to send unlocked ALGO to
    * @returns Redemption result with success/error info
    */
-  async burnCkAlgo(principal: string, microAlgos: number) {
+  async burnCkAlgo(principal: string, microAlgos: number, destinationAddress: string) {
     try {
-      console.log(`🔥 Burning ${microAlgos} microckALGO from principal: ${principal}`);
+      console.log(`🔥 Burning ${microAlgos} microckALGO from ${principal} (destination: ${destinationAddress})`);
       
-      const result = await this.actor.redeem_ck_algo(BigInt(microAlgos), principal);
+      // Create agent authenticated as the user principal for this specific call
+      const userAgent = new HttpAgent({ 
+        host: 'https://ic0.app',
+        identity: { getPrincipal: () => Principal.fromText(principal) } as any
+      });
+      
+      // Fetch root key for certificate validation
+      await userAgent.fetchRootKey();
+      
+      // Create actor authenticated as the user
+      const userActor = Actor.createActor(ckAlgoIdl, {
+        agent: userAgent,
+        canisterId: this.canisterId
+      });
+      
+      const result = await userActor.redeem_ck_algo(BigInt(microAlgos), destinationAddress);
       
       console.log('✅ ckALGO burn result from canister:', result);
       
       // Handle Rust Result type: { Ok: value } or { Err: error }
-      if ('Ok' in result) {
+      if (result && typeof result === 'object' && 'Ok' in result) {
         const burnedAmount = microAlgos / 1_000_000; // Convert to ALGO
         console.log(`✅ Successfully burned ${burnedAmount} ckALGO`);
         return {
@@ -145,11 +161,11 @@ export class CkAlgoService {
           amount_burned: burnedAmount,
           raw_amount: microAlgos,
           principal,
-          tx_id: result.Ok
+          tx_id: (result as any).Ok
         };
-      } else if ('Err' in result) {
-        console.error('❌ ckALGO burning failed:', result.Err);
-        throw new Error(`ckALGO burning failed: ${result.Err}`);
+      } else if (result && typeof result === 'object' && 'Err' in result) {
+        console.error('❌ ckALGO burning failed:', (result as any).Err);
+        throw new Error(`ckALGO burning failed: ${(result as any).Err}`);
       } else {
         throw new Error('Unknown result format from ckALGO canister');
       }

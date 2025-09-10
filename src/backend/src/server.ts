@@ -572,7 +572,7 @@ app.post('/ck-algo/redeem', async (req, res) => {
     const ckAlgoMicroUnits = Math.floor(amount * 1_000_000);
     
     try {
-      const burnResult = await ckAlgoService.burnCkAlgo(principal, ckAlgoMicroUnits);
+      const burnResult = await ckAlgoService.burnCkAlgo(principal, ckAlgoMicroUnits, destinationAddress);
       console.log(`✅ Successfully burned ${amount} ckALGO:`, burnResult);
     } catch (burnError) {
       console.error('❌ ckALGO burning failed:', burnError);
