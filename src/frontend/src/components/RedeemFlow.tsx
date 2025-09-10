@@ -142,13 +142,35 @@ const RedeemFlow: React.FC = () => {
         
         const redeemResult = await response.json();
         
+        console.log('🔍 Full redeem API response:', redeemResult);
+        
         if (redeemResult.success) {
           console.log('✅ ALGO redeemed successfully (Phase 3):', redeemResult);
+          
+          // Check if the response actually contains transaction details
+          if (!redeemResult.algorandTxId && !redeemResult.transactionId) {
+            console.warn('⚠️ Success response but no transaction ID - possible backend issue');
+          }
+          
           setTransactionResult(redeemResult);
+          
+          // Wait a moment before refreshing balance to allow backend processing
+          setTimeout(async () => {
+            console.log('🔄 Refreshing balance after redemption...');
+            const oldBalance = ckAlgoBalance;
+            await loadCkAlgoBalance();
+            
+            // Check if balance actually changed
+            setTimeout(() => {
+              if (ckAlgoBalance === oldBalance) {
+                console.warn('⚠️ Balance did not change after successful redemption - possible backend issue');
+                console.log(`Old balance: ${oldBalance}, Current balance: ${ckAlgoBalance}`);
+              }
+            }, 1000);
+          }, 2000);
+          
           setCurrentStep(4); // Success
           setIsProcessing(false);
-          // Refresh balance after successful redemption
-          loadCkAlgoBalance();
         } else {
           throw new Error(redeemResult.error || 'Redemption failed');
         }
