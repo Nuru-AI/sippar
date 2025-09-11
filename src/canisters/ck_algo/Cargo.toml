@@ -19,3 +19,6 @@ hex = "0.4"
 version = "0.2"
 features = ["custom"]
 
+[dev-dependencies]
+tokio = { version = "1.0", features = ["full"] }
+

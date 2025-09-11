@@ -35,10 +35,10 @@
     "build:canisters": "dfx build",
     "test": "npm run test:unit && npm run test:integration && npm run test:e2e",
     "test:unit": "jest --testPathPattern=tests/unit",
-    "test:integration": "jest --testPathPattern=tests/integration", 
+    "test:integration": "jest --testPathPattern=tests/integration",
     "test:e2e": "playwright test tests/e2e",
     "test:frontend": "jest --testPathPattern=frontend",
-    "test:backend": "jest --testPathPattern=backend", 
+    "test:backend": "jest --testPathPattern=backend",
     "test:canister": "jest --testPathPattern=canister",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -59,10 +59,11 @@
     "health": "curl -f https://nuru.network/api/sippar/health || exit 1"
   },
   "dependencies": {
-    "@dfinity/agent": "^0.21.0",
+    "@dfinity/agent": "^0.21.4",
     "@dfinity/auth-client": "^0.21.0",
-    "@dfinity/candid": "^0.21.0",
-    "@dfinity/principal": "^0.21.0",
+    "@dfinity/candid": "^0.21.4",
+    "@dfinity/principal": "^0.21.4",
+    "@sippar/ck-algo-sdk": "file:src/sdk/sippar-ck-algo-sdk-0.1.0.tgz",
     "algosdk": "^2.7.0",
     "axios": "^1.6.0",
     "base32": "^0.0.7",
@@ -160,7 +161,7 @@
     "testEnvironment": "node",
     "testMatch": [
       "**/tests/**/*.test.ts",
-      "**/tests/**/*.test.js", 
+      "**/tests/**/*.test.js",
       "**/tests/**/*.spec.ts",
       "**/tests/**/*.spec.js"
     ],

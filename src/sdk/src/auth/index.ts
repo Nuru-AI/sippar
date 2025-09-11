@@ -352,4 +352,4 @@ export async function createAuth(config?: AuthConfig): Promise<SipparAuth> {
   return auth;
 }
 
-export { UserTier, type UserIdentity, type AuthState, type AuthConfig };
+export { UserTier };

@@ -3,7 +3,7 @@
 
 import { Actor, HttpAgent } from '@dfinity/agent';
 import { Principal } from '@dfinity/principal';
-import { SipparAuth, AuthConfig } from '../auth';
+import { SipparAuth, AuthConfig } from '../auth/index';
 import { AIService } from '../services/ai';
 import { SmartContractService } from '../services/smart-contracts';
 import { CrossChainService } from '../services/cross-chain';
