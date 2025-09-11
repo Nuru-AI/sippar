@@ -578,6 +578,34 @@ fn init() {
     }
 }
 
+#[ic_cdk::post_upgrade]
+fn post_upgrade() {
+    // Ensure backend is authorized after upgrade
+    AUTHORIZED_MINTERS.with(|minters| {
+        let mut minters_vec = minters.borrow_mut();
+        
+        // Add backend principal if not already present
+        if let Ok(backend_principal) = Principal::from_text("2vxsx-fae") {
+            if !minters_vec.contains(&backend_principal) {
+                minters_vec.push(backend_principal);
+            }
+        }
+        
+        // Also ensure threshold signer is present
+        if let Ok(signer_principal) = Principal::from_text("vj7ly-diaaa-aaaae-abvoq-cai") {
+            if !minters_vec.contains(&signer_principal) {
+                minters_vec.push(signer_principal);
+            }
+        }
+        
+        // Ensure management canister is present
+        let mgmt_principal = Principal::management_canister();
+        if !minters_vec.contains(&mgmt_principal) {
+            minters_vec.push(mgmt_principal);
+        }
+    });
+}
+
 // Initialize AI services during canister init
 fn initialize_ai_services() {
     AI_SERVICES.with(|services| {
