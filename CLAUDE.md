@@ -442,3 +442,4 @@ cat tools/deployment/DEPLOYMENT_STRUCTURE.md
 - **✅ Accurate Documentation**: Updated `docs/api/endpoints.md` with real response examples
 - **✅ Oracle System Integration**: Oracle APIs fully operational with live monitoring
 - **✅ No Hallucinations**: All endpoint responses verified against actual backend
+- "⚠️ Balance did not change after successful redemption - possible backend issue" '/var/folders/1r/szfp8v9523v1cby37wh2vz140000gp/T/TemporaryItems/NSIRD_screencaptureui_1B8bP9/Screenshot 2025-09-12 at 2.13.30 PM.png'

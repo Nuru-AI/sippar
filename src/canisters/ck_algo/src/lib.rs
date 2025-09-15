@@ -1577,6 +1577,110 @@ fn redeem_ck_algo(amount: Nat, algorand_address: String) -> Result<String, Strin
     Ok(format!("ALGO_TX_{}", time()))
 }
 
+/// Admin burn function - allows authorized backends to burn tokens from user's balance
+#[update]
+fn admin_burn_ck_algo(user_principal: Principal, amount: Nat, algorand_address: String) -> Result<String, String> {
+    let caller = caller();
+    
+    // Check if caller is authorized to perform admin operations
+    let is_authorized = AUTHORIZED_MINTERS.with(|minters| {
+        minters.borrow().contains(&caller)
+    });
+    
+    if !is_authorized {
+        return Err(format!("Unauthorized: Only authorized principals can perform admin burns. Caller: {}", caller));
+    }
+    
+    let user_str = principal_to_string(&user_principal);
+    let user_balance = get_balance_internal(&user_str);
+    
+    if user_balance < amount {
+        return Err(format!("Insufficient funds: User {} has {} but trying to burn {}", user_str, user_balance, amount));
+    }
+    
+    // Burn tokens from user's balance
+    let new_balance = user_balance - amount.clone();
+    set_balance_internal(&user_str, new_balance);
+    
+    // Update total supply
+    TOTAL_SUPPLY.with(|supply| {
+        let current_supply = supply.borrow().clone();
+        *supply.borrow_mut() = current_supply - amount.clone();
+    });
+    
+    // Enhanced audit trail
+    record_audit_entry(
+        "ADMIN_BURN_CK_ALGO".to_string(),
+        user_principal,
+        false,
+        vec!["admin_burn".to_string(), "balance_burned".to_string(), "algorand_transfer_pending".to_string()],
+        format!("Admin {} burned {} ckALGO from user {} to Algorand address {}", caller, amount, user_str, algorand_address),
+    );
+    
+    Ok(format!("ALGO_TX_{}", time()))
+}
+
+/// Admin transfer function - allows authorized backends to transfer tokens between users
+#[update]
+fn admin_transfer_ck_algo_by_string(from_principal_str: String, to_principal: Principal, amount: Nat) -> Result<Nat, String> {
+    let caller = caller();
+    
+    // Check if caller is authorized to perform admin operations
+    let is_authorized = AUTHORIZED_MINTERS.with(|minters| {
+        minters.borrow().contains(&caller)
+    });
+    
+    if !is_authorized {
+        return Err(format!("Unauthorized: Only authorized principals can perform admin transfers. Caller: {}", caller));
+    }
+    
+    let from_str = from_principal_str; // Use the string directly as passed in
+    let to_str = principal_to_string(&to_principal);
+    
+    let from_balance = get_balance_internal(&from_str);
+    
+    if from_balance < amount {
+        return Err(format!("Insufficient funds: User {} has {} but trying to transfer {}", from_str, from_balance, amount));
+    }
+    
+    // Transfer tokens: from_user -> to_user
+    let new_from_balance = from_balance - amount.clone();
+    let current_to_balance = get_balance_internal(&to_str);
+    let new_to_balance = current_to_balance + amount.clone();
+    
+    set_balance_internal(&from_str, new_from_balance);
+    set_balance_internal(&to_str, new_to_balance);
+    
+    // Generate transfer index (simplified)
+    let transfer_index = time() as u64;
+    
+    // Enhanced audit trail for both users
+    // For from_principal, we need to try to parse it back to Principal for audit
+    let from_principal_for_audit = if let Ok(p) = Principal::from_text(&from_str) {
+        p
+    } else {
+        caller // Fallback to caller if chain fusion principal can't be parsed
+    };
+    
+    record_audit_entry(
+        "ADMIN_TRANSFER_OUT".to_string(),
+        from_principal_for_audit,
+        false,
+        vec!["admin_transfer".to_string(), "balance_decreased".to_string()],
+        format!("Admin {} transferred {} ckALGO from {} to {}", caller, amount, from_str, to_str),
+    );
+    
+    record_audit_entry(
+        "ADMIN_TRANSFER_IN".to_string(),
+        to_principal,
+        false,
+        vec!["admin_transfer".to_string(), "balance_increased".to_string()],
+        format!("Admin {} transferred {} ckALGO from {} to {}", caller, amount, from_str, to_str),
+    );
+    
+    Ok(Nat::from(transfer_index))
+}
+
 // ============================================================================
 // MULTI-TIER REVENUE SYSTEM (Day 5-6 Enhancement)
 // ============================================================================
@@ -1852,6 +1956,48 @@ fn get_backend_integration_status() -> Option<String> {
 #[query]
 fn get_caller() -> Principal {
     caller()
+}
+
+#[query]
+fn debug_list_balance_keys() -> Vec<String> {
+    BALANCES.with(|balances| {
+        balances.borrow().keys().cloned().collect()
+    })
+}
+
+/// Admin function to restore balance after canister upgrade
+#[update]
+fn admin_restore_balance(account_str: String, amount: Nat) -> Result<Nat, String> {
+    let caller = caller();
+    
+    // Check if caller is authorized to perform admin operations
+    let is_authorized = AUTHORIZED_MINTERS.with(|minters| {
+        minters.borrow().contains(&caller)
+    });
+    
+    if !is_authorized {
+        return Err(format!("Unauthorized: Only authorized principals can restore balances. Caller: {}", caller));
+    }
+    
+    // Set balance directly
+    set_balance_internal(&account_str, amount.clone());
+    
+    // Update total supply
+    TOTAL_SUPPLY.with(|supply| {
+        let current_supply = supply.borrow().clone();
+        *supply.borrow_mut() = current_supply + amount.clone();
+    });
+    
+    // Record audit entry
+    record_audit_entry(
+        "ADMIN_RESTORE_BALANCE".to_string(),
+        caller,
+        false,
+        vec!["admin_restore".to_string(), "balance_restored".to_string()],
+        format!("Admin {} restored {} ckALGO balance for account {}", caller, amount, account_str),
+    );
+    
+    Ok(amount)
 }
 
 // ============================================================================
