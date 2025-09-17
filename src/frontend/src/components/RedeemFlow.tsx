@@ -144,7 +144,8 @@ const RedeemFlow: React.FC = () => {
         
         console.log('🔍 Full redeem API response:', redeemResult);
         
-        if (redeemResult.success) {
+        // Check both HTTP status and response success field
+        if (response.ok && redeemResult.success === true) {
           console.log('✅ ALGO redeemed successfully (Phase 3):', redeemResult);
           
           // Check if the response actually contains transaction details
@@ -158,21 +159,44 @@ const RedeemFlow: React.FC = () => {
           setTimeout(async () => {
             console.log('🔄 Refreshing balance after redemption...');
             const oldBalance = ckAlgoBalance;
-            await loadCkAlgoBalance();
+            console.log(`📊 Pre-refresh balance: ${oldBalance} ckALGO`);
             
-            // Check if balance actually changed
-            setTimeout(() => {
-              if (ckAlgoBalance === oldBalance) {
-                console.warn('⚠️ Balance did not change after successful redemption - possible backend issue');
-                console.log(`Old balance: ${oldBalance}, Current balance: ${ckAlgoBalance}`);
+            try {
+              // Call balance API directly to get fresh data
+              const response = await fetch(`https://nuru.network/api/sippar/ck-algo/balance/${user.principal}`);
+              const balanceData = await response.json();
+              
+              if (response.ok && balanceData.success && balanceData.balances?.ck_algo_balance !== undefined) {
+                const newBalance = balanceData.balances.ck_algo_balance;
+                setCkAlgoBalance(newBalance);
+                console.log(`📊 Fresh balance from API: ${newBalance} ckALGO`);
+                
+                if (Math.abs(newBalance - oldBalance) < 0.001) {
+                  console.warn('⚠️ Balance did not change after redemption - checking if this is expected');
+                  console.log(`Old balance: ${oldBalance}, Current balance: ${newBalance}`);
+                } else {
+                  const burned = oldBalance - newBalance;
+                  console.log(`✅ Balance updated successfully! Burned: ${burned.toFixed(6)} ckALGO`);
+                  console.log(`📊 Balance change: ${oldBalance} → ${newBalance} ckALGO`);
+                }
+                
+                // Trigger balance refresh in Dashboard and other components
+                window.dispatchEvent(new CustomEvent('sipparBalanceRefresh'));
+              } else {
+                console.error('❌ Failed to get fresh balance:', balanceData);
               }
-            }, 1000);
-          }, 2000);
+            } catch (error) {
+              console.error('❌ Failed to refresh balance:', error);
+            }
+          }, 1000);
           
           setCurrentStep(4); // Success
           setIsProcessing(false);
         } else {
-          throw new Error(redeemResult.error || 'Redemption failed');
+          // Backend returned error or HTTP error occurred
+          const errorMessage = redeemResult.error || `API Error: ${response.status} ${response.statusText}`;
+          console.error('❌ Backend redemption failed:', errorMessage);
+          throw new Error(errorMessage);
         }
       }
     } catch (error) {

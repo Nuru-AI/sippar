@@ -20,7 +20,13 @@ service : () -> {
     
     // Admin Methods
     update_algorand_balance : (nat) -> (variant { Ok : null; Err : text });
+    admin_burn_ck_algo : (principal, nat, text) -> (variant { Ok : text; Err : text });
+    admin_transfer_ck_algo_by_string : (text, principal, nat) -> (variant { Ok : nat; Err : text });
+    admin_add_authorized_minter : (principal) -> (variant { Ok : text; Err : text });
+    admin_list_authorized_minters : () -> (vec principal) query;
     
     // Debug method
     get_caller : () -> (principal) query;
+    debug_list_balance_keys : () -> (vec text) query;
+    admin_restore_balance : (text, nat) -> (variant { Ok : nat; Err : text });
 }

@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartBiz Intelligence - AI That Makes Your Business Smarter</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="style.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-brain"></i>
+                <span>SmartBiz Intelligence</span>
+            </div>
+            <div class="nav-menu">
+                <a href="#features" class="nav-link">Features</a>
+                <a href="#demo" class="nav-link">Live Demo</a>
+                <a href="#pricing" class="nav-link">Pricing</a>
+                <button class="demo-button" onclick="startDemo()">Try Free Demo</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1>AI That Makes Your Business Smarter</h1>
+            <p class="hero-subtitle">Automatically optimize your website, social media, and customer insights with enterprise-grade security - no technical expertise required.</p>
+            <div class="hero-stats">
+                <div class="stat">
+                    <div class="stat-number">80%</div>
+                    <div class="stat-label">Time Saved</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">3x</div>
+                    <div class="stat-label">Better Results</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">10min</div>
+                    <div class="stat-label">Setup Time</div>
+                </div>
+            </div>
+            <button class="cta-button" onclick="startDemo()">
+                <i class="fas fa-play"></i>
+                Start Free Demo
+            </button>
+            <p class="hero-note">✓ No credit card required ✓ Bank-level security ✓ Instant setup</p>
+        </div>
+        <div class="hero-visual">
+            <div class="dashboard-preview">
+                <div class="preview-header">
+                    <div class="preview-dots">
+                        <span></span><span></span><span></span>
+                    </div>
+                    <span class="preview-title">SmartBiz Dashboard</span>
+                </div>
+                <div class="preview-content">
+                    <div class="preview-chart">
+                        <canvas id="heroChart" width="300" height="150"></canvas>
+                    </div>
+                    <div class="preview-insights">
+                        <div class="insight-item">
+                            <i class="fas fa-lightbulb"></i>
+                            <span>Post at 2 PM for 40% more engagement</span>
+                        </div>
+                        <div class="insight-item">
+                            <i class="fas fa-trending-up"></i>
+                            <span>Your Friday promotions drive 3x sales</span>
+                        </div>
+                        <div class="insight-item">
+                            <i class="fas fa-users"></i>
+                            <span>Customers prefer product videos by 65%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features">
+        <div class="container">
+            <h2>Everything Your Business Needs, Automated</h2>
+            <p class="section-subtitle">One platform that connects all your business tools and makes them smarter</p>
+
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3>Smart Analytics</h3>
+                    <p>Get plain-English insights about your customers, website, and social media performance.</p>
+                    <ul class="feature-list">
+                        <li>✓ When to post for maximum engagement</li>
+                        <li>✓ Which products sell best when</li>
+                        <li>✓ Customer behavior predictions</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <h3>AI Content Creation</h3>
+                    <p>Automatically generate social media posts, product descriptions, and marketing content.</p>
+                    <ul class="feature-list">
+                        <li>✓ Daily social media posts</li>
+                        <li>✓ Product descriptions that sell</li>
+                        <li>✓ Email marketing campaigns</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h3>Enterprise Security</h3>
+                    <p>Bank-level protection for your business data with advanced encryption and audit trails.</p>
+                    <ul class="feature-list">
+                        <li>✓ Zero single points of failure</li>
+                        <li>✓ Instant secure payments</li>
+                        <li>✓ Complete audit trails</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-magic"></i>
+                    </div>
+                    <h3>Smart Automation</h3>
+                    <p>Connect all your business tools and automate repetitive tasks intelligently.</p>
+                    <ul class="feature-list">
+                        <li>✓ Automated inventory alerts</li>
+                        <li>✓ Smart pricing adjustments</li>
+                        <li>✓ Customer follow-up sequences</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-credit-card"></i>
+                    </div>
+                    <h3>Smart Payments</h3>
+                    <p>Process payments instantly with enterprise-grade security and transparent fees.</p>
+                    <ul class="feature-list">
+                        <li>✓ Instant vendor payments</li>
+                        <li>✓ No payment delays</li>
+                        <li>✓ Transparent fee structure</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-puzzle-piece"></i>
+                    </div>
+                    <h3>Easy Integration</h3>
+                    <p>Connect your existing tools in minutes - Wix, Shopify, social media, and more.</p>
+                    <ul class="feature-list">
+                        <li>✓ One-click website import</li>
+                        <li>✓ Social media auto-connect</li>
+                        <li>✓ E-commerce integration</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Live Demo Section -->
+    <section id="demo" class="demo-section">
+        <div class="container">
+            <h2>See SmartBiz Intelligence in Action</h2>
+            <p class="section-subtitle">Explore a real business dashboard and see how AI makes everything smarter</p>
+
+            <div class="demo-container" id="demoContainer" style="display: none;">
+                <div class="demo-tabs">
+                    <button class="tab-button active" onclick="showTab('overview')">Business Overview</button>
+                    <button class="tab-button" onclick="showTab('insights')">AI Insights</button>
+                    <button class="tab-button" onclick="showTab('automation')">Smart Automation</button>
+                    <button class="tab-button" onclick="showTab('payments')">Smart Payments</button>
+                </div>
+
+                <div class="demo-content">
+                    <!-- Overview Tab -->
+                    <div id="overview" class="tab-content active">
+                        <div class="dashboard-grid">
+                            <div class="dashboard-card">
+                                <h3><i class="fas fa-chart-line"></i> Website Performance</h3>
+                                <div class="metric">
+                                    <span class="metric-value">2,847</span>
+                                    <span class="metric-label">Monthly Visitors</span>
+                                    <span class="metric-change positive">+23%</span>
+                                </div>
+                                <canvas id="websiteChart" width="250" height="100"></canvas>
+                            </div>
+
+                            <div class="dashboard-card">
+                                <h3><i class="fas fa-heart"></i> Social Media</h3>
+                                <div class="metric">
+                                    <span class="metric-value">12.4K</span>
+                                    <span class="metric-label">Total Followers</span>
+                                    <span class="metric-change positive">+18%</span>
+                                </div>
+                                <div class="social-platforms">
+                                    <div class="platform">
+                                        <i class="fab fa-instagram"></i>
+                                        <span>8.2K</span>
+                                    </div>
+                                    <div class="platform">
+                                        <i class="fab fa-facebook"></i>
+                                        <span>3.1K</span>
+                                    </div>
+                                    <div class="platform">
+                                        <i class="fab fa-linkedin"></i>
+                                        <span>1.1K</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="dashboard-card">
+                                <h3><i class="fas fa-dollar-sign"></i> Revenue</h3>
+                                <div class="metric">
+                                    <span class="metric-value">$8,420</span>
+                                    <span class="metric-label">This Month</span>
+                                    <span class="metric-change positive">+31%</span>
+                                </div>
+                                <div class="revenue-breakdown">
+                                    <div class="revenue-item">
+                                        <span class="revenue-source">Online Store</span>
+                                        <span class="revenue-amount">$6,240</span>
+                                    </div>
+                                    <div class="revenue-item">
+                                        <span class="revenue-source">Services</span>
+                                        <span class="revenue-amount">$2,180</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AI Insights Tab -->
+                    <div id="insights" class="tab-content">
+                        <div class="insights-container">
+                            <div class="insight-card priority-high">
+                                <div class="insight-header">
+                                    <i class="fas fa-lightbulb"></i>
+                                    <span class="insight-priority">High Impact</span>
+                                </div>
+                                <h3>Optimal Posting Time</h3>
+                                <p>Your audience is 40% more active on <strong>Tuesday at 2:00 PM</strong>. Schedule your product announcements for maximum engagement.</p>
+                                <div class="insight-action">
+                                    <button class="action-button">Auto-Schedule Posts</button>
+                                    <span class="confidence">95% confidence</span>
+                                </div>
+                            </div>
+
+                            <div class="insight-card priority-medium">
+                                <div class="insight-header">
+                                    <i class="fas fa-shopping-cart"></i>
+                                    <span class="insight-priority">Revenue Opportunity</span>
+                                </div>
+                                <h3>Inventory Optimization</h3>
+                                <p>Your <strong>blue summer dresses</strong> sell 3x faster than other colors. Consider increasing inventory by 60% before peak season.</p>
+                                <div class="insight-action">
+                                    <button class="action-button">Update Inventory</button>
+                                    <span class="confidence">87% confidence</span>
+                                </div>
+                            </div>
+
+                            <div class="insight-card priority-medium">
+                                <div class="insight-header">
+                                    <i class="fas fa-users"></i>
+                                    <span class="insight-priority">Customer Behavior</span>
+                                </div>
+                                <h3>Content Preference</h3>
+                                <p>Your customers engage <strong>65% more</strong> with video content than photos. Video posts generate 2x more sales inquiries.</p>
+                                <div class="insight-action">
+                                    <button class="action-button">Generate Video Content</button>
+                                    <span class="confidence">92% confidence</span>
+                                </div>
+                            </div>
+
+                            <div class="insight-card priority-low">
+                                <div class="insight-header">
+                                    <i class="fas fa-clock"></i>
+                                    <span class="insight-priority">Timing</span>
+                                </div>
+                                <h3>Seasonal Trend</h3>
+                                <p>Friday promotions drive <strong>45% more sales</strong> than weekday promotions. Consider moving your weekly deals to Friday afternoons.</p>
+                                <div class="insight-action">
+                                    <button class="action-button">Schedule Friday Deals</button>
+                                    <span class="confidence">78% confidence</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Automation Tab -->
+                    <div id="automation" class="tab-content">
+                        <div class="automation-grid">
+                            <div class="automation-card active">
+                                <div class="automation-header">
+                                    <i class="fas fa-robot"></i>
+                                    <h3>Social Media Automation</h3>
+                                    <span class="status-badge active">Active</span>
+                                </div>
+                                <p>Automatically posting to Instagram, Facebook, and LinkedIn based on your inventory and customer insights.</p>
+                                <div class="automation-stats">
+                                    <div class="stat">
+                                        <span class="stat-number">24</span>
+                                        <span class="stat-label">Posts This Week</span>
+                                    </div>
+                                    <div class="stat">
+                                        <span class="stat-number">+42%</span>
+                                        <span class="stat-label">Engagement</span>
+                                    </div>
+                                </div>
+                                <button class="automation-button">View Schedule</button>
+                            </div>
+
+                            <div class="automation-card active">
+                                <div class="automation-header">
+                                    <i class="fas fa-envelope"></i>
+                                    <h3>Customer Follow-up</h3>
+                                    <span class="status-badge active">Active</span>
+                                </div>
+                                <p>Smart email sequences that adapt based on customer behavior and purchase history.</p>
+                                <div class="automation-stats">
+                                    <div class="stat">
+                                        <span class="stat-number">156</span>
+                                        <span class="stat-label">Emails Sent</span>
+                                    </div>
+                                    <div class="stat">
+                                        <span class="stat-number">68%</span>
+                                        <span class="stat-label">Open Rate</span>
+                                    </div>
+                                </div>
+                                <button class="automation-button">Edit Sequences</button>
+                            </div>
+
+                            <div class="automation-card">
+                                <div class="automation-header">
+                                    <i class="fas fa-boxes"></i>
+                                    <h3>Inventory Alerts</h3>
+                                    <span class="status-badge inactive">Setup Required</span>
+                                </div>
+                                <p>Get notified when popular items are running low and receive AI-powered reorder suggestions.</p>
+                                <div class="automation-setup">
+                                    <div class="setup-step">
+                                        <i class="fas fa-check-circle"></i>
+                                        <span>Connect inventory system</span>
+                                    </div>
+                                    <div class="setup-step pending">
+                                        <i class="fas fa-circle"></i>
+                                        <span>Set alert thresholds</span>
+                                    </div>
+                                </div>
+                                <button class="automation-button primary">Complete Setup</button>
+                            </div>
+
+                            <div class="automation-card">
+                                <div class="automation-header">
+                                    <i class="fas fa-tags"></i>
+                                    <h3>Dynamic Pricing</h3>
+                                    <span class="status-badge inactive">Available</span>
+                                </div>
+                                <p>Automatically adjust prices based on demand, inventory levels, and competitor analysis.</p>
+                                <div class="automation-preview">
+                                    <div class="preview-item">
+                                        <span>Seasonal Adjustments</span>
+                                        <i class="fas fa-toggle-off"></i>
+                                    </div>
+                                    <div class="preview-item">
+                                        <span>Competitor Monitoring</span>
+                                        <i class="fas fa-toggle-off"></i>
+                                    </div>
+                                </div>
+                                <button class="automation-button primary">Enable Pricing</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Smart Payments Tab -->
+                    <div id="payments" class="tab-content">
+                        <div class="payments-container">
+                            <div class="payments-overview">
+                                <div class="payment-card">
+                                    <h3><i class="fas fa-credit-card"></i> Payment Summary</h3>
+                                    <div class="payment-stats">
+                                        <div class="payment-stat">
+                                            <span class="stat-value">$12,847</span>
+                                            <span class="stat-label">Processed This Month</span>
+                                        </div>
+                                        <div class="payment-stat">
+                                            <span class="stat-value">2.3s</span>
+                                            <span class="stat-label">Average Processing Time</span>
+                                        </div>
+                                        <div class="payment-stat">
+                                            <span class="stat-value">99.97%</span>
+                                            <span class="stat-label">Success Rate</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="payment-features">
+                                <div class="feature-item">
+                                    <div class="feature-icon">
+                                        <i class="fas fa-bolt"></i>
+                                    </div>
+                                    <div class="feature-content">
+                                        <h4>Instant Vendor Payments</h4>
+                                        <p>Pay suppliers and contractors instantly with enterprise-grade security. No waiting for bank transfers.</p>
+                                        <span class="feature-benefit">Save 3-5 business days per payment</span>
+                                    </div>
+                                </div>
+
+                                <div class="feature-item">
+                                    <div class="feature-icon">
+                                        <i class="fas fa-shield-alt"></i>
+                                    </div>
+                                    <div class="feature-content">
+                                        <h4>Mathematical Security</h4>
+                                        <p>Every payment is protected by advanced cryptography with complete audit trails for compliance.</p>
+                                        <span class="feature-benefit">Bank-level security, zero trust required</span>
+                                    </div>
+                                </div>
+
+                                <div class="feature-item">
+                                    <div class="feature-icon">
+                                        <i class="fas fa-percentage"></i>
+                                    </div>
+                                    <div class="feature-content">
+                                        <h4>Transparent Fees</h4>
+                                        <p>Simple 1.5% processing fee with no hidden charges. What you see is what you pay.</p>
+                                        <span class="feature-benefit">Save 40% vs traditional processors</span>
+                                    </div>
+                                </div>
+
+                                <div class="feature-item">
+                                    <div class="feature-icon">
+                                        <i class="fas fa-file-contract"></i>
+                                    </div>
+                                    <div class="feature-content">
+                                        <h4>Automated Contracts</h4>
+                                        <p>Set up recurring payments and automatic contractor payments based on project milestones.</p>
+                                        <span class="feature-benefit">Reduce administrative work by 80%</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="payment-demo">
+                                <h4>Try a Demo Payment</h4>
+                                <div class="demo-payment-form">
+                                    <div class="form-group">
+                                        <label>Send Payment To:</label>
+                                        <select>
+                                            <option>Digital Marketing Agency</option>
+                                            <option>Inventory Supplier</option>
+                                            <option>Freelance Designer</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Amount:</label>
+                                        <input type="text" value="$250.00" readonly>
+                                    </div>
+                                    <button class="demo-payment-button" onclick="processDemoPayment()">
+                                        <i class="fas fa-lock"></i>
+                                        Process Secure Payment
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="demo-start" id="demoStart">
+                <button class="start-demo-button" onclick="startDemo()">
+                    <i class="fas fa-play"></i>
+                    Launch Interactive Demo
+                </button>
+                <p>See how SmartBiz Intelligence works with real business data</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Customer Stories -->
+    <section class="testimonials">
+        <div class="container">
+            <h2>Real Results from Real Businesses</h2>
+
+            <div class="testimonials-grid">
+                <div class="testimonial-card">
+                    <div class="testimonial-content">
+                        <p>"SmartBiz Intelligence saved me 10 hours a week and increased my online sales by 40%. I had no idea business intelligence could be this simple."</p>
+                    </div>
+                    <div class="testimonial-author">
+                        <img src="https://images.unsplash.com/photo-1494790108755-2616b612b47c?w=60&h=60&fit=crop&crop=face" alt="Sarah Chen">
+                        <div>
+                            <strong>Sarah Chen</strong>
+                            <span>Boutique Owner</span>
+                        </div>
+                    </div>
+                    <div class="testimonial-results">
+                        <div class="result">
+                            <span class="result-number">+40%</span>
+                            <span class="result-label">Sales Increase</span>
+                        </div>
+                        <div class="result">
+                            <span class="result-number">10hrs</span>
+                            <span class="result-label">Weekly Time Saved</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="testimonial-content">
+                        <p>"The AI insights are incredibly accurate. It told me exactly when to launch my new product line, and sales exceeded my projections by 60%."</p>
+                    </div>
+                    <div class="testimonial-author">
+                        <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=60&h=60&fit=crop&crop=face" alt="Mike Rodriguez">
+                        <div>
+                            <strong>Mike Rodriguez</strong>
+                            <span>E-commerce Founder</span>
+                        </div>
+                    </div>
+                    <div class="testimonial-results">
+                        <div class="result">
+                            <span class="result-number">+60%</span>
+                            <span class="result-label">Above Projections</span>
+                        </div>
+                        <div class="result">
+                            <span class="result-number">3x</span>
+                            <span class="result-label">ROI on Marketing</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="testimonial-content">
+                        <p>"Finally, a business tool that actually makes sense to me. No technical jargon, just clear insights that help me make better decisions."</p>
+                    </div>
+                    <div class="testimonial-author">
+                        <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=60&h=60&fit=crop&crop=face" alt="Jessica Park">
+                        <div>
+                            <strong>Jessica Park</strong>
+                            <span>Consulting Firm Owner</span>
+                        </div>
+                    </div>
+                    <div class="testimonial-results">
+                        <div class="result">
+                            <span class="result-number">85%</span>
+                            <span class="result-label">Client Satisfaction</span>
+                        </div>
+                        <div class="result">
+                            <span class="result-number">$2k</span>
+                            <span class="result-label">Monthly Savings</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section id="pricing" class="pricing">
+        <div class="container">
+            <h2>Simple, Transparent Pricing</h2>
+            <p class="section-subtitle">Choose the plan that fits your business size. Upgrade or downgrade anytime.</p>
+
+            <div class="pricing-grid">
+                <div class="pricing-card">
+                    <div class="pricing-header">
+                        <h3>Starter</h3>
+                        <div class="price">
+                            <span class="currency">$</span>
+                            <span class="amount">49</span>
+                            <span class="period">/month</span>
+                        </div>
+                    </div>
+                    <div class="pricing-features">
+                        <ul>
+                            <li><i class="fas fa-check"></i> Basic business analytics</li>
+                            <li><i class="fas fa-check"></i> 3 social media platforms</li>
+                            <li><i class="fas fa-check"></i> 100 AI insights/month</li>
+                            <li><i class="fas fa-check"></i> Standard support</li>
+                            <li><i class="fas fa-check"></i> Website integration</li>
+                        </ul>
+                    </div>
+                    <button class="pricing-button">Start Free Trial</button>
+                    <p class="pricing-note">Perfect for small retail businesses</p>
+                </div>
+
+                <div class="pricing-card featured">
+                    <div class="pricing-badge">Most Popular</div>
+                    <div class="pricing-header">
+                        <h3>Professional</h3>
+                        <div class="price">
+                            <span class="currency">$</span>
+                            <span class="amount">149</span>
+                            <span class="period">/month</span>
+                        </div>
+                    </div>
+                    <div class="pricing-features">
+                        <ul>
+                            <li><i class="fas fa-check"></i> Advanced predictive analytics</li>
+                            <li><i class="fas fa-check"></i> Unlimited social media</li>
+                            <li><i class="fas fa-check"></i> 500 AI insights/month</li>
+                            <li><i class="fas fa-check"></i> Priority support</li>
+                            <li><i class="fas fa-check"></i> Smart payment processing</li>
+                            <li><i class="fas fa-check"></i> Content generation tools</li>
+                            <li><i class="fas fa-check"></i> Inventory automation</li>
+                        </ul>
+                    </div>
+                    <button class="pricing-button">Start Free Trial</button>
+                    <p class="pricing-note">Ideal for growing e-commerce businesses</p>
+                </div>
+
+                <div class="pricing-card">
+                    <div class="pricing-header">
+                        <h3>Enterprise</h3>
+                        <div class="price">
+                            <span class="currency">$</span>
+                            <span class="amount">449</span>
+                            <span class="period">/month</span>
+                        </div>
+                    </div>
+                    <div class="pricing-features">
+                        <ul>
+                            <li><i class="fas fa-check"></i> Complete business intelligence</li>
+                            <li><i class="fas fa-check"></i> Unlimited everything</li>
+                            <li><i class="fas fa-check"></i> Multi-user accounts</li>
+                            <li><i class="fas fa-check"></i> Dedicated success manager</li>
+                            <li><i class="fas fa-check"></i> Advanced compliance features</li>
+                            <li><i class="fas fa-check"></i> Custom integrations</li>
+                            <li><i class="fas fa-check"></i> White-label options</li>
+                        </ul>
+                    </div>
+                    <button class="pricing-button">Contact Sales</button>
+                    <p class="pricing-note">For established businesses and agencies</p>
+                </div>
+            </div>
+
+            <div class="pricing-guarantee">
+                <div class="guarantee-content">
+                    <i class="fas fa-shield-alt"></i>
+                    <div>
+                        <h4>30-Day Money-Back Guarantee</h4>
+                        <p>Try SmartBiz Intelligence risk-free. If you're not completely satisfied, get a full refund within 30 days.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="container">
+            <div class="cta-content">
+                <h2>Ready to Make Your Business Smarter?</h2>
+                <p>Join hundreds of businesses already using AI to grow faster and work smarter.</p>
+                <button class="cta-button large" onclick="startDemo()">
+                    <i class="fas fa-rocket"></i>
+                    Start Your Free Trial
+                </button>
+                <p class="cta-note">✓ Setup in 10 minutes ✓ No credit card required ✓ Cancel anytime</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <div class="footer-logo">
+                        <i class="fas fa-brain"></i>
+                        <span>SmartBiz Intelligence</span>
+                    </div>
+                    <p>AI that makes your business smarter, automatically.</p>
+                </div>
+                <div class="footer-links">
+                    <div class="footer-column">
+                        <h4>Product</h4>
+                        <a href="#features">Features</a>
+                        <a href="#demo">Demo</a>
+                        <a href="#pricing">Pricing</a>
+                    </div>
+                    <div class="footer-column">
+                        <h4>Support</h4>
+                        <a href="#">Help Center</a>
+                        <a href="#">Contact Us</a>
+                        <a href="#">Security</a>
+                    </div>
+                    <div class="footer-column">
+                        <h4>Company</h4>
+                        <a href="#">About</a>
+                        <a href="#">Careers</a>
+                        <a href="#">Privacy</a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 SmartBiz Intelligence. All rights reserved.</p>
+                <div class="footer-security">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Enterprise-grade security</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Demo Modal -->
+    <div id="demoModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Processing Secure Payment...</h3>
+                <span class="close" onclick="closeDemoModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="payment-processing">
+                    <div class="processing-step active">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Verifying transaction details</span>
+                    </div>
+                    <div class="processing-step active">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>Encrypting with enterprise security</span>
+                    </div>
+                    <div class="processing-step active">
+                        <i class="fas fa-network-wired"></i>
+                        <span>Processing through secure network</span>
+                    </div>
+                    <div class="processing-step success">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Payment completed successfully!</span>
+                    </div>
+                </div>
+                <div class="payment-success">
+                    <h4>✓ Payment Processed</h4>
+                    <p>$250.00 sent to Digital Marketing Agency</p>
+                    <p class="transaction-id">Transaction ID: #SB7892341</p>
+                    <p class="processing-time">Processing time: 2.3 seconds</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

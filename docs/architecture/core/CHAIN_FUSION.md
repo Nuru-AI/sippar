@@ -175,35 +175,51 @@ let signature_response = sign_with_schnorr(SignWithSchnorrArgument {
 
 ---
 
-## 🪙 **Chain-Key ALGO (ckALGO) - Production Ready**
+## 🪙 **Chain-Key ALGO (ckALGO) - Architecture & Implementation Status**
 
-### **Proven Token Architecture**
+### **Correct Chain Fusion Token Architecture**
 
-**ckALGO** is a mathematically-backed representation of ALGO on the Internet Computer:
+**ckALGO** follows the proven ckBTC model for mathematically-backed tokens:
 
-- **Backing**: Each ckALGO backed by native ALGO controlled via **proven** threshold signatures
-- **Standard**: ICRC-1 compliant token on ICP
-- **Redemption**: **Mathematically guaranteed** redemption to native ALGO  
-- **Trading**: Sub-second trading on ICP DEXs with zero gas fees
-- **Security**: **Proven cryptographic control** - no economic assumptions
+- **Backing**: Each ckALGO backed by native ALGO held in ICP subnet-controlled addresses
+- **Standard**: ICRC-1 compliant token on ICP  
+- **Custody Model**: Follows ckBTC pattern - no canister custody, pure threshold signatures
+- **Security**: Mathematical proofs via threshold cryptography (no trusted intermediaries)
 
-**Production Canister: `gbmxj-yiaaa-aaaak-qulqa-cai`** ✅ **CONTROLLED**
+**Production Canister: `gbmxj-yiaaa-aaaak-qulqa-cai`** ✅ **DEPLOYED**
+**Threshold Signer: `vj7ly-diaaa-aaaae-abvoq-cai`** ✅ **PROVEN WORKING**
 
-### **Proven Mint/Redeem Process**
+### **Correct Chain Fusion Architecture (ckBTC Pattern)**
 
-**Mathematical Minting Process:**
-1. ICP generates **proven working** threshold Ed25519 signatures
-2. User's Algorand address is **mathematically controlled** by ICP subnet  
-3. ALGO deposits are **cryptographically secured** under threshold control
-4. ckALGO minting backed by **real, provable** ALGO reserves
-5. **1:1 mathematical backing guaranteed** by threshold cryptography
+**Proper Minting Process:**
+1. **Address Generation**: ICP subnet generates unique Algorand deposit address for user
+2. **User Deposit**: User sends ALGO to subnet-controlled address (real blockchain transaction) 
+3. **Deposit Detection**: Backend monitors Algorand network for confirmed deposits
+4. **Verification**: Confirm ALGO received at correct address with correct amount
+5. **ckALGO Minting**: Only after deposit confirmation, mint equivalent ckALGO tokens
 
-**Proven Redemption Process:**
-1. ckALGO burn transaction on ICP
-2. ICP subnet signs ALGO release using **proven** threshold Ed25519
-3. **Mathematically valid** signature generates real Algorand transaction
-4. ALGO transferred using **confirmed working** threshold signatures
-5. **Cryptographically guaranteed** execution (no trust required)
+**Proper Redemption Process:**
+1. **ckALGO Burn**: User burns ckALGO tokens on ICP
+2. **Withdrawal Request**: System queues ALGO withdrawal transaction
+3. **Threshold Signing**: ICP subnet signs Algorand transaction to release ALGO
+4. **ALGO Transfer**: Broadcast signed transaction to Algorand network
+5. **Completion**: ALGO sent from subnet address to user's address
+
+### **❌ Current Implementation Issues**
+
+**Current Status: Proof-of-Concept Only**
+- ✅ Threshold signatures mathematically proven working
+- ❌ No actual ALGO deposit detection
+- ❌ Self-transfer transactions instead of real deposits  
+- ❌ ckALGO minted without underlying ALGO custody
+- ❌ Users retain full control of "backing" ALGO (can double-spend)
+
+**Critical Missing Components:**
+- Real deposit address generation per user
+- Algorand network monitoring for deposits
+- Deposit verification before minting
+- Proper custody addresses controlled by ICP subnet
+- Real withdrawal transactions on redemption
 
 ---
 
@@ -358,47 +374,67 @@ const signature = await icpCanister.sign_with_schnorr(messageToSign);
 
 ## 🚀 **Current Production Status**
 
-### **✅ Fully Operational Systems**
+### **✅ Proven Foundation Technology**
 
-**Proven Working Components:**
+**Confirmed Working Components:**
 1. **Address Derivation**: Generate valid Algorand addresses ✅ **CONFIRMED**
 2. **Threshold Signatures**: Ed25519 signing via ICP consensus ✅ **PROVEN**  
 3. **Transaction Broadcasting**: Submit to Algorand network ✅ **WORKING**
-4. **Balance Monitoring**: Track real ALGO movements ✅ **OPERATIONAL**
-5. **ckALGO Integration**: Token minting and management ✅ **READY**
+4. **Basic Token Operations**: ckALGO mint/burn functions ✅ **OPERATIONAL**
 
-**Live Transaction Evidence:**
+**Live Transaction Proof of Concept:**
 - **Testnet Transaction**: `3RU7HQ2EIO7VIFYW2Q5IIANI5WJJBXH6YT5W4RCB7JZLNH6F3NUQ`
 - **Mainnet Transaction**: `QODAHWSF55G3P43JXZ7TOYDJUCEQS7CZDMQ5WC5BGPMH6OQ4QTQA`  
-- **Verified On-Chain**: Both transactions confirmed and balance changes visible
-- **Mathematical Proof**: ICP threshold signatures control real Algorand assets
+- **Mathematical Proof**: ICP threshold signatures can control real Algorand assets
 
-### **🎯 Next Development Phases**
+### **🚧 Missing for True Chain Fusion**
 
-**Phase 4: Production Scaling** (Current Focus)
+**Required for Production Bridge:**
+1. **Deposit Detection**: Monitor Algorand network for user deposits ❌ **NOT IMPLEMENTED**
+2. **Custody Addresses**: Generate unique deposit addresses per user ❌ **NOT IMPLEMENTED**  
+3. **Reserve Tracking**: Track locked ALGO vs ckALGO supply ❌ **NOT IMPLEMENTED**
+4. **Proper Minting**: Only mint after verified ALGO deposits ❌ **SIMULATION ONLY**
+5. **Real Redemptions**: Release locked ALGO on ckALGO burn ❌ **NOT IMPLEMENTED**
+
+### **🎯 Implementation Roadmap**
+
+**Phase 3: True Chain Fusion Implementation** (URGENT - Current Focus)
+- Implement ckBTC-style deposit detection system
+- Generate unique custody addresses per user transaction  
+- Add Algorand network monitoring for deposit verification
+- Implement proper ALGO custody (subnet-controlled addresses)
+- Fix minting to require verified deposits
+- Implement real redemption with ALGO release
+
+**Phase 4: Production Hardening** 
 - Enhanced monitoring and alerting systems
-- Optimized cycle management for cost efficiency  
-- Advanced error handling and retry mechanisms
-- Performance monitoring and optimization
+- Reserve ratio verification and reporting
+- Emergency pause mechanisms for security
+- Comprehensive audit trail and compliance
 
 **Phase 5: Advanced Features** (Q4 2025-Q1 2026)  
-- Atomic cross-chain transaction coordination
 - Support for Algorand Standard Assets (ASAs)
 - Advanced DeFi integrations leveraging proven security
 - AI-powered trading and arbitrage systems
+- Cross-chain atomic swaps
 
 ---
 
-## 🏆 **Conclusion: Mathematical Proof of Concept → Production Reality**
+## 🏆 **Conclusion: Foundation Technology Proven, Bridge Implementation Needed**
 
-Sippar has achieved what was previously theoretical - **mathematically proven, trustless cross-chain asset control**. The breakthrough from concept to confirmed mainnet reality demonstrates:
+Sippar has achieved the critical breakthrough - **mathematically proven threshold signature control of Algorand assets**. However, the current implementation is a proof-of-concept, not a production bridge.
 
-### **🎯 Proven Achievements**
-- ✅ **World-First Technology**: First successful ICP-Algorand Chain Fusion implementation
-- ✅ **Mathematical Security**: Real money protected by cryptographic proofs, not economic assumptions
-- ✅ **Production Readiness**: Confirmed working on both Algorand testnet and mainnet
-- ✅ **Zero Trust Requirements**: No validators, custodians, or trusted intermediaries needed
-- ✅ **Breakthrough Innovation**: Solved fundamental cross-chain security problems
+### **🎯 Confirmed Achievements**
+- ✅ **Threshold Signature Breakthrough**: First successful ICP-Algorand threshold signing
+- ✅ **Mathematical Proof**: Real ALGO controlled via cryptographic proofs
+- ✅ **Foundation Technology**: All core components proven working
+- ✅ **Security Model**: Zero trust requirements demonstrated
+
+### **🚧 Required for Production Bridge**
+- ❌ **Real Deposit System**: Currently simulated, needs ckBTC-style implementation
+- ❌ **Custody Architecture**: No actual ALGO locking mechanism implemented
+- ❌ **Reserve Verification**: ckALGO supply not backed by locked ALGO
+- ❌ **Production UX**: Users unaware their ALGO isn't actually locked
 
 ### **🔮 Strategic Impact**
 This breakthrough positions Sippar as the foundation for:
@@ -416,8 +452,10 @@ The mathematical proofs demonstrated here establish:
 
 ---
 
-**Technical Status**: ✅ **BREAKTHROUGH PROVEN ON MAINNET**  
-**Last Updated**: September 10, 2025 - Breakthrough Integration Complete  
-**Next Milestone**: Production scaling and advanced feature development
+**Technical Status**: 🚧 **FOUNDATION PROVEN - BRIDGE IMPLEMENTATION REQUIRED**  
+**Last Updated**: September 12, 2025 - Architecture Analysis Complete  
+**Current Priority**: Implement true Chain Fusion following ckBTC model
+**Next Milestone**: Real deposit detection and custody system
 
-**🏆 Historic Achievement**: September 8, 2025 - First successful trustless ICP-Algorand asset control via mathematical cryptography**
+**🏆 Historic Achievement**: September 8, 2025 - First successful ICP-Algorand threshold signatures  
+**⚠️ Current Reality**: Proof-of-concept only - production bridge requires proper custody implementation**

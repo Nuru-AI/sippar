@@ -1,15 +1,15 @@
 # Sippar API Endpoints - PRODUCTION REALITY
 
-**Last Updated**: September 15, 2025
-**Backend Version**: 1.0.0-production (Sprint X Complete - Authentic Mathematical Backing)
-**Source**: `src/backend/src/server.ts` (PRODUCTION SERVER with SimplifiedBridge Integration)
-**Verification Status**: ✅ **SPRINT X VERIFIED** - All endpoints use real canister data (simulation eliminated)
-**Chain Fusion Status**: 🎉 **AUTHENTIC BACKING ACHIEVED** - Real canister integration with threshold-controlled custody
+**Last Updated**: September 17, 2025
+**Backend Version**: 1.0.0-production (Sprint X.1 Complete - Production Systems)
+**Source**: `src/backend/src/server.ts` (PRODUCTION SERVER with Migration + Monitoring)
+**Verification Status**: ✅ **SPRINT X.1 VERIFIED** - 59 endpoints implemented (41 existing + 18 Sprint X.1)
+**Chain Fusion Status**: 🎉 **PRODUCTION-READY** - Complete production systems with monitoring
 
 ⚠️ **DOCUMENTATION UPDATE**: This documentation has been corrected to match the **ACTUAL PRODUCTION SERVER**.
 Previous documentation was based on `server-phase1-2.ts` which is **NOT DEPLOYED**.
 
-🎉 **SPRINT X UPDATE**: All endpoints now use authentic mathematical backing via SimplifiedBridgeService integration with canister `hldvt-2yaaa-aaaak-qulxa-cai`. Simulation data completely eliminated - all responses now reflect real threshold-controlled custody addresses and authentic reserve calculations.
+🎉 **SPRINT X.1 UPDATE**: Complete production system with authentic mathematical backing + migration system + production monitoring. Total of 59 endpoints implemented with comprehensive production capabilities.
 
 ## Base URL
 
@@ -19,9 +19,35 @@ Previous documentation was based on `server-phase1-2.ts` which is **NOT DEPLOYED
 **Server Response**: "Sippar Algorand Chain Fusion Backend - Phase 3"
 
 ## 🔍 **ACTUAL PRODUCTION ENDPOINTS**
-*(Server reports 27 endpoints after Sprint X Phase A.4 - real canister integration with authentic mathematical backing)*
+*(Server implements 59 endpoints after Sprint X.1 completion - authentic backing + migration + monitoring)*
 
-**✅ VERIFICATION STATUS**: All endpoints tested September 15, 2025 - **SPRINT X COMPLETE** - Real canister data confirmed
+**✅ VERIFICATION STATUS**: 59 endpoints implemented September 17, 2025 - **SPRINT X.1 COMPLETE**
+
+### **Sprint X.1 New Endpoints (18 added)**
+
+#### **Migration System Endpoints (6)**
+- `GET /migration/status/:principal` - User migration status
+- `POST /migration/fresh-start` - Initialize fresh user migration
+- `POST /migration/bridge` - Bridge user from unbacked to backed
+- `POST /migration/bridge/complete` - Complete migration process
+- `GET /migration/stats` - Migration system statistics
+- `GET /migration/progress/:principal` - Individual migration progress
+
+#### **Deposit Monitoring Endpoints (4)**
+- `GET /deposits/monitoring-stats` - Deposit monitoring statistics
+- `POST /deposits/start-monitoring` - Start deposit monitoring for user
+- `POST /deposits/stop-monitoring` - Stop deposit monitoring
+- `GET /deposits/pending` - List pending deposits
+
+#### **Production Monitoring Endpoints (8)**
+- `GET /monitoring/system` - System health metrics (CPU, memory, disk)
+- `GET /monitoring/migration` - Migration system metrics and statistics
+- `GET /monitoring/reserves` - Reserve backing verification metrics
+- `GET /monitoring/alerts` - Active alerts and alert history
+- `POST /monitoring/alerts/test` - Test notification channels
+- `GET /monitoring/health-checks` - Component connectivity verification
+- `GET /monitoring/dashboard` - Aggregated monitoring dashboard data
+- `GET /monitoring/history` - Historical metrics and alert logs
 
 ## Health & Status
 

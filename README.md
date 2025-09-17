@@ -237,9 +237,10 @@ sippar/
 - **Key Discovery**: Comprehensive oracle services already implemented, needs enabling
 
 ### **Core Documentation**
+- **📋 [Current Status & Development Plan](docs/development/CURRENT_STATUS_AND_DEVELOPMENT_PLAN.md)**: Complete current status and roadmap
 - **[Architecture](docs/architecture/)**: Technical system design
 - **[Integration Guide](docs/integration/)**: Developer integration docs
-- **[API Reference](docs/api/)**: Complete API documentation (18/18 endpoints verified)
+- **[API Reference](docs/api/)**: Complete API documentation (27/27 endpoints verified)
 - **[User Guide](docs/guides/user/)**: End-user documentation
 
 ### **Strategic Research Documentation**

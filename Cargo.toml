@@ -1,7 +1,8 @@
 [workspace]
 members = [
     "src/canisters/ck_algo",
-    "src/canisters/threshold_signer/src/algorand_threshold_signer_backend"
+    "src/canisters/threshold_signer/src/algorand_threshold_signer_backend",
+    "src/canisters/simplified_bridge"
 ]
 resolver = "2"
 

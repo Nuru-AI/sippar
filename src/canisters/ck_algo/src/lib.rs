@@ -2000,6 +2000,44 @@ fn admin_restore_balance(account_str: String, amount: Nat) -> Result<Nat, String
     Ok(amount)
 }
 
+// Admin function to add authorized minters
+#[update]
+fn admin_add_authorized_minter(minter_principal: Principal) -> Result<String, String> {
+    let caller = caller();
+
+    // Only controllers can add authorized minters
+    let is_controller = ic_cdk::api::is_controller(&caller);
+    if !is_controller {
+        return Err(format!("Unauthorized: Only controllers can add authorized minters. Caller: {}", caller));
+    }
+
+    AUTHORIZED_MINTERS.with(|minters| {
+        let mut minters_vec = minters.borrow_mut();
+        if !minters_vec.contains(&minter_principal) {
+            minters_vec.push(minter_principal);
+            Ok(format!("Successfully added {} as authorized minter", minter_principal.to_text()))
+        } else {
+            Err(format!("Principal {} is already an authorized minter", minter_principal.to_text()))
+        }
+    })
+}
+
+// Admin function to list authorized minters
+#[query]
+fn admin_list_authorized_minters() -> Vec<Principal> {
+    let caller = caller();
+
+    // Only controllers can list authorized minters
+    let is_controller = ic_cdk::api::is_controller(&caller);
+    if !is_controller {
+        return Vec::new();
+    }
+
+    AUTHORIZED_MINTERS.with(|minters| {
+        minters.borrow().clone()
+    })
+}
+
 // ============================================================================
 // SMART CONTRACT ENGINE IMPLEMENTATION (Days 8-9: Sprint 012.5 Week 2)
 // ============================================================================
