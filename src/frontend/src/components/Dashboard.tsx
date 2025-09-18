@@ -13,6 +13,8 @@ import TransactionHistory from './TransactionHistory';
 import AIChat from './ai/AIChat';
 import AIOracle from './ai/AIOracle';
 import BackingEducation from './BackingEducation';
+import { X402AgentMarketplace } from './x402/X402AgentMarketplace';
+import { X402Analytics } from './x402/X402Analytics';
 import sipparAPI from '../services/SipparAPIService';
 
 const Dashboard: React.FC = () => {
@@ -25,7 +27,7 @@ const Dashboard: React.FC = () => {
   const setBalancesLoading = useAuthStore(state => state.setBalancesLoading);
   
   const [showChainFusionExplanation, setShowChainFusionExplanation] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'mint' | 'redeem' | 'history' | 'ai-oracle' | 'education'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'mint' | 'redeem' | 'history' | 'ai-oracle' | 'x402-marketplace' | 'x402-analytics' | 'education'>('overview');
 
   useEffect(() => {
     if (user?.principal) {
@@ -172,6 +174,26 @@ const Dashboard: React.FC = () => {
           }`}
         >
           🤖 AI Oracle
+        </button>
+        <button
+          onClick={() => setActiveTab('x402-marketplace')}
+          className={`flex-1 py-2 px-4 rounded-md font-medium transition-colors ${
+            activeTab === 'x402-marketplace'
+              ? 'bg-blue-500 text-white'
+              : 'text-gray-300 hover:text-white hover:bg-gray-700'
+          }`}
+        >
+          🛒 X402 Marketplace
+        </button>
+        <button
+          onClick={() => setActiveTab('x402-analytics')}
+          className={`flex-1 py-2 px-4 rounded-md font-medium transition-colors ${
+            activeTab === 'x402-analytics'
+              ? 'bg-blue-500 text-white'
+              : 'text-gray-300 hover:text-white hover:bg-gray-700'
+          }`}
+        >
+          📊 X402 Analytics
         </button>
         <button
           onClick={() => setActiveTab('education')}
@@ -1034,6 +1056,20 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* X402 Marketplace Tab */}
+      {activeTab === 'x402-marketplace' && (
+        <div className="space-y-8">
+          <X402AgentMarketplace />
+        </div>
+      )}
+
+      {/* X402 Analytics Tab */}
+      {activeTab === 'x402-analytics' && (
+        <div className="space-y-8">
+          <X402Analytics />
         </div>
       )}
 

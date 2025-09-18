@@ -22,6 +22,7 @@ import { ReserveVerificationService } from './services/reserveVerificationServic
 import { migrationService } from './services/migrationService.js';
 import { productionMonitoringService } from './services/productionMonitoringService.js';
 import { alertManager } from './services/alertManager.js';
+import { x402Service } from './services/x402Service.js';
 
 // Load environment variables
 config();
@@ -159,6 +160,17 @@ app.use(cors({
 }));
 app.use(morgan('combined'));
 app.use(express.json());
+
+// X402 Payment Protocol Middleware
+console.log('🔒 Initializing X402 payment middleware for AI and ckALGO services');
+try {
+  const x402Middleware = x402Service.createMiddleware();
+  app.use(x402Middleware);
+  console.log('✅ X402 middleware configured for protected routes');
+} catch (error) {
+  console.warn('⚠️ X402 middleware initialization failed:', error);
+  console.log('📝 Continuing without X402 payments - services will be free');
+}
 
 // Request validation schemas
 const deriveCredentialsSchema = z.object({
@@ -3083,10 +3095,241 @@ app.use('*', (req, res) => {
       'POST /monitoring/alerts/test',
       'GET /monitoring/health-checks',
       'GET /monitoring/dashboard',
-      'GET /monitoring/history'
+      'GET /monitoring/history',
+
+      // Sprint 016: X402 Payment Protocol Endpoints
+      'POST /api/sippar/x402/create-payment',
+      'GET /api/sippar/x402/payment-status/:id',
+      'POST /api/sippar/x402/verify-token',
+      'GET /api/sippar/x402/agent-marketplace',
+      'GET /api/sippar/x402/analytics',
+      'POST /api/sippar/x402/enterprise-billing'
     ],
     timestamp: new Date().toISOString(),
   });
+});
+
+// ==========================================
+// X402 Payment Protocol Endpoints
+// ==========================================
+
+// X402 Payment Creation
+app.post('/api/sippar/x402/create-payment', async (req, res) => {
+  const startTime = Date.now();
+  try {
+    logOperation('x402-create-payment', true, Date.now() - startTime);
+
+    const paymentRequest = req.body;
+    const payment = await x402Service.createEnterprisePayment(paymentRequest);
+
+    res.json({
+      success: true,
+      payment,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logOperation('x402-create-payment', false, Date.now() - startTime, undefined, errorMessage);
+
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create X402 payment',
+      details: errorMessage,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// X402 Payment Status
+app.get('/api/sippar/x402/payment-status/:id', async (req, res) => {
+  const startTime = Date.now();
+  try {
+    logOperation('x402-payment-status', true, Date.now() - startTime);
+
+    const { id } = req.params;
+    // For now, we'll return a mock status - in production this would query actual payment state
+    res.json({
+      success: true,
+      paymentId: id,
+      status: 'confirmed',
+      amount: 0.01,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logOperation('x402-payment-status', false, Date.now() - startTime, undefined, errorMessage);
+
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get payment status',
+      details: errorMessage,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// X402 Service Token Verification
+app.post('/api/sippar/x402/verify-token', async (req, res) => {
+  const startTime = Date.now();
+  try {
+    const { token } = req.body;
+    const isValid = x402Service.verifyServiceToken(token);
+
+    logOperation('x402-verify-token', true, Date.now() - startTime);
+
+    res.json({
+      success: true,
+      valid: isValid,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logOperation('x402-verify-token', false, Date.now() - startTime, undefined, errorMessage);
+
+    res.status(500).json({
+      success: false,
+      error: 'Failed to verify token',
+      details: errorMessage,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// X402 Agent Marketplace
+app.get('/api/sippar/x402/agent-marketplace', async (req, res) => {
+  const startTime = Date.now();
+  try {
+    logOperation('x402-marketplace', true, Date.now() - startTime);
+
+    const marketplace = {
+      services: [
+        {
+          id: 'ai-oracle-basic',
+          name: 'AI Oracle Basic Query',
+          description: 'Basic AI query with standard response time',
+          price: 0.01,
+          currency: 'USD',
+          endpoint: '/api/sippar/ai/query'
+        },
+        {
+          id: 'ai-oracle-enhanced',
+          name: 'Enhanced AI Query',
+          description: 'Premium AI analysis with faster response times',
+          price: 0.05,
+          currency: 'USD',
+          endpoint: '/api/sippar/ai/enhanced-query'
+        },
+        {
+          id: 'ckALGO-mint',
+          name: 'ckALGO Minting Service',
+          description: 'Cross-chain ALGO to ckALGO conversion',
+          price: 0.001,
+          currency: 'USD',
+          endpoint: '/api/sippar/x402/mint-ckALGO'
+        },
+        {
+          id: 'ckALGO-redeem',
+          name: 'ckALGO Redemption Service',
+          description: 'Cross-chain ckALGO to ALGO conversion',
+          price: 0.001,
+          currency: 'USD',
+          endpoint: '/api/sippar/x402/redeem-ckALGO'
+        }
+      ],
+      totalServices: 4,
+      timestamp: new Date().toISOString()
+    };
+
+    res.json({
+      success: true,
+      marketplace,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logOperation('x402-marketplace', false, Date.now() - startTime, undefined, errorMessage);
+
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get marketplace data',
+      details: errorMessage,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// X402 Analytics
+app.get('/api/sippar/x402/analytics', async (req, res) => {
+  const startTime = Date.now();
+  try {
+    logOperation('x402-analytics', true, Date.now() - startTime);
+
+    const metrics = x402Service.getMetrics();
+    const paymentHistory = x402Service.getPaymentHistory(50);
+
+    res.json({
+      success: true,
+      analytics: {
+        metrics,
+        recentPayments: paymentHistory,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logOperation('x402-analytics', false, Date.now() - startTime, undefined, errorMessage);
+
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get analytics',
+      details: errorMessage,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// X402 Enterprise Billing
+app.post('/api/sippar/x402/enterprise-billing', async (req, res) => {
+  const startTime = Date.now();
+  try {
+    logOperation('x402-enterprise-billing', true, Date.now() - startTime);
+
+    const { principal, services, billingPeriod } = req.body;
+
+    // Mock enterprise billing data
+    const billing = {
+      principal,
+      billingPeriod,
+      services: services || [],
+      totalUsage: Math.floor(Math.random() * 1000),
+      totalCost: Math.random() * 100,
+      currency: 'USD',
+      paymentStatus: 'current',
+      nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+    };
+
+    res.json({
+      success: true,
+      billing,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logOperation('x402-enterprise-billing', false, Date.now() - startTime, undefined, errorMessage);
+
+    res.status(500).json({
+      success: false,
+      error: 'Failed to process enterprise billing',
+      details: errorMessage,
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // Start server
