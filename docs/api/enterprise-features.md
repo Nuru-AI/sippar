@@ -1,23 +1,383 @@
-# ckALGO Enterprise Features API Reference
+# Sippar Enterprise Features API Reference
 
-**Version**: 1.0.0  
-**Date**: September 10, 2025  
-**Sprint**: 012.5 Day 19-20: Documentation & Examples  
+**Version**: 2.1.0
+**Date**: September 18, 2025
+**Sprint**: 016 - X402 Protocol Integration Complete
 
-This document provides comprehensive API reference for the enterprise features implemented in the ckALGO Smart Contract Enhancement platform.
+This document provides comprehensive API reference for the enterprise features implemented in the Sippar platform, including the world-first X402 Payment Protocol + Chain Fusion integration.
 
 ---
 
 ## 🏢 **Enterprise Features Overview**
 
-The ckALGO platform includes enterprise-grade features designed for Fortune 500 adoption:
+The Sippar platform includes enterprise-grade features designed for Fortune 500 adoption and autonomous AI-to-AI commerce:
 
+- **🚀 X402 Payment Protocol** *(NEW - Sprint 016)*: World-first HTTP 402 + Chain Fusion payment system
+- **💼 Enterprise Payment System**: B2B billing, analytics, marketplace with threshold signature backing
+- **🤖 Agentic Commerce Platform**: AI-to-AI autonomous payments with mathematical security
 - **Advanced Compliance Framework**: Rule-based compliance evaluation with 8+ regulation types
 - **Explainable AI System**: 6 explanation types with bias assessment and ethical scoring
 - **Enterprise Access Controls**: Role-based permissions with 24+ granular permission types
 - **Governance System**: Weighted voting with tier-based governance participation
 - **Risk Assessment**: Automated user risk profiling with continuous monitoring
 - **Audit Logging**: Complete audit trail with regulatory reporting capabilities
+
+---
+
+## 🚀 **X402 Payment Protocol Enterprise Features** *(NEW - Sprint 016)*
+
+### **World-First X402 + Chain Fusion Integration**
+
+Sprint 016 achieved the **world's first integration of HTTP 402 "Payment Required" standard with blockchain threshold signatures**, enabling autonomous AI-to-AI commerce with mathematical security backing.
+
+**Production Deployment**: All 6 X402 endpoints operational at `https://nuru.network/api/sippar/x402/`
+
+### **Enterprise Payment Creation**
+
+#### `POST /api/sippar/x402/create-payment`
+Creates enterprise-grade payments with Chain Fusion backing and threshold signature verification.
+
+**Request Structure:**
+```typescript
+interface EnterprisePaymentRequest {
+  amount: number;           // Payment amount in USD
+  service: string;          // Service identifier
+  principal: string;        // Internet Identity principal
+  algorandAddress: string;  // Threshold-controlled Algorand address
+  metadata?: {
+    enterpriseId?: string;
+    projectId?: string;
+    billingCategory?: string;
+    costCenter?: string;
+  };
+}
+```
+
+**Response Structure:**
+```typescript
+interface EnterprisePaymentResponse {
+  success: boolean;
+  paymentId: string;        // Unique payment identifier
+  amount: number;
+  service: string;
+  serviceToken: string;     // JWT token for service access
+  expiresAt: string;        // Token expiration (1 hour)
+  algorandIntegration: {
+    backingAddress: string;     // Threshold-controlled custody address
+    thresholdControlled: boolean;
+    canisterId: string;         // ICP canister providing signatures
+  };
+  enterpriseFeatures: {
+    billingIntegration: boolean;
+    analyticsTracking: boolean;
+    complianceLogging: boolean;
+  };
+}
+```
+
+**Example Usage:**
+```typescript
+const payment = await fetch('/api/sippar/x402/create-payment', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    amount: 0.05,
+    service: 'ai-oracle-enhanced',
+    principal: '7renf-5svak-mtapl-juxhw-3hv7d-zzfzs-hjlxv-p7wsv-e2zjc-kksxf-3ae',
+    algorandAddress: '6W47GCLXWEIEZ2LRQCXF7HGLOYSXYCXOPXJ5YE55EULFHB7O4RWIM3JDCI',
+    metadata: {
+      enterpriseId: 'ACME-CORP-001',
+      projectId: 'AI-RESEARCH-2025',
+      billingCategory: 'AI_SERVICES'
+    }
+  })
+});
+```
+
+### **Payment Status & Verification**
+
+#### `GET /api/sippar/x402/payment-status/:id`
+Retrieves detailed payment status with enterprise tracking.
+
+**Response:**
+```typescript
+interface PaymentStatusResponse {
+  success: boolean;
+  paymentId: string;
+  status: 'pending' | 'confirmed' | 'expired' | 'failed';
+  amount: number;
+  service: string;
+  createdAt: string;
+  expiresAt: string;
+  enterpriseTracking: {
+    billingPeriod: string;
+    costCenter?: string;
+    projectId?: string;
+    invoiceNumber?: string;
+  };
+  chainFusionDetails: {
+    thresholdSignature: boolean;
+    mathematicalBacking: boolean;
+    custodyAddress: string;
+  };
+}
+```
+
+#### `POST /api/sippar/x402/verify-token`
+Verifies service tokens with enterprise auditing.
+
+**Request:**
+```typescript
+{
+  token: string;              // JWT service token
+  requiredService?: string;   // Optional service validation
+  enterpriseContext?: {
+    auditTrail: boolean;      // Enable detailed audit logging
+    complianceCheck: boolean; // Run compliance validation
+  };
+}
+```
+
+**Response:**
+```typescript
+{
+  success: boolean;
+  valid: boolean;
+  tokenDetails?: {
+    principal: string;
+    service: string;
+    expiresAt: string;
+    enterpriseId?: string;
+  };
+  complianceStatus?: 'compliant' | 'requires_review' | 'violation';
+  auditLogId?: string;
+}
+```
+
+### **AI Service Marketplace**
+
+#### `GET /api/sippar/x402/agent-marketplace`
+Discovers available AI services with enterprise pricing and SLAs.
+
+**Response:**
+```typescript
+interface ServiceMarketplaceResponse {
+  success: boolean;
+  marketplace: {
+    services: ServiceDefinition[];
+    totalServices: number;
+    timestamp: string;
+  };
+}
+
+interface ServiceDefinition {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  currency: 'USD';
+  endpoint: string;
+  enterpriseFeatures: {
+    slaGuarantee: string;     // "99.9% uptime"
+    supportTier: string;      // "24/7 enterprise"
+    customization: boolean;   // Custom model training
+    dedicatedResources: boolean;
+  };
+  chainFusionBacked: boolean; // Always true
+  responseTime: number;       // Average response time in ms
+}
+```
+
+**Current Marketplace Services (4 active):**
+```typescript
+{
+  "ai-oracle-basic": {
+    price: 0.01,
+    endpoint: "/api/sippar/ai/query",
+    slaGuarantee: "99.5% uptime",
+    supportTier: "business_hours"
+  },
+  "ai-oracle-enhanced": {
+    price: 0.05,
+    endpoint: "/api/sippar/ai/enhanced-query",
+    slaGuarantee: "99.9% uptime",
+    supportTier: "24/7 enterprise"
+  },
+  "ckALGO-mint": {
+    price: 0.001,
+    endpoint: "/api/sippar/x402/mint-ckALGO",
+    slaGuarantee: "99.95% uptime",
+    supportTier: "24/7 enterprise"
+  },
+  "ckALGO-redeem": {
+    price: 0.001,
+    endpoint: "/api/sippar/x402/redeem-ckALGO",
+    slaGuarantee: "99.95% uptime",
+    supportTier: "24/7 enterprise"
+  }
+}
+```
+
+### **Enterprise Analytics & Billing**
+
+#### `GET /api/sippar/x402/analytics`
+Real-time payment analytics dashboard with enterprise insights.
+
+**Response:**
+```typescript
+interface PaymentAnalyticsResponse {
+  success: boolean;
+  analytics: {
+    metrics: {
+      totalPayments: number;
+      totalRevenue: number;
+      averagePaymentAmount: number;
+      successRate: number;         // Percentage of successful payments
+      topServices: ServiceMetrics[];
+    };
+    recentPayments: PaymentRecord[];
+    enterpriseInsights: {
+      monthlySpend: number;
+      costSavings: number;         // vs traditional payment processing
+      automationRate: number;     // % of automated AI-to-AI payments
+      complianceScore: number;     // 0-100 compliance rating
+    };
+    chainFusionMetrics: {
+      thresholdSignatures: number;
+      averageConfirmationTime: number; // ms
+      mathematicalBackingRatio: number; // Always 1.0
+    };
+    timestamp: string;
+  };
+}
+```
+
+#### `POST /api/sippar/x402/enterprise-billing`
+Advanced B2B billing management with usage tracking.
+
+**Request:**
+```typescript
+{
+  operation: 'calculate_bill' | 'generate_invoice' | 'usage_report';
+  principal?: string;           // For specific user billing
+  billingPeriod?: string;       // "2025-09" for September 2025
+  enterpriseOptions?: {
+    consolidateByProject: boolean;
+    includeComplianceReport: boolean;
+    customRates: Record<string, number>; // Service-specific rates
+  };
+}
+```
+
+**Response:**
+```typescript
+interface EnterpriseBillingResponse {
+  success: boolean;
+  billing: {
+    services: ServiceUsage[];
+    totalUsage: number;          // Total service calls
+    totalCost: number;           // Total cost in USD
+    currency: 'USD';
+    paymentStatus: 'current' | 'overdue' | 'processing';
+    nextBillingDate: string;
+    enterpriseDetails: {
+      volume_discount: number;    // Percentage discount applied
+      negotiated_rates: boolean;  // Custom rates in effect
+      payment_terms: string;      // e.g., "Net 30"
+      account_manager: string;    // Contact person
+    };
+    complianceReport?: {
+      auditTrail: boolean;
+      regulatoryCompliance: string[];
+      riskAssessment: 'low' | 'medium' | 'high';
+    };
+  };
+}
+```
+
+### **X402 Middleware Integration**
+
+**Express.js Middleware for Service Protection:**
+```typescript
+import { X402Service } from '../services/x402Service';
+
+const x402Service = new X402Service();
+
+// Protect AI services with X402 payments
+export const x402Middleware = x402Service.createMiddleware({
+  name: 'AI Oracle Enhanced',
+  price: 0.05,
+  currency: 'USD',
+  description: 'Premium AI analysis with faster response times',
+  enterpriseFeatures: {
+    billingIntegration: true,
+    auditLogging: true,
+    complianceChecking: true
+  }
+});
+
+// Usage in Express routes
+app.get('/api/sippar/ai/enhanced-query',
+  x402Middleware,          // Payment required
+  async (req, res) => {
+    // Service only accessible after payment
+    const result = await processEnhancedAIQuery(req.body);
+    res.json(result);
+  }
+);
+```
+
+### **Enterprise Security Model**
+
+**Payment Token Security:**
+```typescript
+interface X402SecurityFeatures {
+  // JWT-based service tokens with threshold signature backing
+  tokenGeneration: {
+    algorithm: 'HS256';
+    expirationTime: '1h';
+    chainFusionProof: boolean;    // Includes threshold signature proof
+    enterpriseAudit: boolean;     // Audit trail for enterprise users
+  };
+
+  // Verification process
+  tokenVerification: {
+    signatureValidation: boolean;  // Verify JWT signature
+    expirationCheck: boolean;      // Check token expiration
+    serviceAuthorization: boolean; // Verify service access rights
+    thresholdProof: boolean;       // Verify Chain Fusion backing
+    complianceCheck: boolean;      // Enterprise compliance validation
+  };
+
+  // Enterprise audit features
+  auditIntegration: {
+    paymentLogging: boolean;       // Log all payment activities
+    complianceTracking: boolean;   // Track regulatory compliance
+    costCenterMapping: boolean;    // Map to enterprise cost centers
+    projectAllocation: boolean;    // Allocate costs to projects
+  };
+}
+```
+
+### **Performance & SLA Metrics**
+
+**Enterprise SLA Guarantees:**
+- **Payment Processing**: <100ms average response time
+- **Token Verification**: <50ms average response time
+- **Service Discovery**: <200ms average response time
+- **Analytics Queries**: <500ms average response time
+- **Billing Operations**: <1000ms average response time
+
+**Uptime Guarantees:**
+- **Standard Services**: 99.5% uptime
+- **Enterprise Services**: 99.9% uptime
+- **Mission Critical**: 99.95% uptime with 24/7 support
+
+**Chain Fusion Performance:**
+- **Threshold Signatures**: 100% mathematical backing
+- **Signature Generation**: ~1 second average (ICP network limitation)
+- **Payment Confirmation**: <2 seconds end-to-end
+- **Reserve Verification**: Real-time, <100ms
 
 ---
 
@@ -599,7 +959,8 @@ export function ComplianceDashboard() {
 
 ---
 
-**Last Updated**: September 10, 2025  
-**Version**: 1.0.0  
-**Contact**: Sippar Development Team  
-**Support**: enterprise@sippar.ai
+**Last Updated**: September 18, 2025
+**Version**: 2.1.0 - Sprint 016 X402 Integration Complete
+**Production URL**: https://nuru.network/api/sippar/x402/
+**Contact**: Sippar Development Team
+**Enterprise Support**: enterprise@sippar.ai

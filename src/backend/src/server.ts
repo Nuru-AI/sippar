@@ -3037,78 +3037,6 @@ app.get('/monitoring/history', async (req, res) => {
   }
 });
 
-// 404 handler - MUST be last!
-app.use('*', (req, res) => {
-  res.status(404).json({
-    success: false,
-    error: 'Endpoint not found',
-    service: 'Sippar Algorand Chain Fusion Backend - Phase 3',
-    available_endpoints: [
-      'GET /health',
-      'POST /derive-algorand-credentials',
-      'POST /ck-algo/mint',
-      'POST /ck-algo/redeem',
-      'GET /ck-algo/balance/:principal',
-      'GET /canister/test',
-      'GET /algorand/account/:address',
-      'GET /algorand/deposits/:address',
-      'POST /chain-fusion/transfer-algo',
-      'GET /api/v1/threshold/status',
-      'POST /api/v1/threshold/derive-address',
-      'POST /api/v1/sippar/mint/prepare',
-      'POST /api/v1/sippar/redeem/prepare',
-      'POST /api/v1/threshold/sign-transaction',
-      'GET /api/ai/status',
-      'POST /api/ai/auth-url',
-      // Sprint 012.5 Integration: Enhanced AI Endpoints
-      'POST /api/sippar/ai/query',
-      'POST /api/v1/ai-oracle/query',
-      'POST /api/sippar/ai/chat-auth',
-      'POST /api/sippar/ai/enhanced-query',
-      'GET /api/v1/ai-oracle/health',
-      'GET /api/sippar/ai/health',
-      'POST /migrate-algo',
-      // Sprint X Phase 3.1: Reserve Verification Endpoints
-      'GET /reserves/status',
-      'GET /reserves/proof',
-      'POST /reserves/can-mint',
-      'GET /reserves/admin/dashboard',
-      'POST /reserves/admin/pause',
-      'POST /reserves/admin/unpause',
-      // Sprint X.1 Phase 1.1: Deposit Monitoring Endpoints
-      'GET /deposits/monitoring-stats',
-      'POST /deposits/start-monitoring',
-      'POST /deposits/stop-monitoring',
-      'GET /deposits/pending',
-      // Sprint X.1 Phase 1.1: Migration Endpoints
-      'GET /migration/status/:principal',
-      'POST /migration/fresh-start',
-      'POST /migration/bridge',
-      'POST /migration/bridge/complete',
-      'GET /migration/stats',
-      'GET /migration/progress/:principal',
-      // Sprint X.1 Phase 2: Production Monitoring Endpoints
-      'GET /monitoring/system',
-      'GET /monitoring/migration',
-      'GET /monitoring/reserves',
-      'GET /monitoring/alerts',
-      'POST /monitoring/alerts/test',
-      'GET /monitoring/health-checks',
-      'GET /monitoring/dashboard',
-      'GET /monitoring/history',
-
-      // Sprint 016: X402 Payment Protocol Endpoints
-      'POST /api/sippar/x402/create-payment',
-      'GET /api/sippar/x402/payment-status/:id',
-      'POST /api/sippar/x402/verify-token',
-      'GET /api/sippar/x402/agent-marketplace',
-      'GET /api/sippar/x402/analytics',
-      'POST /api/sippar/x402/enterprise-billing'
-    ],
-    timestamp: new Date().toISOString(),
-  });
-});
-
 // ==========================================
 // X402 Payment Protocol Endpoints
 // ==========================================
@@ -3351,6 +3279,80 @@ app.listen(PORT, async () => {
   } catch (error) {
     console.error('❌ Failed to start deposit monitoring:', error);
   }
+});
+
+// ==========================================
+// 404 handler - MUST be last!
+// ==========================================
+app.use('*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    error: 'Endpoint not found',
+    service: 'Sippar Algorand Chain Fusion Backend - Phase 3',
+    available_endpoints: [
+      'GET /health',
+      'POST /derive-algorand-credentials',
+      'POST /ck-algo/mint',
+      'POST /ck-algo/redeem',
+      'GET /ck-algo/balance/:principal',
+      'GET /canister/test',
+      'GET /algorand/account/:address',
+      'GET /algorand/deposits/:address',
+      'POST /chain-fusion/transfer-algo',
+      'GET /api/v1/threshold/status',
+      'POST /api/v1/threshold/derive-address',
+      'POST /api/v1/sippar/mint/prepare',
+      'POST /api/v1/sippar/redeem/prepare',
+      'POST /api/v1/threshold/sign-transaction',
+      'GET /api/ai/status',
+      'POST /api/ai/auth-url',
+      // Sprint 012.5 Integration: Enhanced AI Endpoints
+      'POST /api/sippar/ai/query',
+      'POST /api/v1/ai-oracle/query',
+      'POST /api/sippar/ai/chat-auth',
+      'POST /api/sippar/ai/enhanced-query',
+      'GET /api/v1/ai-oracle/health',
+      'GET /api/sippar/ai/health',
+      'POST /migrate-algo',
+      // Sprint X Phase 3.1: Reserve Verification Endpoints
+      'GET /reserves/status',
+      'GET /reserves/proof',
+      'POST /reserves/can-mint',
+      'GET /reserves/admin/dashboard',
+      'POST /reserves/admin/pause',
+      'POST /reserves/admin/unpause',
+      // Sprint X.1 Phase 1.1: Deposit Monitoring Endpoints
+      'GET /deposits/monitoring-stats',
+      'POST /deposits/start-monitoring',
+      'POST /deposits/stop-monitoring',
+      'GET /deposits/pending',
+      // Sprint X.1 Phase 1.1: Migration Endpoints
+      'GET /migration/status/:principal',
+      'POST /migration/fresh-start',
+      'POST /migration/bridge',
+      'POST /migration/bridge/complete',
+      'GET /migration/stats',
+      'GET /migration/progress/:principal',
+      // Sprint X.1 Phase 2: Production Monitoring Endpoints
+      'GET /monitoring/system',
+      'GET /monitoring/migration',
+      'GET /monitoring/reserves',
+      'GET /monitoring/alerts',
+      'POST /monitoring/alerts/test',
+      'GET /monitoring/health-checks',
+      'GET /monitoring/dashboard',
+      'GET /monitoring/history',
+
+      // Sprint 016: X402 Payment Protocol Endpoints
+      'POST /api/sippar/x402/create-payment',
+      'GET /api/sippar/x402/payment-status/:id',
+      'POST /api/sippar/x402/verify-token',
+      'GET /api/sippar/x402/agent-marketplace',
+      'GET /api/sippar/x402/analytics',
+      'POST /api/sippar/x402/enterprise-billing'
+    ],
+    timestamp: new Date().toISOString(),
+  });
 });
 
 export default app;
