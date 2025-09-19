@@ -16,7 +16,7 @@
 - ✅ **Threshold-Backed Payments**: X402 payments secured by ICP threshold signatures
 - ✅ **Agentic Commerce**: Autonomous AI-to-AI payment system operational
 - ✅ **Enterprise Platform**: B2B billing, analytics, service marketplace complete
-- ✅ **Production System**: 71 API endpoints (65 + 6 X402) operational
+- ✅ **Production System**: 53 API endpoints (47 + 6 X402) operational
 
 ### **✅ Foundation Technology Stack (Previously Proven)**
 
@@ -188,7 +188,7 @@ graph TD
 - ✅ Express.js middleware for payment-protected AI endpoints
 - ✅ Frontend payment components (26,163 bytes total)
 - ✅ TypeScript SDK with pay-and-call functionality
-- ✅ 6 X402 API endpoints operational (71 total endpoints)
+- ✅ 6 X402 API endpoints operational (53 total endpoints)
 - ✅ Enterprise billing, analytics, and service marketplace
 - ✅ World-first X402 + Chain Fusion integration complete
 

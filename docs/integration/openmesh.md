@@ -1,8 +1,8 @@
 # OpenMesh/XNode Infrastructure Integration
 
-**Last Updated**: September 5, 2025  
-**Integration Status**: ✅ Production Active  
-**Infrastructure**: XNode2 container services
+**Last Updated**: September 19, 2025
+**Integration Status**: ✅ Production Active + X402 Payment Enhancement
+**Infrastructure**: XNode2 container services + X402 payment protection
 
 ---
 
@@ -132,17 +132,32 @@ Sippar leverages established infrastructure patterns from TokenHunter/Rabbi:
 - **Security Model**: Container isolation with SSH-based management
 - **Monitoring Systems**: Health checking and service monitoring
 
-### **AI Service Bridge**
+### **AI Service Bridge + X402 Integration** *(Enhanced: Sprint 016)*
 ```typescript
-// Sippar AI Service configuration
+// Sippar AI Service configuration with X402 payment protection
 export class SipparAIService {
   private primaryEndpoint = 'https://chat.nuru.network';
   private fallbackEndpoint = 'https://xnode2.openmesh.cloud:8080';
-  
-  // Utilizes XNode2 AI containers for processing
-  async processAIQuery(query: string): Promise<AIResponse> {
-    // Primary: Use optimized Nuru endpoint
-    // Fallback: Direct XNode2 container access
+  private x402PaymentService = new X402Service();
+
+  // X402-protected AI processing via XNode2 infrastructure
+  async processAIQuery(query: string, paymentToken?: string): Promise<AIResponse> {
+    // Primary: X402-protected Nuru endpoint with payment verification
+    if (paymentToken) {
+      return this.processPaymentProtectedQuery(query, paymentToken);
+    }
+
+    // Fallback: Direct XNode2 container access (free tier)
+    return this.processFreeQuery(query);
+  }
+
+  private async processPaymentProtectedQuery(query: string, token: string): Promise<AIResponse> {
+    // Sprint 016: X402 payment verification with XNode2 AI processing
+    const verification = await this.x402PaymentService.verifyToken(token);
+    if (verification.valid) {
+      return this.callXNode2AI(query, 'premium');
+    }
+    throw new Error('Invalid payment token');
   }
 }
 ```
@@ -177,6 +192,62 @@ export class SipparAIService {
 - **XNode Documentation**: Available through OpenMesh developer resources
 - **Container Management**: nixos-container system documentation
 - **SSH Access**: Standard SSH key-based authentication
+
+---
+
+## 💳 **X402 Payment Integration** *(NEW: Sprint 016)*
+
+### **Payment-Protected AI Services via XNode Infrastructure**
+
+Sprint 016 successfully integrated X402 payment protocol with OpenMesh XNode AI infrastructure, creating payment-gated access to advanced AI models.
+
+**X402 + XNode Architecture**:
+```
+AI Agent Request → X402 Payment Required → Internet Identity → Payment Token → XNode2 AI Processing
+        ↓               ↓                      ↓               ↓              ↓
+   HTTP 402 Response  Payment Creation  Threshold Signature  Token Verification  Premium AI Access
+```
+
+### **Payment-Protected XNode Services**
+
+**Premium AI Models with X402 Protection**:
+- **DeepSeek-R1**: Advanced reasoning model - $0.05 USD per query
+- **Qwen2.5**: Enhanced language model - $0.02 USD per query
+- **phi-3**: Optimized model - $0.01 USD per query
+- **mistral**: Efficient processing - $0.01 USD per query
+
+**Service Tiers**:
+```typescript
+// X402-Protected XNode Services
+interface XNodeServiceTier {
+  free: {
+    models: ['phi-3-basic'],
+    responseTime: '200-500ms',
+    rateLimit: '10 queries/hour',
+    features: ['basic AI processing']
+  },
+  premium: {
+    models: ['deepseek-r1', 'qwen2.5', 'phi-3', 'mistral'],
+    responseTime: '31-91ms',
+    rateLimit: 'unlimited',
+    features: ['advanced AI', 'explainable AI', 'priority processing']
+  }
+}
+```
+
+### **Enterprise XNode + X402 Integration**
+
+**B2B AI Infrastructure**:
+- **Payment Verification**: X402 tokens verified via ICP threshold signatures
+- **Usage Analytics**: Real-time tracking of XNode AI service consumption
+- **Billing Integration**: Automated billing for enterprise XNode AI usage
+- **SLA Guarantees**: Premium response times with payment verification
+
+**Production Deployment**:
+- **XNode2 Integration**: `https://xnode2.openmesh.cloud:8080` with X402 middleware
+- **Payment Endpoints**: X402 payment creation and verification operational
+- **Container Services**: 12 active containers including AI services with payment gates
+- **Performance**: 31-91ms AI response times maintained with payment protection
 
 ---
 

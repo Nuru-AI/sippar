@@ -125,7 +125,7 @@ sippar/
 - [x] Internet Identity login working for Sippar ✅
 - [x] Algorand address derivation from II principal ✅
 - [x] ckALGO implementation deployed to ICP mainnet ✅
-- [x] AI Oracle deployed to Algorand testnet (App ID: 745336634) ✅
+- [x] AI Oracle deployed to Algorand testnet (App ID: 745336394) ✅
 - [x] Complete AI request and credit system functionality ✅
 - [x] Frontend AI Oracle integration with interactive testing ✅
 - [ ] ICP backend integration with Nuru AI platform
