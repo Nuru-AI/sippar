@@ -24,7 +24,15 @@
 - **Agentic Commerce**: Pay-per-use AI services with threshold signature backing
 - **Enterprise Platform**: B2B billing, analytics, and service marketplace complete
 - **Mathematical Security**: X402 payments backed by ICP threshold signatures
-- **Production Deployment**: 53 total endpoints (47 existing + 6 X402) operational
+- **Production Deployment**: 71 total endpoints (65 core + 6 X402) operational
+
+#### **Current Production Capabilities** *(Updated September 22, 2025)*:
+- **API Endpoints**: 71 total operational (65 core + 6 X402 payment protocol)
+- **Authentication**: Internet Identity with biometric support
+- **Payment Processing**: Real-time micro-payments with mathematical security
+- **Agent Marketplace**: Complete frontend components operational
+- **Analytics Dashboard**: Real-time payment and usage analytics
+- **Threshold Control**: Mathematical 1:1 backing with ICP threshold signatures
 
 ### **Sprint X.1: Production Completion & Reality Alignment** ✅ **COMPLETED & ARCHIVED**
 **Status**: ✅ **COMPLETE** - All Phase 1 & 2 objectives achieved (September 17, 2025)
@@ -200,14 +208,27 @@ Each sprint gets a dedicated working directory with standardized organization:
 
 ### **🔄 CURRENT ACTIVE SPRINT**
 
-#### **Sprint 013: Go-to-Market & Ecosystem Adoption** 🚀 **PLANNING INITIATED**
-- **Status**: 📋 **PLANNING INITIATED** - Sprint documentation and structure complete
-- **Start Date**: September 18, 2025
-- **Timeline**: Q4 2025 (3-4 weeks) - October 16, 2025 target completion
-- **Priority**: **HIGH** - Business Development & Market Penetration
-- **Foundation**: Built on complete production platform from Sprint 012.5
-- **Working Directory**: `/working/sprint-013/` ✅ **CREATED**
-- **Documentation**: [sprint013-go-to-market-ecosystem-adoption.md](/working/sprint-013/sprint013-go-to-market-ecosystem-adoption.md)
+#### **Sprint 017: Streaming Platform Strategic Expansion** 🚀 **PLANNING INITIATED**
+- **Status**: 📋 **STRATEGIC OPPORTUNITY** - Streaming platform market entry identified
+- **Start Date**: September 22, 2025
+- **Timeline**: 4-6 weeks (September 22 - October 30, 2025)
+- **Priority**: **STRATEGIC** - Leverage X402 capabilities for streaming platform market
+- **Foundation**: Build on Sprint 016 X402 + Chain Fusion for streaming use cases
+- **Target Market**: Web2 streaming platforms (100k-500k users) and fintech startups
+- **Working Directory**: `/working/sprint-017-strategic-expansion/` ✅ **CREATED**
+
+**Streaming Platform Opportunity**:
+1. **Pay-Per-Second Viewing**: Real-time micro-payments with mathematical security
+2. **Zero-Friction Authentication**: Internet Identity for seamless user onboarding
+3. **Agent-Based Advertising**: AI agents bidding for ad slots with threshold signatures
+4. **Platform Risk Elimination**: Zero custody risk for platforms and users
+5. **Web2 → Web3 Bridge**: Simplest path for streaming platforms to enter Web3
+
+#### **Sprint 013: Go-to-Market & Ecosystem Adoption** 🔄 **DEFERRED**
+- **Status**: 📋 **DEFERRED** - Deferred in favor of strategic streaming platform opportunity
+- **Rationale**: Sprint 017 streaming platform focus provides more targeted market entry
+- **Timeline**: Will resume after Sprint 017 demonstrates streaming platform traction
+- **Working Directory**: `/working/sprint-013/` (prepared but deferred)
 
 **Core Objectives**:
 1. **Algorand Ecosystem Dominance**: Capture 80%+ of Algorand AI oracle market through strategic partnerships
@@ -338,41 +359,81 @@ Each sprint gets a dedicated working directory with standardized organization:
 
 ### **✅ CURRENT ACTIVE SPRINT**
 
-#### **Sprint 013: Go-to-Market & Ecosystem Adoption** 🚀 **ACTIVE**
-- **Timeline**: September 18 - October 16, 2025 (4 weeks)
-- **Priority**: **HIGH** - Capitalize on complete production platform
-- **Status**: Planning initiated, comprehensive strategy documented
-- **Foundation**: Complete intelligent cross-chain automation platform from Sprint 012.5
+#### **Sprint 017: Streaming Platform Strategic Expansion** 🚀 **PLANNING INITIATED**
+- **Timeline**: September 22 - October 30, 2025 (4-6 weeks)
+- **Priority**: **STRATEGIC** - Target streaming platform market with X402 capabilities
+- **Status**: Planning initiated, streaming platform opportunity identified
+- **Foundation**: Build on Sprint 016 X402 + Chain Fusion achievement for streaming market entry
 
 **Core Objectives**:
-1. **Algorand Ecosystem Dominance**: Capture 80%+ of Algorand AI oracle market
-2. **Strategic Partnerships**: 5+ major protocol integrations (Folks Finance, Tinyman, etc.)
-3. **Enterprise Pilot Programs**: 3+ Fortune 500 pilot programs launched
-4. **Developer Ecosystem Growth**: 25+ active developers building on platform
-5. **Revenue Generation**: $50K+ Monthly Recurring Revenue achieved
+1. **Streaming Platform Targeting**: Create specialized landing page and demos for Web2 streaming platforms
+2. **Pay-Per-Second Showcase**: Demonstrate real-time micro-payment capabilities for streaming content
+3. **Platform Pilot Programs**: Secure 2+ streaming platform pilot partnerships (100k-500k user platforms)
+4. **Zero-Custody Value Prop**: Prove mathematical security eliminates platform and user custody risks
+5. **Revenue Validation**: Achieve first streaming platform revenue and usage metrics
 
-**Success Criteria**: Market leadership in intelligent cross-chain applications with sustainable revenue growth.
+**Success Criteria**: Establish Sippar as preferred payment infrastructure for streaming platforms entering Web3, with validated streaming use cases and pilot program momentum.
 
 ### **📋 DEFERRED SPRINTS**
+
+#### **Sprint 013: Go-to-Market & Ecosystem Adoption** 🔄 **DEFERRED**
+- **Status**: **DEFERRED** - Strategic focus shifted to streaming platform opportunity
+- **Rationale**: Sprint 017 streaming platform targeting provides more focused market entry
+- **Timeline**: Will proceed after Sprint 017 demonstrates streaming platform traction
+- **Priority**: HIGH - General ecosystem adoption after streaming platform validation
 
 #### **Sprint 012: Security Audit & Production Hardening** 🛡️ **DEFERRED**
 - **Status**: **DEFERRED** - Planned but not started (working directory created)
 - **Rationale**: Business validation prioritized over security audit
-- **Timeline**: Will proceed after Sprint 013 demonstrates market traction
+- **Timeline**: Will proceed after streaming platform pilots demonstrate market traction
 - **Priority**: HIGH - Will be critical before major enterprise adoption
 
 ### **🔮 FUTURE EXPANSION OPPORTUNITIES**
 
-#### **Sprint 015: Multi-Chain AI Oracle Expansion** 🌐 **HIGH REVENUE**
+#### **Sprint 019: Full Canister Migration - API Gateway** 🏗️ **ARCHITECTURAL PRIORITY**
+- **Timeline**: Q1 2026 (3-4 weeks)
+- **Foundation**: Migrate Node.js backend to pure canister architecture following ICP best practices
+- **Current Status**: 70-75% complete with 3 operational canisters (ckALGO, SimplifiedBridge, ThresholdSigner)
+- **Scope**: Migrate remaining API gateway layer and external service integration
+
+**Migration Assessment**:
+- **✅ Already Canisterized**: Core business logic (token operations, bridge operations, threshold signatures)
+- **🔄 Needs Migration**: API gateway (82 endpoints), HTTP outcalls for Algorand network, monitoring/analytics
+- **Gap Analysis**: ~25-30% of functionality still in Node.js backend
+
+**Phase 1: API Gateway Canister** (2-3 weeks)
+- Replace Express.js routing with canister-based API functions
+- Implement HTTP outcalls for Algorand network integration
+- Migrate core endpoint functionality to unified API canister
+
+**Phase 2: Service Integration** (1-2 weeks)
+- Move monitoring and analytics to canister-based collection
+- Implement AI service coordination via HTTP outcalls
+- Add canister-based rate limiting and security controls
+
+**Phase 3: Frontend Integration** (1 week)
+- Update frontend to call canisters directly instead of Node.js backend
+- Remove Node.js backend dependency entirely
+- Achieve pure ICP dApp architecture
+
+#### **Sprint 020: Multi-Chain AI Oracle Expansion** 🌐 **HIGH REVENUE**
 - **Timeline**: Q1-Q2 2026
 - **Foundation**: Leverage proven AI Oracle success for multi-chain expansion
 - **Market Opportunity**: Ethereum ($200B) + Solana ($50B) ecosystems
 - **Technical Foundation**: ICP threshold signatures already support multiple chains
+- **Prerequisite**: Complete canister migration from Sprint 019
 
-#### **Sprint 016: Advanced AI & Enterprise Features** 🤖🏢
+#### **Sprint 018: Streaming Platform Implementation** 📺 **HIGH PRIORITY**
+- **Timeline**: November 2025 (3-4 weeks)
+- **Foundation**: Build on Sprint 017 streaming platform pilots with production implementation
+- **Market Focus**: Convert streaming platform pilot partnerships into production deployments
+- **Technical Implementation**: Custom streaming payment flows and integration SDKs
+- **Revenue Target**: First recurring revenue from streaming platform partnerships
+
+#### **Sprint 021: Advanced AI & Enterprise Features** 🤖🏢
 - **Timeline**: Q2-Q3 2026
 - **Focus**: X402 Protocol integration and advanced enterprise capabilities
-- **Dependency**: Market validation from Sprint 013 success
+- **Dependency**: Market validation from Sprint 017/018 streaming platform success and pure canister architecture
 
 ---
 
