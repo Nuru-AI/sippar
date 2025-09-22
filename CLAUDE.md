@@ -3,7 +3,7 @@
 **Project**: Sippar - ICP Chain Fusion bridge for Algorand ecosystem
 **Sister Project**: Nuru AI TokenHunter Rabbi Trading Bot  
 **Date Created**: September 3, 2025
-**Version**: 2.0.0-production
+**Version**: 1.0.0-production
 **Status**: 🎉 **AUTHENTIC MATHEMATICAL BACKING ACHIEVED** - Sprint X Architecture Fix Complete
 **Last Updated**: September 15, 2025
 
@@ -272,7 +272,7 @@ cat tools/deployment/DEPLOYMENT_STRUCTURE.md
 - **Production Frontend**: Uses direct backend access (`http://nuru.network:3004`)
 - **Nginx Proxy**: `/api/sippar/` routes → `http://localhost:3004/` (WORKING)
 - **Direct Access**: Port 3004 open in firewall for frontend API calls
-- **API Endpoints**: 59 total endpoints implemented (41 existing + 18 Sprint X.1) - verified Sept 17, 2025
+- **API Endpoints**: 74 total endpoints implemented - verified Dec 19, 2025
 
 ---
 

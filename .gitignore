@@ -67,4 +67,5 @@ temp/
 working/
 
 # Archive directory (legacy/backup files)
-archive/
+archive/CLAUDE.local.md
+.collaborative-intelligence.json

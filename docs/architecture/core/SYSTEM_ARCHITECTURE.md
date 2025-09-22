@@ -2,7 +2,7 @@
 
 **Project**: Sippar - Algorand Chain Fusion Bridge  
 **Date**: September 15, 2025 (Updated - Sprint X Complete)
-**Version**: 2.0.0-production
+**Version**: 1.0.0-production
 **Purpose**: Current production system architecture documentation with authentic mathematical backing
 
 ## 🏗️ **Architecture Overview**
@@ -12,20 +12,27 @@ Sippar implements ICP Chain Fusion technology to create a trustless bridge betwe
 ## 🔗 **Chain Fusion Technology Stack**
 
 ### **Core Components**
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   User Device   │    │  Internet Computer │    │   Algorand      │
-│                 │    │                    │    │                 │
-│ Internet Identity│──▶ │ Threshold Ed25519  │──▶ │ Native ALGO     │
-│ (Biometric/Device)│   │ Signature Service  │    │ Direct Control  │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-         │                        │                        │
-         │                        ▼                        │
-         │              ┌──────────────────┐                │
-         │              │   ckALGO Token   │                │
-         └──────────────│   (1:1 Backed)   │────────────────┘
-                        │   ICP Canister   │
-                        └──────────────────┘
+
+```mermaid
+flowchart TD
+    A[User Device<br/>Internet Identity<br/>Biometric/Device Auth] -->|Authenticate| B[Internet Computer<br/>Threshold Ed25519<br/>Signature Service]
+    B -->|Sign Transactions| C[Algorand Network<br/>Native ALGO<br/>Direct Control]
+
+    B --> D[ckALGO Canister<br/>1:1 Backed Tokens]
+    B --> E[SimplifiedBridge<br/>Custody Management]
+    B --> F[X402 Service<br/>Payment Protocol]
+
+    D -->|Mint/Redeem| C
+    E -->|Custody Addresses| C
+    F -->|AI Payments| G[AI Services<br/>Multi-Model Access]
+
+    style A fill:#e1f5fe
+    style B fill:#f3e5f5
+    style C fill:#e8f5e8
+    style D fill:#fff3e0
+    style E fill:#fff3e0
+    style F fill:#fce4ec
+    style G fill:#f1f8e9
 ```
 
 ### **Architecture Principles**
@@ -34,6 +41,49 @@ Sippar implements ICP Chain Fusion technology to create a trustless bridge betwe
 3. **Zero Web3 Complexity**: Internet Identity hides all blockchain complexity
 4. **Native Asset Control**: Users control actual ALGO, not wrapped tokens
 5. **Authentic Mathematical Backing**: Real canister integration with 100% verifiable reserve calculations (Sprint X)
+
+## 🔄 **Transaction Flow**
+
+### **ckALGO Minting Process**
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant II as Internet Identity
+    participant ICP as ICP Canister
+    participant A as Algorand Network
+
+    U->>II: Authenticate with biometrics
+    II->>ICP: Generate threshold address
+    ICP->>A: Derive Algorand custody address
+
+    U->>A: Deposit ALGO to custody address
+    A->>ICP: Monitor deposit (6+ confirmations)
+    ICP->>ICP: Mint ckALGO tokens (1:1 ratio)
+    ICP->>U: ckALGO balance updated
+
+    Note over U,A: Mathematical 1:1 backing maintained
+```
+
+### **X402 Payment Flow**
+
+```mermaid
+sequenceDiagram
+    participant User as User/AI Agent
+    participant X402 as X402 Service
+    participant AI as AI Provider
+    participant ICP as ICP Payment
+
+    User->>X402: Request AI service access
+    X402->>ICP: Create payment requirement
+    User->>ICP: Submit payment (ckALGO/ICP)
+    ICP->>X402: Payment confirmed
+    X402->>User: Service token issued
+    User->>AI: Access service with token
+    AI->>X402: Validate token
+    X402->>AI: Access approved
+    AI->>User: Service response
+```
 
 ## 🔐 **Security Architecture**
 

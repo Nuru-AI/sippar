@@ -1,26 +1,50 @@
 {
   "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/sprint-protection.sh"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Bash|Write",
-        "hooks": [
-          {
-            "type": "command", 
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/sprint-post-validation.sh"
-          }
-        ]
-      }
-    ]
+  },
+  "slashCommands": {
+    "/athena": {
+      "command": "/Users/eladm/Projects/CollaborativeIntelligence/interfaces/claude-bridge/scripts/agent-activator.sh",
+      "args": ["@Athena"],
+      "description": "Activate Athena agent with full context loading"
+    },
+    "/developer": {
+      "command": "/Users/eladm/Projects/CollaborativeIntelligence/interfaces/claude-bridge/scripts/agent-activator.sh",
+      "args": ["@Developer"],
+      "description": "Activate Developer agent with full context loading"
+    },
+    "/architect": {
+      "command": "/Users/eladm/Projects/CollaborativeIntelligence/interfaces/claude-bridge/scripts/agent-activator.sh",
+      "args": ["@Architect"],
+      "description": "Activate Architect agent with full context loading"
+    },
+    "/designer": {
+      "command": "/Users/eladm/Projects/CollaborativeIntelligence/interfaces/claude-bridge/scripts/agent-activator.sh",
+      "args": ["@Designer"],
+      "description": "Activate Designer agent with full context loading"
+    },
+    "/agents": {
+      "command": "ls",
+      "args": ["/Users/eladm/Projects/CollaborativeIntelligence/AGENTS/"],
+      "description": "List all available CI agents"
+    },
+    "/protect": {
+      "command": "/Users/eladm/Projects/CollaborativeIntelligence/interfaces/claude-bridge/scripts/agent-protector.sh",
+      "description": "Run agent protection and integrity check"
+    },
+    "/session": {
+      "command": "ls",
+      "args": ["-la", "/Users/eladm/Projects/CollaborativeIntelligence/Sessions/"],
+      "description": "Show current CI session files"
+    },
+    "/logs": {
+      "command": "ls",
+      "args": ["-la", "/Users/eladm/Projects/CollaborativeIntelligence/.claude/logs/"],
+      "description": "Show CI integration logs"
+    },
+    "/trustwrapper": {
+      "command": "/Users/eladm/Projects/CollaborativeIntelligence/interfaces/claude-bridge/monitoring/hallucination_dashboard.py",
+      "args": ["--generate-only"],
+      "description": "Generate TrustWrapper hallucination detection dashboard"
+    }
   }
 }

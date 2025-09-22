@@ -5,6 +5,94 @@
 
 import React, { useState, useEffect } from 'react';
 
+// AI Service Interface Component
+const AIServiceInterface: React.FC = () => {
+  const [query, setQuery] = useState('');
+  const [response, setResponse] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedService, setSelectedService] = useState('ai-oracle-basic');
+
+  const handleSubmit = async () => {
+    if (!query.trim()) return;
+
+    setIsLoading(true);
+    setResponse('');
+
+    try {
+      const response = await fetch('https://nuru.network/api/sippar/ai/query', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: query,
+          model: 'deepseek-r1',
+          service: selectedService
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setResponse(result.ai_response || result.response || 'Query completed successfully');
+      } else {
+        setResponse(`Error: ${result.error || 'Query failed'}`);
+      }
+    } catch (error) {
+      setResponse(`Error: ${error instanceof Error ? error.message : 'Network error'}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-300 mb-2">
+          Select AI Service:
+        </label>
+        <select
+          value={selectedService}
+          onChange={(e) => setSelectedService(e.target.value)}
+          className="w-full p-2 border border-gray-600 rounded-md bg-gray-700 text-white"
+        >
+          <option value="ai-oracle-basic">AI Oracle Basic ($0.01)</option>
+          <option value="ai-oracle-enhanced">AI Oracle Enhanced ($0.05)</option>
+          <option value="ai-oracle-enterprise">AI Oracle Enterprise ($0.10)</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-300 mb-2">
+          Your AI Query:
+        </label>
+        <textarea
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Ask anything... (e.g., 'Explain blockchain technology', 'What is DeFi?')"
+          className="w-full p-3 border border-gray-600 rounded-md bg-gray-700 text-white"
+          rows={3}
+        />
+      </div>
+
+      <button
+        onClick={handleSubmit}
+        disabled={isLoading || !query.trim()}
+        className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {isLoading ? '🤖 AI is thinking...' : '🚀 Ask AI'}
+      </button>
+
+      {response && (
+        <div className="mt-4 p-4 bg-gray-700 border border-gray-600 rounded-lg">
+          <h4 className="text-sm font-medium text-gray-300 mb-2">AI Response:</h4>
+          <p className="text-white whitespace-pre-wrap">{response}</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
 interface X402Metrics {
   totalPayments: number;
   totalRevenue: number;
@@ -46,7 +134,7 @@ export const X402Analytics: React.FC = () => {
 
   const fetchAnalyticsData = async () => {
     try {
-      const response = await fetch('/api/sippar/x402/analytics');
+      const response = await fetch('https://nuru.network/api/sippar/x402/analytics');
       const result = await response.json();
 
       if (result.success) {
@@ -145,8 +233,8 @@ export const X402Analytics: React.FC = () => {
     <div className="p-6">
       {/* Header */}
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">X402 Payment Analytics</h2>
-        <p className="text-gray-600">
+        <h2 className="text-2xl font-bold text-white mb-2">X402 Payment Analytics</h2>
+        <p className="text-gray-300">
           Micropayment metrics and service usage insights
         </p>
         <div className="mt-2 text-sm text-gray-500">
@@ -156,22 +244,22 @@ export const X402Analytics: React.FC = () => {
 
       {/* Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
+        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
           <h3 className="text-sm font-medium text-gray-500 mb-1">Total Payments</h3>
-          <p className="text-2xl font-bold text-gray-900">{metrics.totalPayments.toLocaleString()}</p>
+          <p className="text-2xl font-bold text-white">{metrics.totalPayments.toLocaleString()}</p>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
+        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
           <h3 className="text-sm font-medium text-gray-500 mb-1">Total Revenue</h3>
           <p className="text-2xl font-bold text-green-600">{formatCurrency(metrics.totalRevenue)}</p>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
+        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
           <h3 className="text-sm font-medium text-gray-500 mb-1">Average Payment</h3>
           <p className="text-2xl font-bold text-blue-600">{formatCurrency(metrics.averagePaymentAmount)}</p>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
+        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
           <h3 className="text-sm font-medium text-gray-500 mb-1">Success Rate</h3>
           <p className="text-2xl font-bold text-purple-600">{(metrics.successRate * 100).toFixed(1)}%</p>
         </div>
@@ -180,7 +268,7 @@ export const X402Analytics: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Services */}
         <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Top Services by Revenue</h3>
+          <h3 className="text-lg font-semibold text-white mb-4">Top Services by Revenue</h3>
 
           {metrics.topServices.length === 0 ? (
             <div className="text-center text-gray-500 py-8">
@@ -195,7 +283,7 @@ export const X402Analytics: React.FC = () => {
                       {index + 1}
                     </span>
                     <div>
-                      <p className="font-medium text-gray-900 text-sm">
+                      <p className="font-medium text-white text-sm">
                         {service.endpoint.split('/').pop()}
                       </p>
                       <p className="text-xs text-gray-500">
@@ -214,7 +302,7 @@ export const X402Analytics: React.FC = () => {
 
         {/* Recent Payments */}
         <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Payments</h3>
+          <h3 className="text-lg font-semibold text-white mb-4">Recent Payments</h3>
 
           {recentPayments.length === 0 ? (
             <div className="text-center text-gray-500 py-8">
@@ -225,7 +313,7 @@ export const X402Analytics: React.FC = () => {
               {recentPayments.map((payment, index) => (
                 <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 text-sm truncate">
+                    <p className="font-medium text-white text-sm truncate">
                       {payment.service.split('/').pop()}
                     </p>
                     <p className="text-xs text-gray-500">
@@ -236,7 +324,7 @@ export const X402Analytics: React.FC = () => {
                     </p>
                   </div>
                   <div className="flex flex-col items-end ml-4">
-                    <span className="font-semibold text-gray-900">
+                    <span className="font-semibold text-white">
                       {formatCurrency(payment.amount)}
                     </span>
                     {getStatusBadge(payment.status)}
@@ -247,6 +335,20 @@ export const X402Analytics: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* AI Service Interface */}
+      {analyticsData.metrics.totalPayments > 0 && (
+        <div className="mt-8 bg-gray-800 border border-gray-700 rounded-lg p-6">
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold text-white mb-2">🤖 Use Your Paid AI Services</h3>
+            <p className="text-gray-300 text-sm">
+              You've made {analyticsData.metrics.totalPayments} payments totaling {formatCurrency(analyticsData.metrics.totalRevenue)} - Use your AI access below
+            </p>
+          </div>
+
+          <AIServiceInterface />
+        </div>
+      )}
 
       {/* Protocol Information */}
       <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">

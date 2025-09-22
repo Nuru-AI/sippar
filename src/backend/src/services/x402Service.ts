@@ -54,6 +54,17 @@ class X402Service {
     principal: string;
   }> = [];
 
+  // Performance optimization: Cache for frequent payment tokens
+  private tokenCache = new Map<string, {
+    token: string;
+    expiry: number;
+    created: number;
+  }>();
+
+  // Performance optimization: Pre-computed transaction ID components
+  private transactionIdCounter = 0;
+  private instanceId = Math.random().toString(36).substr(2, 4);
+
   /**
    * Get X402 middleware configuration for AI services
    */
@@ -221,34 +232,117 @@ class X402Service {
   }
 
   /**
-   * Create enterprise payment for B2B usage
+   * Generate optimized transaction ID (faster than random generation)
+   */
+  private generateTransactionId(): string {
+    this.transactionIdCounter++;
+    return `x402-${this.instanceId}-${this.transactionIdCounter}-${Date.now()}`;
+  }
+
+  /**
+   * Create cached service token for repeated requests
+   */
+  private createServiceToken(principal: string, service: string, txId: string): { token: string; expiry: number } {
+    const cacheKey = `${principal}-${service}`;
+    const now = Date.now();
+
+    // Check if we have a valid cached token (reuse for 10 minutes for same principal/service)
+    const cached = this.tokenCache.get(cacheKey);
+    if (cached && cached.expiry > now + (10 * 60 * 1000)) {
+      return { token: cached.token, expiry: cached.expiry };
+    }
+
+    // Create new token (24 hour expiry)
+    const expiryTime = now + (24 * 60 * 60 * 1000);
+    const serviceAccessToken = Buffer.from(JSON.stringify({
+      principal,
+      service,
+      expiry: expiryTime,
+      txId
+    })).toString('base64');
+
+    // Cache the token
+    this.tokenCache.set(cacheKey, {
+      token: serviceAccessToken,
+      expiry: expiryTime,
+      created: now
+    });
+
+    // Clean old cache entries (keep only last 100)
+    if (this.tokenCache.size > 100) {
+      const entries = Array.from(this.tokenCache.entries());
+      entries.sort((a, b) => a[1].created - b[1].created);
+      entries.slice(0, -100).forEach(([key]) => this.tokenCache.delete(key));
+    }
+
+    return { token: serviceAccessToken, expiry: expiryTime };
+  }
+
+  /**
+   * Create enterprise payment for B2B usage (optimized for speed)
    */
   async createEnterprisePayment(request: X402PaymentRequest): Promise<X402PaymentResponse> {
+    const startTime = performance.now();
+
     try {
-      // Generate unique transaction ID
-      const transactionId = `x402-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      // Fast transaction ID generation
+      const transactionId = this.generateTransactionId();
 
-      // Create service access token (24 hour expiry)
-      const expiryTime = Date.now() + (24 * 60 * 60 * 1000);
-      const serviceAccessToken = Buffer.from(JSON.stringify({
-        principal: request.payerCredentials.principal,
-        service: request.serviceEndpoint,
-        expiry: expiryTime,
-        txId: transactionId
-      })).toString('base64');
+      // Fast token creation with caching
+      const { token, expiry } = this.createServiceToken(
+        request.payerCredentials.principal,
+        request.serviceEndpoint,
+        transactionId
+      );
 
-      console.log(`💼 Enterprise X402 payment created: ${transactionId} for ${request.serviceEndpoint}`);
+      // Async metrics update (don't block response)
+      setImmediate(() => {
+        this.updateMetricsAsync(request, startTime);
+      });
 
       return {
         transactionId,
         paymentStatus: 'confirmed',
-        serviceAccessToken,
-        expiryTime
+        serviceAccessToken: token,
+        expiryTime: expiry
       };
 
     } catch (error) {
-      console.error('❌ Enterprise payment creation failed:', error);
+      const duration = performance.now() - startTime;
+      console.error(`❌ Enterprise payment creation failed (${duration.toFixed(2)}ms):`, error);
       throw new Error(`Failed to create enterprise payment: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Update metrics asynchronously to avoid blocking payment creation
+   */
+  private updateMetricsAsync(request: X402PaymentRequest, startTime: number): void {
+    try {
+      const duration = performance.now() - startTime;
+
+      this.metrics.totalPayments++;
+      this.metrics.totalRevenue += request.paymentAmount;
+      this.metrics.averagePaymentAmount = this.metrics.totalRevenue / this.metrics.totalPayments;
+
+      this.paymentHistory.push({
+        timestamp: new Date(),
+        amount: request.paymentAmount,
+        service: request.serviceEndpoint,
+        status: 'success',
+        principal: request.payerCredentials.principal
+      });
+
+      // Update top services
+      this.updateTopServices(request.serviceEndpoint, request.paymentAmount);
+
+      // Log performance (only log slow operations)
+      if (duration > 50) {
+        console.log(`⚡ X402 payment created in ${duration.toFixed(2)}ms for ${request.serviceEndpoint}`);
+      }
+
+    } catch (error) {
+      console.error('⚠️ Error updating X402 metrics:', error);
     }
   }
 

@@ -19,7 +19,7 @@ Sippar is the first intelligent cross-chain automation platform combining ICP Ch
 ### **Live System Access**
 - **Production Platform**: [https://nuru.network/sippar/](https://nuru.network/sippar/)
 - **AI Oracle**: App ID 745336394 on Algorand Testnet
-- **Backend Health**: 65 API endpoints operational (18 migration + 6 AI + 41 core)
+- **Backend Health**: 74 API endpoints operational
 - **Status**: ✅ Healthy and operational with real-time monitoring
 
 ## 🚀 **Unique Value Proposition**
@@ -72,7 +72,7 @@ Sippar is the first intelligent cross-chain automation platform combining ICP Ch
 - **Deliverables**: Enhanced ckALGO canister, AI integration, TypeScript SDK, enterprise monitoring
 
 ### **🎯 Current Status: Production Ready**
-- **Platform**: Complete production system with 65 operational API endpoints
+- **Platform**: Complete production system with 74 operational API endpoints
 - **Performance**: AI services averaging 81ms response time with 99.8% uptime
 - **Security**: Mathematical backing with real threshold-controlled custody addresses
 - **Ecosystem**: Developer SDK with comprehensive documentation and examples
@@ -209,7 +209,7 @@ sippar/
 │   ├── src/components/Dashboard.tsx            # Main authenticated UI ✅ PRODUCTION
 │   ├── src/stores/authStore.ts                # Zustand state management ✅ PRODUCTION
 │   └── src/services/                           # API integration services
-├── src/backend/                                # Express backend (65 endpoints)
+├── src/backend/                                # Express backend (74 endpoints)
 │   ├── src/server.ts                          # Production server ✅ OPERATIONAL
 │   ├── src/services/                          # Business logic services
 │   │   ├── thresholdSignerService.ts          # Threshold signatures ✅ OPERATIONAL
@@ -229,7 +229,7 @@ sippar/
 ### **📚 Documentation & Tools**
 ```
 docs/
-├── api/endpoints.md                           # Complete API reference (65 endpoints)
+├── api/endpoints.md                           # Complete API reference (74 endpoints)
 ├── development/sprint-management.md           # Sprint tracking system
 └── integration/                              # Developer integration guides
 tools/deployment/                             # Production deployment scripts
@@ -241,7 +241,7 @@ examples/typescript/                          # 3 comprehensive examples
 
 ### **Developer Resources**
 - **📋 [Sprint Management](docs/development/sprint-management.md)**: Complete development tracking system
-- **🔧 [API Reference](docs/api/endpoints.md)**: 65 endpoint documentation with examples
+- **🔧 [API Reference](docs/api/endpoints.md)**: 74 endpoint documentation with examples
 - **🏗️ [Architecture](docs/architecture/)**: Technical system design and patterns
 - **🤝 [Integration Guide](docs/integration/)**: Developer integration documentation
 - **💼 [Examples](examples/typescript/)**: 3 comprehensive TypeScript examples
@@ -282,7 +282,7 @@ examples/typescript/                          # 3 comprehensive examples
 - **Migration System**: 468-line MigrationService with 6 API endpoints
 - **Production Monitoring**: ProductionMonitoringService (600+ lines)
 - **Alert Management**: AlertManager (800+ lines) with multi-channel notifications
-- **Backend Expansion**: 65 total endpoints (18 migration + 6 AI + 41 core)
+- **Backend Expansion**: 74 total endpoints
 
 #### **✅ Sprint X - Authentic Mathematical Backing (Complete)**
 **Status**: Mathematical Security Achieved (September 15, 2025)

@@ -28,10 +28,15 @@ export const X402PaymentModal: React.FC<X402PaymentModalProps> = ({
   onPaymentSuccess,
   onPaymentFailure
 }) => {
-  const { user } = useAuthStore();
+  const { user, credentials } = useAuthStore();
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'success' | 'failed'>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [serviceToken, setServiceToken] = useState<string>('');
+  const [showServiceInterface, setShowServiceInterface] = useState(false);
+  const [aiQuery, setAiQuery] = useState<string>('');
+  const [aiResponse, setAiResponse] = useState<string>('');
+  const [isUsingService, setIsUsingService] = useState(false);
 
   const handlePayment = async () => {
     if (!user?.principal) {
@@ -46,17 +51,18 @@ export const X402PaymentModal: React.FC<X402PaymentModalProps> = ({
     try {
       // Create X402 payment request
       const paymentRequest = {
-        serviceEndpoint: service.endpoint,
-        paymentAmount: service.price,
+        service: service.id,
+        amount: service.price,
+        principal: user.principal,
+        algorandAddress: credentials?.algorandAddress || '',
         aiModel: 'default',
-        requestId: `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        payerCredentials: {
-          principal: user.principal,
-          algorandAddress: user.algorandCredentials?.address || ''
+        metadata: {
+          requestId: `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          serviceEndpoint: service.endpoint
         }
       };
 
-      const response = await fetch('/api/sippar/x402/create-payment', {
+      const response = await fetch('https://nuru.network/api/sippar/x402/create-payment', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -68,6 +74,7 @@ export const X402PaymentModal: React.FC<X402PaymentModalProps> = ({
 
       if (result.success) {
         setPaymentStatus('success');
+        setServiceToken(result.payment.serviceToken || result.payment.accessToken || '');
         onPaymentSuccess(result.payment);
       } else {
         throw new Error(result.error || 'Payment creation failed');
@@ -84,10 +91,52 @@ export const X402PaymentModal: React.FC<X402PaymentModalProps> = ({
     }
   };
 
+  const handleUseService = async () => {
+    if (!serviceToken || !aiQuery.trim()) {
+      setErrorMessage('Please enter a query to use the AI service');
+      return;
+    }
+
+    setIsUsingService(true);
+    setAiResponse('');
+
+    try {
+      const response = await fetch(`https://nuru.network${service.endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${serviceToken}`,
+          'X-Service-Token': serviceToken
+        },
+        body: JSON.stringify({
+          query: aiQuery,
+          model: 'deepseek-r1'
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setAiResponse(result.ai_response || result.response || 'Service completed successfully');
+      } else {
+        throw new Error(result.error || 'Service request failed');
+      }
+    } catch (error) {
+      console.error('Service usage failed:', error);
+      setAiResponse(`Error: ${error instanceof Error ? error.message : 'Service request failed'}`);
+    } finally {
+      setIsUsingService(false);
+    }
+  };
+
   const handleClose = () => {
-    if (!isProcessing) {
+    if (!isProcessing && !isUsingService) {
       setPaymentStatus('idle');
       setErrorMessage('');
+      setShowServiceInterface(false);
+      setAiQuery('');
+      setAiResponse('');
+      setServiceToken('');
       onClose();
     }
   };
@@ -139,10 +188,48 @@ export const X402PaymentModal: React.FC<X402PaymentModalProps> = ({
           </div>
         )}
 
-        {paymentStatus === 'success' && (
+        {paymentStatus === 'success' && !showServiceInterface && (
           <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
             <div className="flex items-center">
               <span className="text-green-700">✅ Payment successful! Service access granted.</span>
+            </div>
+          </div>
+        )}
+
+        {paymentStatus === 'success' && showServiceInterface && (
+          <div className="mb-4 space-y-4">
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <h3 className="text-blue-800 font-semibold mb-2">🤖 Use Your AI Service</h3>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Ask the AI anything:
+                  </label>
+                  <textarea
+                    value={aiQuery}
+                    onChange={(e) => setAiQuery(e.target.value)}
+                    placeholder="What would you like to know? (e.g., 'Explain blockchain technology')"
+                    className="w-full p-2 border border-gray-300 rounded-md text-gray-900"
+                    rows={3}
+                  />
+                </div>
+
+                <button
+                  onClick={handleUseService}
+                  disabled={isUsingService || !aiQuery.trim()}
+                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isUsingService ? 'Processing...' : '🚀 Ask AI'}
+                </button>
+
+                {aiResponse && (
+                  <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">AI Response:</h4>
+                    <p className="text-sm text-gray-800 whitespace-pre-wrap">{aiResponse}</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -163,10 +250,10 @@ export const X402PaymentModal: React.FC<X402PaymentModalProps> = ({
                 <span className="text-gray-600">Principal:</span>
                 <span className="ml-2 font-mono text-xs">{user.principal}</span>
               </div>
-              {user.algorandCredentials?.address && (
+              {credentials?.algorandAddress && (
                 <div>
                   <span className="text-gray-600">Algorand Address:</span>
-                  <span className="ml-2 font-mono text-xs">{user.algorandCredentials.address}</span>
+                  <span className="ml-2 font-mono text-xs">{credentials.algorandAddress}</span>
                 </div>
               )}
             </div>
@@ -194,12 +281,29 @@ export const X402PaymentModal: React.FC<X402PaymentModalProps> = ({
             </>
           )}
 
-          {paymentStatus === 'success' && (
+          {paymentStatus === 'success' && !showServiceInterface && (
+            <div className="flex gap-3">
+              <button
+                onClick={handleClose}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => setShowServiceInterface(true)}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                🚀 Use Service
+              </button>
+            </div>
+          )}
+
+          {paymentStatus === 'success' && showServiceInterface && (
             <button
               onClick={handleClose}
-              className="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+              className="w-full px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
             >
-              Continue
+              Close
             </button>
           )}
 

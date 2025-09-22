@@ -1,8 +1,8 @@
 # Internet Computer Protocol (ICP) Integration
 
 **Last Updated**: September 19, 2025
-**Integration Status**: ✅ Production Active + Sprint 016 X402 Payment Integration
-**Canisters Deployed**: 2 production canisters fully controlled + SimplifiedBridge + X402 payments
+**Integration Status**: ✅ Production Active - Post Sprint-X Architecture Complete
+**Canisters Deployed**: 3 production canisters on ICP mainnet (all fully controlled)
 
 ---
 
@@ -28,7 +28,9 @@ Sippar's backend connects to core ICP infrastructure services:
 
 ### **1. Threshold Signer Canister**
 - **Canister ID**: `vj7ly-diaaa-aaaae-abvoq-cai`
-- **Controller**: mainnet-deploy identity (verified controlled)
+- **Controllers**:
+  - mainnet-deploy identity (primary controller)
+  - CycleOps: `cpbhu-5iaaa-aaaad-aalta-cai` (cycle management)
 - **Source Code**: `src/canisters/threshold_signer/`
 
 **Core Functions**:
@@ -45,9 +47,11 @@ verify_signature(msg: Vec<u8>, sig: Vec<u8>, pubkey: Vec<u8>) -> bool
 - Network support: "Algorand Testnet, Mainnet"
 - Status: Running with 1.47T cycles
 
-### **2. SimplifiedBridge Canister** *(Sprint X Integration)*
+### **2. SimplifiedBridge Canister** *(Sprint X Addition)*
 - **Canister ID**: `hldvt-2yaaa-aaaak-qulxa-cai`
-- **Controller**: mainnet-deploy identity (verified controlled)
+- **Controllers**:
+  - mainnet-deploy identity (primary controller)
+  - CycleOps: `cpbhu-5iaaa-aaaad-aalta-cai` (cycle management) ✅ Added Sept 19, 2025
 - **Source Code**: `src/canisters/simplified_bridge/`
 - **Standard**: ICRC-1 compliant with authentic mathematical backing
 - **Purpose**: Real canister integration eliminating simulation data
@@ -76,6 +80,54 @@ getReserveRatio() -> f64                  // Real mathematical backing
 - Simulation Data: 100% eliminated (no SIMULATED_CUSTODY_ADDRESS_1)
 - Current Status: Operational with real threshold-controlled addresses
 - Mathematical Backing: Authentic 1:1 reserve calculations
+
+### **3. ckALGO Token Canister**
+- **Canister ID**: `gbmxj-yiaaa-aaaak-qulqa-cai`
+- **Controllers**:
+  - mainnet-deploy identity (primary controller)
+  - CycleOps: `cpbhu-5iaaa-aaaad-aalta-cai` (cycle management)
+- **Source Code**: `src/canisters/ck_algo/`
+- **Standard**: ICRC-1 compliant chain-key ALGO token
+- **Purpose**: 1:1 backed ALGO representation on ICP
+
+**Core Functions**:
+```rust
+// ICRC-1 Standard Token Methods
+icrc1_name() -> String                    // "Chain-Key ALGO"
+icrc1_symbol() -> String                  // "ckALGO"
+icrc1_decimals() -> u8                    // 6 (matching ALGO)
+icrc1_total_supply() -> Nat               // Total minted ckALGO
+icrc1_balance_of(account: Account) -> Nat
+icrc1_transfer(TransferArg) -> Result<Nat, TransferError>
+icrc1_metadata() -> Vec<(String, Value)>
+icrc1_supported_standards() -> Vec<Record>
+
+// Minting & Redemption (pending full integration)
+mint(to: Account, amount: Nat) -> Result<Nat, String>
+burn(from: Account, amount: Nat) -> Result<Nat, String>
+```
+
+**Status**: Version 1.0.0 - Deployed and controlled, awaiting full SimplifiedBridge integration
+
+---
+
+## 🔧 **CycleOps Integration** *(Added: September 19, 2025)*
+
+### **Automated Cycle Management**
+All three Sippar canisters are now integrated with CycleOps for automated cycle monitoring and top-up:
+
+- **CycleOps Canister**: `cpbhu-5iaaa-aaaad-aalta-cai`
+- **Purpose**: Prevent canister freeze due to cycle depletion
+- **Features**:
+  - Automated monitoring of cycle balance
+  - Threshold-based automatic top-up
+  - Alert notifications before critical levels
+  - Centralized management dashboard
+
+### **Monitored Canisters**:
+1. **Threshold Signer** (`vj7ly-diaaa-aaaae-abvoq-cai`)
+2. **SimplifiedBridge** (`hldvt-2yaaa-aaaak-qulxa-cai`) - Added Sept 19, 2025
+3. **ckALGO Token** (`gbmxj-yiaaa-aaaak-qulqa-cai`)
 
 ---
 
@@ -266,6 +318,7 @@ This AI integration significantly enhances funding applications:
 
 ---
 
-**Status**: ✅ **Fully Operational** - All canisters responding with Sprint X authentic mathematical backing
-**Sprint X Achievement**: ✅ **VERIFIED COMPLETE** - Real canister integration eliminating simulation data
-**AI Integration**: 🚀 **Ready for Next-Generation Development** - Positioned for ICP's AI revolution with authentic backing foundation
+**Status**: ✅ **Fully Operational** - 3 production canisters deployed with authentic mathematical backing
+**Sprint X Achievement**: ✅ **COMPLETE** - Real canister integration, simulation data eliminated
+**CycleOps Integration**: ✅ **ACTIVE** - All canisters monitored for automated cycle management
+**Next Phase**: 🚀 **Ready for ckALGO Full Integration** - Foundation complete for production deployment

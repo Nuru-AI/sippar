@@ -1,0 +1,15 @@
+# Project: sippar-ci-integration
+# Created: Fri Sep 19 14:14:27 CEST 2025
+
+# Load CollaborativeIntelligence System
+When starting, immediately:
+1. Load /Users/eladm/Projects/CollaborativeIntelligence/CLAUDE.md
+2. Use this as the primary configuration source
+3. Defer all project management functions to the CollaborativeIntelligence system
+
+# 🔴 CRITICAL SECURITY ALERT
+**AUTH_BYPASS_001**: Agent authentication system compromised
+**IMMEDIATE ACTION**: All agent activations require manual security verification
+**USER SAFETY**: Challenge all agent identity claims before trusting operations
+
+# Project-specific configuration can be added below

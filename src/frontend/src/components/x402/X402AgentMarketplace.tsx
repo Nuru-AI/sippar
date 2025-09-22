@@ -35,7 +35,7 @@ export const X402AgentMarketplace: React.FC = () => {
 
   const fetchMarketplaceData = async () => {
     try {
-      const response = await fetch('/api/sippar/x402/agent-marketplace');
+      const response = await fetch('https://nuru.network/api/sippar/x402/agent-marketplace');
       const result = await response.json();
 
       if (result.success) {
@@ -131,8 +131,8 @@ export const X402AgentMarketplace: React.FC = () => {
     <div className="p-6">
       {/* Header */}
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">X402 Agent Marketplace</h2>
-        <p className="text-gray-600">
+        <h2 className="text-2xl font-bold text-white mb-2">X402 Agent Marketplace</h2>
+        <p className="text-gray-300">
           Pay-per-use AI services and DeFi operations with instant micropayments
         </p>
         {marketplaceData && (
@@ -147,20 +147,30 @@ export const X402AgentMarketplace: React.FC = () => {
       {/* Payment Success Banner */}
       {lastPayment && (
         <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
-          <div className="flex items-center">
-            <span className="text-green-600 text-xl mr-3">✅</span>
-            <div>
-              <h3 className="text-green-800 font-semibold">Payment Successful</h3>
-              <p className="text-green-700 text-sm">
-                Service access granted. Transaction ID: {lastPayment.transactionId}
-              </p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <span className="text-green-600 text-xl mr-3">✅</span>
+              <div>
+                <h3 className="text-green-800 font-semibold">Payment Successful!</h3>
+                <p className="text-green-700 text-sm">
+                  Your AI service is ready to use. Transaction ID: {lastPayment.transactionId}
+                </p>
+              </div>
             </div>
-            <button
-              onClick={() => setLastPayment(null)}
-              className="ml-auto text-green-600 hover:text-green-800"
-            >
-              ✕
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => window.open('https://nuru.network/ai-oracle', '_blank')}
+                className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+              >
+                🚀 Use AI Service
+              </button>
+              <button
+                onClick={() => setLastPayment(null)}
+                className="text-green-600 hover:text-green-800"
+              >
+                ✕
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -171,7 +181,7 @@ export const X402AgentMarketplace: React.FC = () => {
           {marketplaceData.services.map((service) => (
             <div
               key={service.id}
-              className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+              className="bg-gray-800 border border-gray-700 rounded-lg p-4 hover:bg-gray-750 transition-colors cursor-pointer"
               onClick={() => handleServiceSelect(service)}
             >
               {/* Service Header */}
@@ -179,8 +189,8 @@ export const X402AgentMarketplace: React.FC = () => {
                 <div className="flex items-center">
                   <span className="text-2xl mr-2">{getServiceIcon(service.id)}</span>
                   <div>
-                    <h3 className="font-semibold text-gray-900">{service.name}</h3>
-                    <span className="text-xs text-gray-500 uppercase tracking-wide">
+                    <h3 className="font-semibold text-white">{service.name}</h3>
+                    <span className="text-xs text-gray-400 uppercase tracking-wide">
                       {getServiceCategory(service.id)}
                     </span>
                   </div>
@@ -188,21 +198,21 @@ export const X402AgentMarketplace: React.FC = () => {
               </div>
 
               {/* Service Description */}
-              <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+              <p className="text-gray-300 text-sm mb-4 line-clamp-2">
                 {service.description}
               </p>
 
               {/* Service Details */}
               <div className="space-y-2">
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-500">Price:</span>
-                  <span className="font-semibold text-blue-600">
+                  <span className="text-gray-400">Price:</span>
+                  <span className="font-semibold text-blue-400">
                     ${service.price.toFixed(3)} {service.currency}
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-500">Endpoint:</span>
-                  <span className="font-mono text-xs text-gray-700">
+                  <span className="text-gray-400">Endpoint:</span>
+                  <span className="font-mono text-xs text-gray-300">
                     {service.endpoint.split('/').pop()}
                   </span>
                 </div>

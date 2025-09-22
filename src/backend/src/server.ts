@@ -3042,28 +3042,207 @@ app.get('/monitoring/history', async (req, res) => {
 // ==========================================
 
 // X402 Payment Creation
-app.post('/api/sippar/x402/create-payment', async (req, res) => {
-  const startTime = Date.now();
-  try {
-    logOperation('x402-create-payment', true, Date.now() - startTime);
+// Rate limiting storage
+const rateLimitStorage = new Map<string, { count: number; resetTime: number }>();
+const RATE_LIMIT_WINDOW = 60000; // 1 minute
+const RATE_LIMIT_MAX_REQUESTS = 10; // 10 requests per minute per IP
 
-    const paymentRequest = req.body;
+// Security validation functions
+function validatePrincipal(principal: string): boolean {
+  // ICP Principal format: 5-63 characters, lowercase letters and digits, with dashes
+  const principalRegex = /^[a-z0-9\-]{5,63}$/;
+  return principalRegex.test(principal);
+}
+
+function validateAlgorandAddress(address: string): boolean {
+  // Algorand address: 58 characters, base32 encoding
+  const algorandRegex = /^[A-Z2-7]{58}$/;
+  return algorandRegex.test(address);
+}
+
+function validateServiceEndpoint(service: string): boolean {
+  // Whitelist of allowed service endpoints
+  const allowedServices = [
+    // AI Services
+    'ai-oracle-basic',
+    'ai-oracle-enhanced',
+    'ai-oracle-enterprise',
+    // AI Chat Services
+    'ai-chat-basic',
+    'ai-chat-enhanced',
+    // Chain Fusion Services
+    'chain-fusion-basic',
+    'chain-fusion-enhanced',
+    // ckALGO Services
+    'ckALGO-mint',
+    'ckALGO-redeem',
+    // External API Services
+    'external-openai-gpt4',
+    'external-claude-sonnet',
+    // Analytics Services
+    'blockchain-analytics'
+  ];
+  return allowedServices.includes(service);
+}
+
+function validatePaymentAmount(amount: number): boolean {
+  // Amount must be positive number between 0.001 and 100 ALGO
+  return typeof amount === 'number' && amount > 0 && amount <= 100;
+}
+
+function sanitizeInput(input: string): string {
+  // Remove potential XSS and injection patterns
+  return input.replace(/[<>'"&]/g, '').trim().slice(0, 100);
+}
+
+function checkRateLimit(clientIp: string): boolean {
+  const now = Date.now();
+  const clientLimit = rateLimitStorage.get(clientIp);
+
+  if (!clientLimit || now > clientLimit.resetTime) {
+    // Reset window
+    rateLimitStorage.set(clientIp, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+    return true;
+  }
+
+  if (clientLimit.count >= RATE_LIMIT_MAX_REQUESTS) {
+    return false; // Rate limit exceeded
+  }
+
+  clientLimit.count++;
+  return true;
+}
+
+app.post('/api/sippar/x402/create-payment', async (req, res) => {
+  const startTime = performance.now();
+  const clientIp = req.ip || req.connection.remoteAddress || 'unknown';
+
+  try {
+    // Rate limiting check
+    if (!checkRateLimit(clientIp)) {
+      const duration = performance.now() - startTime;
+      logOperation('x402-create-payment', false, duration, undefined, `Rate limit exceeded for IP: ${clientIp}`);
+
+      return res.status(429).json({
+        success: false,
+        error: 'Rate limit exceeded',
+        details: 'Maximum 10 requests per minute allowed',
+        processingTime: `${duration.toFixed(2)}ms`,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const { service, amount, principal, algorandAddress, aiModel = 'default', metadata = {} } = req.body;
+
+    // Enhanced validation with security checks
+    const validationErrors = [];
+
+    if (!service) validationErrors.push('service is required');
+    else if (!validateServiceEndpoint(service)) validationErrors.push('invalid service endpoint');
+
+    if (!amount) validationErrors.push('amount is required');
+    else if (!validatePaymentAmount(amount)) validationErrors.push('amount must be between 0.001 and 100');
+
+    if (!principal) validationErrors.push('principal is required');
+    else if (!validatePrincipal(principal)) validationErrors.push('invalid principal format');
+
+    if (!algorandAddress) validationErrors.push('algorandAddress is required');
+    else if (!validateAlgorandAddress(algorandAddress)) validationErrors.push('invalid Algorand address format');
+
+    if (validationErrors.length > 0) {
+      const duration = performance.now() - startTime;
+      logOperation('x402-create-payment', false, duration, undefined, `Validation failed: ${validationErrors.join(', ')}`);
+
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        details: validationErrors,
+        processingTime: `${duration.toFixed(2)}ms`,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Sanitize inputs and create secure request object
+    const paymentRequest = {
+      serviceEndpoint: sanitizeInput(service),
+      paymentAmount: amount,
+      aiModel: sanitizeInput(aiModel),
+      requestId: `req-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+      payerCredentials: {
+        principal: sanitizeInput(principal),
+        algorandAddress: sanitizeInput(algorandAddress)
+      },
+      metadata: {
+        clientIp,
+        userAgent: sanitizeInput(req.headers['user-agent'] || 'unknown'),
+        timestamp: new Date().toISOString(),
+        securityValidated: true
+      }
+    };
+
     const payment = await x402Service.createEnterprisePayment(paymentRequest);
+
+    const duration = performance.now() - startTime;
+
+    // Security audit logging
+    console.log(`🔒 SECURITY AUDIT - X402 Payment Created:`, {
+      transactionId: payment.transactionId,
+      clientIp,
+      principal: principal.slice(0, 10) + '...',
+      service,
+      amount,
+      processingTime: `${duration.toFixed(2)}ms`,
+      securityValidated: true,
+      timestamp: new Date().toISOString()
+    });
+
+    logOperation('x402-create-payment', true, duration);
 
     res.json({
       success: true,
-      payment,
+      payment: {
+        ...payment,
+        securityInfo: {
+          validated: true,
+          rateLimit: 'within_limits',
+          processingTime: `${duration.toFixed(2)}ms`
+        }
+      },
+      performance: {
+        processingTime: `${duration.toFixed(2)}ms`,
+        target: '<200ms'
+      },
       timestamp: new Date().toISOString()
     });
 
   } catch (error) {
+    const duration = performance.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logOperation('x402-create-payment', false, Date.now() - startTime, undefined, errorMessage);
+
+    // Security incident logging
+    console.error(`🚨 SECURITY INCIDENT - X402 Payment Failed:`, {
+      clientIp,
+      error: errorMessage,
+      userAgent: req.headers['user-agent'],
+      body: JSON.stringify(req.body).slice(0, 200),
+      processingTime: `${duration.toFixed(2)}ms`,
+      timestamp: new Date().toISOString()
+    });
+
+    logOperation('x402-create-payment', false, duration, undefined, errorMessage);
 
     res.status(500).json({
       success: false,
       error: 'Failed to create X402 payment',
       details: errorMessage,
+      securityInfo: {
+        incident: 'logged',
+        timestamp: new Date().toISOString()
+      },
+      performance: {
+        processingTime: `${duration.toFixed(2)}ms`,
+        target: '<200ms'
+      },
       timestamp: new Date().toISOString()
     });
   }
@@ -3126,6 +3305,235 @@ app.post('/api/sippar/x402/verify-token', async (req, res) => {
   }
 });
 
+// X402 Service Provider Registration
+app.post('/api/sippar/x402/register-provider', async (req, res) => {
+  const startTime = performance.now();
+  const clientIp = req.ip || req.connection.remoteAddress || 'unknown';
+
+  try {
+    const { providerName, serviceId, serviceEndpoint, description, pricing, category } = req.body;
+
+    // Validation for provider registration
+    const validationErrors = [];
+    if (!providerName) validationErrors.push('providerName is required');
+    if (!serviceId) validationErrors.push('serviceId is required');
+    if (!serviceEndpoint) validationErrors.push('serviceEndpoint is required');
+    if (!description) validationErrors.push('description is required');
+    if (!pricing || typeof pricing !== 'number') validationErrors.push('valid pricing is required');
+    if (!category) validationErrors.push('category is required');
+
+    if (validationErrors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Provider registration validation failed',
+        details: validationErrors,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Provider registration logic (in production, this would save to database)
+    const registrationId = `provider-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+
+    console.log(`🔗 SERVICE PROVIDER REGISTERED:`, {
+      registrationId,
+      providerName,
+      serviceId,
+      category,
+      pricing,
+      clientIp,
+      timestamp: new Date().toISOString()
+    });
+
+    const duration = performance.now() - startTime;
+
+    res.json({
+      success: true,
+      registration: {
+        registrationId,
+        status: 'pending_approval',
+        providerName,
+        serviceId,
+        category,
+        pricing,
+        estimatedApprovalTime: '24-48 hours'
+      },
+      nextSteps: [
+        'Complete technical integration testing',
+        'Provide API documentation and examples',
+        'Setup revenue sharing configuration',
+        'Complete security and compliance review'
+      ],
+      processingTime: `${duration.toFixed(2)}ms`,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    const duration = performance.now() - startTime;
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    console.error(`🚨 PROVIDER REGISTRATION FAILED:`, {
+      clientIp,
+      error: errorMessage,
+      processingTime: `${duration.toFixed(2)}ms`,
+      timestamp: new Date().toISOString()
+    });
+
+    res.status(500).json({
+      success: false,
+      error: 'Provider registration failed',
+      details: errorMessage,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// X402 Revenue Sharing & Provider Analytics
+app.get('/api/sippar/x402/provider-analytics/:providerId', async (req, res) => {
+  const startTime = performance.now();
+  try {
+    const { providerId } = req.params;
+
+    // Mock provider analytics (in production, this would query actual data)
+    const analytics = {
+      providerId,
+      overview: {
+        totalRevenue: 45.67,
+        totalTransactions: 234,
+        averageTransactionValue: 0.195,
+        successRate: 99.1,
+        customerSatisfaction: 8.7
+      },
+      revenueSharing: {
+        providerShare: 70, // 70% to provider
+        platformShare: 30, // 30% to platform
+        currentBalance: 31.97,
+        lastPayout: "2025-09-15T10:30:00Z",
+        nextPayoutDate: "2025-09-30T10:30:00Z"
+      },
+      servicePerformance: [
+        {
+          serviceId: 'external-openai-gpt4',
+          transactions: 156,
+          revenue: 23.40,
+          avgResponseTime: 1.2,
+          errorRate: 0.6
+        },
+        {
+          serviceId: 'blockchain-analytics',
+          transactions: 78,
+          revenue: 19.50,
+          avgResponseTime: 2.8,
+          errorRate: 1.3
+        }
+      ],
+      topCustomers: [
+        { principal: 'rdmx6-jaaaa-aaaah-qcaiq-cai', transactions: 45, revenue: 8.95 },
+        { principal: 'valid-enterprise-user', transactions: 38, revenue: 7.60 }
+      ]
+    };
+
+    const duration = performance.now() - startTime;
+
+    res.json({
+      success: true,
+      analytics,
+      processingTime: `${duration.toFixed(2)}ms`,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    const duration = performance.now() - startTime;
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve provider analytics',
+      details: errorMessage,
+      processingTime: `${duration.toFixed(2)}ms`,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// X402 Service Discovery API
+app.get('/api/sippar/x402/discover-services', async (req, res) => {
+  const startTime = performance.now();
+  try {
+    const { category, priceMin, priceMax, sortBy = 'popularity' } = req.query;
+
+    // Service discovery with filtering and sorting
+    const discovery = {
+      filters: {
+        category: category || 'all',
+        priceRange: {
+          min: priceMin ? parseFloat(priceMin as string) : 0,
+          max: priceMax ? parseFloat(priceMax as string) : 1000
+        },
+        sortBy
+      },
+      recommendations: [
+        {
+          id: 'ai-oracle-enhanced',
+          name: 'Enhanced AI Query',
+          category: 'AI Services',
+          price: 0.05,
+          popularity: 9.2,
+          reliability: 99.5,
+          avgResponseTime: 0.85,
+          description: 'Premium AI analysis with faster response times',
+          tags: ['AI', 'Analysis', 'Fast', 'Premium']
+        },
+        {
+          id: 'external-openai-gpt4',
+          name: 'OpenAI GPT-4 Gateway',
+          category: 'External APIs',
+          price: 0.15,
+          popularity: 8.8,
+          reliability: 98.9,
+          avgResponseTime: 1.2,
+          description: 'Access OpenAI GPT-4 with X402 payment protection',
+          tags: ['OpenAI', 'GPT-4', 'External', 'Gateway']
+        },
+        {
+          id: 'blockchain-analytics',
+          name: 'Blockchain Analytics Pro',
+          category: 'Analytics',
+          price: 0.25,
+          popularity: 8.1,
+          reliability: 99.8,
+          avgResponseTime: 2.8,
+          description: 'Advanced blockchain data analysis and monitoring',
+          tags: ['Analytics', 'Blockchain', 'Data', 'Professional']
+        }
+      ],
+      trending: ['ai-oracle-enhanced', 'external-claude-sonnet', 'chain-fusion-enhanced'],
+      newServices: ['blockchain-analytics', 'external-openai-gpt4'],
+      totalAvailable: 12
+    };
+
+    const duration = performance.now() - startTime;
+
+    res.json({
+      success: true,
+      discovery,
+      processingTime: `${duration.toFixed(2)}ms`,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    const duration = performance.now() - startTime;
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    res.status(500).json({
+      success: false,
+      error: 'Service discovery failed',
+      details: errorMessage,
+      processingTime: `${duration.toFixed(2)}ms`,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // X402 Agent Marketplace
 app.get('/api/sippar/x402/agent-marketplace', async (req, res) => {
   const startTime = Date.now();
@@ -3134,13 +3542,16 @@ app.get('/api/sippar/x402/agent-marketplace', async (req, res) => {
 
     const marketplace = {
       services: [
+        // Existing Core Services
         {
           id: 'ai-oracle-basic',
           name: 'AI Oracle Basic Query',
           description: 'Basic AI query with standard response time',
           price: 0.01,
           currency: 'USD',
-          endpoint: '/api/sippar/ai/query'
+          endpoint: '/api/sippar/ai/query',
+          category: 'AI Services',
+          status: 'active'
         },
         {
           id: 'ai-oracle-enhanced',
@@ -3148,26 +3559,118 @@ app.get('/api/sippar/x402/agent-marketplace', async (req, res) => {
           description: 'Premium AI analysis with faster response times',
           price: 0.05,
           currency: 'USD',
-          endpoint: '/api/sippar/ai/enhanced-query'
+          endpoint: '/api/sippar/ai/enhanced-query',
+          category: 'AI Services',
+          status: 'active'
         },
+        {
+          id: 'ai-oracle-enterprise',
+          name: 'Enterprise AI Oracle',
+          description: 'Enterprise-grade AI analysis with priority processing and SLA guarantees',
+          price: 0.10,
+          currency: 'USD',
+          endpoint: '/api/sippar/ai/enterprise-query',
+          category: 'AI Services',
+          status: 'active'
+        },
+        // New Chat Services
+        {
+          id: 'ai-chat-basic',
+          name: 'AI Chat Basic',
+          description: 'Interactive AI conversation with context memory',
+          price: 0.02,
+          currency: 'USD',
+          endpoint: '/api/sippar/ai/chat-basic',
+          category: 'AI Chat',
+          status: 'active'
+        },
+        {
+          id: 'ai-chat-enhanced',
+          name: 'AI Chat Enhanced',
+          description: 'Advanced AI conversation with extended context and personality',
+          price: 0.07,
+          currency: 'USD',
+          endpoint: '/api/sippar/ai/chat-enhanced',
+          category: 'AI Chat',
+          status: 'active'
+        },
+        // Chain Fusion Services
+        {
+          id: 'chain-fusion-basic',
+          name: 'Chain Fusion Transfer',
+          description: 'Basic cross-chain asset transfer with threshold signatures',
+          price: 0.003,
+          currency: 'USD',
+          endpoint: '/api/sippar/chain-fusion/transfer',
+          category: 'Chain Fusion',
+          status: 'active'
+        },
+        {
+          id: 'chain-fusion-enhanced',
+          name: 'Chain Fusion Advanced',
+          description: 'Advanced cross-chain operations with smart contract integration',
+          price: 0.008,
+          currency: 'USD',
+          endpoint: '/api/sippar/chain-fusion/advanced',
+          category: 'Chain Fusion',
+          status: 'active'
+        },
+        // ckALGO Services
         {
           id: 'ckALGO-mint',
           name: 'ckALGO Minting Service',
-          description: 'Cross-chain ALGO to ckALGO conversion',
+          description: 'Cross-chain ALGO to ckALGO conversion with 1:1 backing',
           price: 0.001,
           currency: 'USD',
-          endpoint: '/api/sippar/x402/mint-ckALGO'
+          endpoint: '/api/sippar/x402/mint-ckALGO',
+          category: 'Chain Fusion',
+          status: 'active'
         },
         {
           id: 'ckALGO-redeem',
           name: 'ckALGO Redemption Service',
-          description: 'Cross-chain ckALGO to ALGO conversion',
+          description: 'Cross-chain ckALGO to ALGO conversion with threshold signatures',
           price: 0.001,
           currency: 'USD',
-          endpoint: '/api/sippar/x402/redeem-ckALGO'
+          endpoint: '/api/sippar/x402/redeem-ckALGO',
+          category: 'Chain Fusion',
+          status: 'active'
+        },
+        // New External API Services
+        {
+          id: 'external-openai-gpt4',
+          name: 'OpenAI GPT-4 Gateway',
+          description: 'Access OpenAI GPT-4 with X402 payment protection and usage tracking',
+          price: 0.15,
+          currency: 'USD',
+          endpoint: '/api/sippar/x402/openai-gpt4',
+          category: 'External APIs',
+          status: 'active'
+        },
+        {
+          id: 'external-claude-sonnet',
+          name: 'Anthropic Claude Gateway',
+          description: 'Access Claude Sonnet with enhanced reasoning and X402 billing',
+          price: 0.12,
+          currency: 'USD',
+          endpoint: '/api/sippar/x402/claude-sonnet',
+          category: 'External APIs',
+          status: 'active'
+        },
+        {
+          id: 'blockchain-analytics',
+          name: 'Blockchain Analytics Pro',
+          description: 'Advanced blockchain data analysis and transaction monitoring',
+          price: 0.25,
+          currency: 'USD',
+          endpoint: '/api/sippar/x402/blockchain-analytics',
+          category: 'Analytics',
+          status: 'active'
         }
       ],
-      totalServices: 4,
+      categories: ['AI Services', 'AI Chat', 'Chain Fusion', 'External APIs', 'Analytics'],
+      totalServices: 12,
+      priceRange: { min: 0.001, max: 0.25 },
       timestamp: new Date().toISOString()
     };
 
@@ -3349,7 +3852,12 @@ app.use('*', (req, res) => {
       'POST /api/sippar/x402/verify-token',
       'GET /api/sippar/x402/agent-marketplace',
       'GET /api/sippar/x402/analytics',
-      'POST /api/sippar/x402/enterprise-billing'
+      'POST /api/sippar/x402/enterprise-billing',
+
+      // Sprint 017 Phase C.1: Ecosystem Expansion Endpoints
+      'POST /api/sippar/x402/register-provider',
+      'GET /api/sippar/x402/provider-analytics/:providerId',
+      'GET /api/sippar/x402/discover-services'
     ],
     timestamp: new Date().toISOString(),
   });

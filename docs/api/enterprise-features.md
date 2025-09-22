@@ -1,6 +1,6 @@
 # Sippar Enterprise Features API Reference
 
-**Version**: 2.1.0
+**Version**: 1.0.0
 **Date**: September 18, 2025
 **Sprint**: 016 - X402 Protocol Integration Complete
 
@@ -960,7 +960,7 @@ export function ComplianceDashboard() {
 ---
 
 **Last Updated**: September 18, 2025
-**Version**: 2.1.0 - Sprint 016 X402 Integration Complete
+**Version**: 1.0.0 - Sprint 016 X402 Integration Complete
 **Production URL**: https://nuru.network/api/sippar/x402/
 **Contact**: Sippar Development Team
 **Enterprise Support**: enterprise@sippar.ai
