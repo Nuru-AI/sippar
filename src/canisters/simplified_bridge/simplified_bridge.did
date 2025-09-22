@@ -1,0 +1,52 @@
+// Simplified Bridge Canister Interface - Sprint X
+// Core bridge functionality only
+
+type PendingDeposit = record {
+  user : principal;
+  algorand_tx_id : text;
+  amount : nat;
+  timestamp : nat64;
+  confirmations : nat8;
+  required_confirmations : nat8;
+};
+
+type DepositRecord = record {
+  deposit_id : text;
+  user : principal;
+  custody_address : text;
+  amount : nat;
+  algorand_tx_id : text;
+  confirmed_at : nat64;
+  minted_ck_algo : nat;
+};
+
+type ReserveStatus = record {
+  locked_algo_reserves : nat;
+  total_ck_algo_supply : nat;
+  reserve_ratio : float64;
+  is_healthy : bool;
+  last_verification : nat64;
+};
+
+service : {
+  // ICRC-1 Standard Methods
+  icrc1_name : () -> (text) query;
+  icrc1_symbol : () -> (text) query;
+  icrc1_decimals : () -> (nat8) query;
+  icrc1_fee : () -> (nat) query;
+  icrc1_total_supply : () -> (nat) query;
+  icrc1_balance_of : (principal) -> (nat) query;
+  icrc1_supported_standards : () -> (vec record { text; text }) query;
+  icrc1_transfer : (principal, nat) -> (variant { Ok : nat; Err : text });
+
+  // Bridge Core Functions
+  generate_deposit_address : (principal) -> (variant { Ok : text; Err : text });
+  mint_after_deposit_confirmed : (text) -> (variant { Ok : nat; Err : text });
+  redeem_ck_algo : (nat, text) -> (variant { Ok : text; Err : text });
+  get_reserve_ratio : () -> (ReserveStatus) query;
+  get_user_deposits : (principal) -> (vec DepositRecord) query;
+
+  // Admin Functions
+  update_reserve_health : (bool) -> (variant { Ok : text; Err : text });
+  get_canister_status : () -> (text) query;
+}

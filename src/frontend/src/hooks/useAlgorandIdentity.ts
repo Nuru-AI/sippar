@@ -82,6 +82,35 @@ export const useAlgorandIdentity = () => {
       if (token && userData) {
         const user = JSON.parse(userData) as AuthUser;
         
+        // 🚨 CRITICAL: Validate principal format before proceeding
+        if (user.principal && user.principal !== '2vxsx-fae') {
+          try {
+            Principal.fromText(user.principal);
+          } catch (error) {
+            console.error('❌ INVALID PRINCIPAL FORMAT DETECTED:', user.principal);
+            console.log('🧹 Clearing corrupted authentication state...');
+            localStorage.removeItem('sippar_ii_token');
+            localStorage.removeItem('sippar_ii_user');
+            localStorage.removeItem('sippar_algorand_credentials');
+            
+            setUser({
+              principal: '2vxsx-fae',
+              accountId: 'sippar-guest',
+              isAuthenticated: false,
+              isPremium: false,
+              dailyMessagesUsed: parseInt(localStorage.getItem('sippar_daily_messages_used') || '0'),
+              dailyLimit: DAILY_LIMIT_FREE,
+            });
+            setCredentials(null);
+            setLoading(false);
+            setError({
+              code: 'INVALID_AUTHENTICATION',
+              message: 'Invalid authentication state detected. Please log in again with Internet Identity.'
+            });
+            return;
+          }
+        }
+        
         // Check if this is a real Internet Identity token
         if (token.startsWith('sippar_ii_token_')) {
           // Only initialize AuthClient once and cache it
@@ -132,10 +161,9 @@ export const useAlgorandIdentity = () => {
         setLoading(false);
       } else {
         // ✅ MIGRATED: Set as unauthenticated guest user using store
-        // Use valid test principal to prevent console errors in production
-        const validTestPrincipal = '2mhjn-ayaae-bagba-faydq-qcikb-mga2d-qpcai-reeyu-culbo-gazdi-nry';
+        // Use anonymous principal for unauthenticated users
         setUser({
-          principal: validTestPrincipal,
+          principal: '2vxsx-fae', // Anonymous principal
           accountId: 'sippar-guest',
           isAuthenticated: false,
           isPremium: false,

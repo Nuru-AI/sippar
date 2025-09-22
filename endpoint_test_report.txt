@@ -1,0 +1,28 @@
+=== COMPREHENSIVE ENDPOINT TESTING ===
+Date: Thu Sep 18 21:21:26 CEST 2025
+Base URL: https://nuru.network/api/sippar
+
+1. Health Endpoint:
+"Sippar Algorand Chain Fusion Backend"
+"Phase 3 - Threshold Signatures"
+"vj7ly-diaaa-aaaae-abvoq-cai"
+
+2. Threshold Status:
+"vj7ly-diaaa-aaaae-abvoq-cai"
+"operational"
+
+3. AI Status:
+true
+
+4. Reserve Status:
+1
+1.9
+
+5. X402 Endpoint Test (Expected to FAIL):
+X402 Create Payment:
+false
+"Endpoint not found"
+
+6. Server Endpoint Count:
+47
+

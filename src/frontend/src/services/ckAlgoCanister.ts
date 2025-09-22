@@ -23,14 +23,14 @@ export class CkAlgoCanisterService {
 
   constructor() {
     // Phase 3: Use production API endpoint
-    this.canisterUrl = '/ck-algo'; // Production: nginx proxy
+    this.canisterUrl = 'https://nuru.network/api/sippar/ck-algo'; // Production: absolute URL
   }
 
   private async tryEndpoints(endpoint: string, options: RequestInit): Promise<Response> {
     // Try production API endpoint first, then fallback
     const endpoints = [
-      `/api/sippar${endpoint}`, // Production: nginx proxy
-      `http://localhost:3001${endpoint}`, // Local dev fallback
+      `https://nuru.network/api/sippar${endpoint}`, // Production: absolute URL
+      `http://localhost:3004${endpoint}`, // Local dev fallback (correct port)
     ];
     
     for (const url of endpoints) {
@@ -94,7 +94,7 @@ export class CkAlgoCanisterService {
    */
   async getBalance(principal: string): Promise<number> {
     try {
-      const response = await fetch(`${this.canisterUrl}/balance/${principal}`);
+      const response = await fetch(`https://nuru.network/api/sippar/ck-algo/balance/${principal}`);
       if (!response.ok) {
         throw new Error(`Balance query failed: ${response.status}`);
       }

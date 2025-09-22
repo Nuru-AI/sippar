@@ -17,6 +17,9 @@ const ckAlgoIdl = ({ IDL }: any) => {
     'icrc1_transfer': IDL.Func([IDL.Principal, IDL.Nat], [IDL.Variant({ 'Ok': IDL.Nat, 'Err': IDL.Text })], []),
     'mint_ck_algo': IDL.Func([IDL.Principal, IDL.Nat], [IDL.Variant({ 'Ok': IDL.Nat, 'Err': IDL.Text })], []),
     'redeem_ck_algo': IDL.Func([IDL.Nat, IDL.Text], [IDL.Variant({ 'Ok': IDL.Text, 'Err': IDL.Text })], []),
+    'admin_burn_ck_algo': IDL.Func([IDL.Principal, IDL.Nat, IDL.Text], [IDL.Variant({ 'Ok': IDL.Text, 'Err': IDL.Text })], []),
+    'admin_transfer_ck_algo_by_string': IDL.Func([IDL.Text, IDL.Principal, IDL.Nat], [IDL.Variant({ 'Ok': IDL.Nat, 'Err': IDL.Text })], []),
+    'admin_restore_balance': IDL.Func([IDL.Text, IDL.Nat], [IDL.Variant({ 'Ok': IDL.Nat, 'Err': IDL.Text })], []),
     'get_reserves': IDL.Func([], [IDL.Nat, IDL.Nat, IDL.Float32], ['query']),
     'get_caller': IDL.Func([], [IDL.Principal], ['query'])
   });
@@ -55,16 +58,22 @@ export class CkAlgoService {
    */
   async getBalance(principal: string): Promise<number> {
     try {
-      const principalObj = Principal.fromText(principal);
-      const balance = await this.actor.icrc1_balance_of(principalObj);
-      
+      console.log(`🔍 Querying ckALGO balance for principal: ${principal}`);
+
+      const validPrincipal = Principal.fromText(principal);
+      console.log(`✅ Principal parsed successfully: ${validPrincipal.toString()}`);
+
+      const balance = await this.actor.icrc1_balance_of(validPrincipal);
+      console.log(`✅ Raw balance from canister: ${balance} microckALGO`);
+
       // Convert from microckALGO to ckALGO (6 decimals)
       const balanceInAlgo = Number(balance) / 1_000_000;
       console.log(`📊 ckALGO balance for ${principal}: ${balanceInAlgo} ckALGO (${balance} microckALGO)`);
-      
+
       return balanceInAlgo;
     } catch (error) {
       console.error('❌ Failed to query ckALGO balance:', error);
+      console.error('❌ Error details:', error);
       throw error;
     }
   }
@@ -123,6 +132,69 @@ export class CkAlgoService {
   }
 
   /**
+   * Burn (redeem) ckALGO tokens by transferring to canister (burn address)
+   * @param principal - User's Internet Identity principal (the token owner)
+   * @param microAlgos - Amount in microckALGO (6 decimals) to burn  
+   * @param destinationAddress - Algorand address to send unlocked ALGO to
+   * @returns Redemption result with success/error info
+   */
+  async burnCkAlgo(principal: string, microAlgos: number, destinationAddress: string) {
+    try {
+      console.log(`🔥 Burning ${microAlgos} microckALGO from ${principal} by transferring to canister (burn)`);
+      
+      // First, check what the actual balance is
+      const currentBalance = await this.getBalance(principal);
+      console.log(`📊 Current ckALGO balance for ${principal}: ${currentBalance} ckALGO`);
+      
+      const requestedAmount = microAlgos / 1_000_000;
+      if (currentBalance < requestedAmount) {
+        throw new Error(`Insufficient balance: User has ${currentBalance} ckALGO but trying to burn ${requestedAmount} ckALGO`);
+      }
+      
+      // Call the enhanced canister's admin_burn_ck_algo function
+      // Backend is authorized to burn tokens from user's balance via admin function
+      console.log(`🔥 Calling enhanced canister admin_burn_ck_algo function`);
+      console.log(`🔥 Burning ${microAlgos} microckALGO (${requestedAmount} ckALGO) from user ${principal} to ${destinationAddress}`);
+      
+      // Handle Chain Fusion principal format for admin burn
+      let burnResult;
+      try {
+        const userPrincipal = Principal.fromText(principal);
+        burnResult = await this.actor.admin_burn_ck_algo(userPrincipal, BigInt(microAlgos), destinationAddress);
+        console.log('✅ Enhanced canister burn result:', burnResult);
+      } catch (principalError) {
+        console.error(`❌ Chain Fusion principal incompatible with ICRC-1 canister: ${principal.substring(0, 20)}...`);
+        console.error(`💡 Chain Fusion principals need different handling for canister calls`);
+        throw new Error(`CHAIN_FUSION_PRINCIPAL_INCOMPATIBLE: This principal format requires Chain Fusion specific canister integration. Standard ICRC-1 operations not supported.`);
+      }
+      
+      // Handle Rust Result type: { Ok: value } or { Err: error }
+      if (burnResult && typeof burnResult === 'object' && 'Ok' in burnResult) {
+        const burnedAmount = microAlgos / 1_000_000; // Convert to ALGO
+        console.log(`✅ Successfully burned ${burnedAmount} ckALGO via enhanced canister`);
+        return {
+          success: true,
+          amount_burned: burnedAmount,
+          raw_amount: microAlgos,
+          principal,
+          tx_id: (burnResult as any).Ok,
+          method: "enhanced_canister",
+          algorand_tx_id: (burnResult as any).Ok
+        };
+      } else if (burnResult && typeof burnResult === 'object' && 'Err' in burnResult) {
+        console.error('❌ Enhanced canister burn failed:', (burnResult as any).Err);
+        throw new Error(`Enhanced canister burn failed: ${(burnResult as any).Err}`);
+      } else {
+        throw new Error('Unknown result format from enhanced canister');
+      }
+      
+    } catch (error) {
+      console.error('❌ Failed to burn ckALGO:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Mint ckALGO tokens to a user's principal
    * @param principal - User's Internet Identity principal (string)
    * @param microAlgos - Amount in microALGO (6 decimals)
@@ -139,12 +211,12 @@ export class CkAlgoService {
       
       // Handle Rust Result type: { Ok: value } or { Err: error }
       if ('Ok' in result) {
-        const mintedAmount = Number(result.Ok) / 1_000_000; // Convert back to ALGO
-        console.log(`✅ Successfully minted ${mintedAmount} ckALGO`);
+        const mintedAmount = microAlgos / 1_000_000; // Use requested amount, not canister response
+        console.log(`✅ Successfully minted ${mintedAmount} ckALGO (canister returned: ${result.Ok})`);
         return {
           success: true,
           amount_minted: mintedAmount,
-          raw_amount: Number(result.Ok),
+          transaction_id: String(result.Ok), // This is actually a transaction ID, not amount
           principal
         };
       } else if ('Err' in result) {
@@ -156,6 +228,66 @@ export class CkAlgoService {
       
     } catch (error) {
       console.error('❌ Failed to mint ckALGO:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Transfer ckALGO tokens to another ICP principal
+   * @param fromPrincipal - Sender's principal (for logging)
+   * @param toPrincipal - Recipient's principal
+   * @param amount - Amount in ckALGO (will be converted to microckALGO)
+   * @returns Transfer result with success/error info
+   */
+  async transferCkAlgo(fromPrincipal: string, toPrincipal: string, amount: number) {
+    try {
+      console.log(`💸 Transferring ${amount} ckALGO from ${fromPrincipal} to ${toPrincipal}`);
+      
+      const microAlgos = Math.floor(amount * 1_000_000); // Convert to microckALGO
+      const toPrincipalObj = Principal.fromText(toPrincipal);
+      
+      // Use admin_transfer_ck_algo_by_string to handle Chain Fusion principals properly
+      const result = await this.actor.admin_transfer_ck_algo_by_string(fromPrincipal, toPrincipalObj, BigInt(microAlgos));
+      
+      console.log('✅ ckALGO transfer result from canister:', result);
+      
+      // Handle Rust Result type: { Ok: value } or { Err: error }
+      if ('Ok' in result) {
+        console.log(`✅ Successfully transferred ${amount} ckALGO`);
+        return {
+          success: true,
+          amount_transferred: amount,
+          raw_amount: microAlgos,
+          from_principal: fromPrincipal,
+          to_principal: toPrincipal,
+          transaction_index: Number(result.Ok)
+        };
+      } else {
+        console.error(`❌ Transfer failed: ${result.Err}`);
+        throw new Error(`Transfer failed: ${result.Err}`);
+      }
+    } catch (error) {
+      console.error('❌ Failed to transfer ckALGO:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Restore balance after canister upgrade (admin only)
+   */
+  async restoreBalance(accountStr: string, amount: number) {
+    try {
+      const microAlgos = Math.floor(amount * 1_000_000);
+      const result = await this.actor.admin_restore_balance(accountStr, BigInt(microAlgos));
+      
+      if ('Ok' in result) {
+        console.log(`✅ Successfully restored ${amount} ckALGO balance for ${accountStr}`);
+        return { success: true, amount_restored: amount };
+      } else {
+        throw new Error(`Restore failed: ${result.Err}`);
+      }
+    } catch (error) {
+      console.error('❌ Failed to restore balance:', error);
       throw error;
     }
   }

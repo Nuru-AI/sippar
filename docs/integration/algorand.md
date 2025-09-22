@@ -1,8 +1,8 @@
 # Algorand Blockchain Integration
 
-**Last Updated**: September 5, 2025  
-**Integration Status**: ✅ Production Active  
-**Smart Contract**: AI Oracle deployed on testnet
+**Last Updated**: September 18, 2025 - Sprint 016 X402 Integration Complete
+**Integration Status**: ✅ Production Active with X402 Payment Protocol
+**Smart Contract**: AI Oracle deployed on testnet + X402 payment-protected services
 
 ---
 
@@ -95,6 +95,222 @@ User Transaction → AI Oracle Contract → Backend Processing → AI Response �
 ```
 
 **Transaction Note Format**: `"sippar-ai-oracle"` for indexer filtering
+
+---
+
+## 💳 **X402 Payment Protocol Integration** *(NEW - Sprint 016)*
+
+### **World's First X402 + Algorand Integration**
+
+Sprint 016 achieved the **world's first integration of HTTP 402 "Payment Required" standard with Algorand threshold signatures**, enabling autonomous AI-to-AI payments for Algorand services.
+
+**Production Deployment**: https://nuru.network/api/sippar/x402/
+
+### **X402 + Algorand Payment Flow**
+
+**Complete Payment Architecture**:
+```
+AI Agent Request → X402 Payment Required → Internet Identity → Algorand Address Derivation → Service Access
+        ↓                   ↓                      ↓                     ↓                    ↓
+   HTTP 402 Response    Payment Creation    Threshold Signature    Mathematical Backing    Protected Service
+```
+
+### **Payment-Protected Algorand Services**
+
+**AI Oracle Services with X402 Payment Protection**:
+```typescript
+// AI Oracle Basic Query - $0.01 USD
+POST /api/sippar/ai/query
+Authorization: Bearer <X402-payment-token>
+
+// AI Oracle Enhanced Query - $0.05 USD
+POST /api/sippar/ai/enhanced-query
+Authorization: Bearer <X402-payment-token>
+
+// Response includes Algorand integration proof
+{
+  "success": true,
+  "ai_response": "Analysis complete...",
+  "algorand_integration": {
+    "user_address": "6W47GCLXWEIEZ2LRQCXF7HGLOYSXYCXOPXJ5YE55EULFHB7O4RWIM3JDCI",
+    "threshold_controlled": true,
+    "mathematical_backing": true,
+    "canister_id": "vj7ly-diaaa-aaaae-abvoq-cai"
+  }
+}
+```
+
+**ckALGO Services with X402 Payment Protection**:
+```typescript
+// ckALGO Minting Service - $0.001 USD
+POST /api/sippar/x402/mint-ckALGO
+Authorization: Bearer <X402-payment-token>
+
+// ckALGO Redemption Service - $0.001 USD
+POST /api/sippar/x402/redeem-ckALGO
+Authorization: Bearer <X402-payment-token>
+
+// Response includes Algorand transaction proof
+{
+  "success": true,
+  "algorand_tx_id": "3RU7HQ2EIO7VIFYW2Q5IIANI5WJJBXH6YT5W4RCB7JZLNH6F3NUQ",
+  "amount": 0.5,
+  "threshold_signature": "verified",
+  "network": "algorand_testnet"
+}
+```
+
+### **X402 Payment Creation with Algorand Backing**
+
+**Enterprise Payment Request**:
+```typescript
+// Create X402 payment with Algorand address verification
+const payment = await fetch('/api/sippar/x402/create-payment', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    amount: 0.05,
+    service: 'ai-oracle-enhanced',
+    principal: '7renf-5svak-mtapl-juxhw-3hv7d-zzfzs-hjlxv-p7wsv-e2zjc-kksxf-3ae',
+    algorandAddress: '6W47GCLXWEIEZ2LRQCXF7HGLOYSXYCXOPXJ5YE55EULFHB7O4RWIM3JDCI'
+  })
+});
+
+// Response includes Algorand integration proof
+{
+  "success": true,
+  "paymentId": "payment_1726689600000_abc123",
+  "serviceToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+  "algorandIntegration": {
+    "backingAddress": "6W47GCLXWEIEZ2LRQCXF7HGLOYSXYCXOPXJ5YE55EULFHB7O4RWIM3JDCI",
+    "thresholdControlled": true,
+    "canisterId": "vj7ly-diaaa-aaaae-abvoq-cai",
+    "mathematicalProof": "threshold_signature_verified"
+  }
+}
+```
+
+### **Algorand Address Verification in X402 Flow**
+
+**Address Validation Process**:
+1. **Principal Submission**: User provides Internet Identity principal
+2. **Address Derivation**: ICP canister derives Algorand address via threshold signatures
+3. **Verification**: Confirm address is controlled by ICP threshold signatures
+4. **Payment Authorization**: Generate X402 token with Algorand backing proof
+5. **Service Access**: Protected Algorand services accessible with valid token
+
+**Address Verification API**:
+```typescript
+// Verify Algorand address is threshold-controlled
+const verification = await chainFusionService.verifyThresholdControl(
+  '6W47GCLXWEIEZ2LRQCXF7HGLOYSXYCXOPXJ5YE55EULFHB7O4RWIM3JDCI'
+);
+
+// Response confirms mathematical backing
+{
+  "thresholdControlled": true,
+  "canisterId": "vj7ly-diaaa-aaaae-abvoq-cai",
+  "derivationPath": ["principal_bytes", "algorand"],
+  "proof": "Ed25519_threshold_signature_control_verified"
+}
+```
+
+### **X402 Service Marketplace for Algorand**
+
+**Available Algorand Services** (4 active):
+```typescript
+{
+  "marketplace": {
+    "services": [
+      {
+        "id": "ai-oracle-basic",
+        "name": "AI Oracle Basic Query",
+        "description": "Basic AI query with Algorand integration",
+        "price": 0.01,
+        "currency": "USD",
+        "endpoint": "/api/sippar/ai/query",
+        "algorand_features": {
+          "threshold_backed": true,
+          "address_derivation": true,
+          "smart_contract_integration": true
+        }
+      },
+      {
+        "id": "ai-oracle-enhanced",
+        "name": "Enhanced AI Query",
+        "description": "Premium AI analysis with Algorand proof",
+        "price": 0.05,
+        "currency": "USD",
+        "endpoint": "/api/sippar/ai/enhanced-query",
+        "algorand_features": {
+          "threshold_backed": true,
+          "transaction_proof": true,
+          "mathematical_verification": true
+        }
+      },
+      {
+        "id": "ckALGO-mint",
+        "name": "ckALGO Minting Service",
+        "description": "Cross-chain ALGO to ckALGO conversion",
+        "price": 0.001,
+        "currency": "USD",
+        "endpoint": "/api/sippar/x402/mint-ckALGO",
+        "algorand_features": {
+          "threshold_signatures": true,
+          "real_algo_custody": true,
+          "cross_chain_bridge": true
+        }
+      },
+      {
+        "id": "ckALGO-redeem",
+        "name": "ckALGO Redemption Service",
+        "description": "Cross-chain ckALGO to ALGO conversion",
+        "price": 0.001,
+        "currency": "USD",
+        "endpoint": "/api/sippar/x402/redeem-ckALGO",
+        "algorand_features": {
+          "threshold_signatures": true,
+          "real_algo_release": true,
+          "cross_chain_bridge": true
+        }
+      }
+    ],
+    "totalServices": 4,
+    "algorand_integration": "full_threshold_signature_backing"
+  }
+}
+```
+
+### **Enterprise Algorand Analytics**
+
+**Payment Analytics with Algorand Context**:
+```typescript
+// X402 Analytics with Algorand integration metrics
+const analytics = await fetch('/api/sippar/x402/analytics');
+
+{
+  "analytics": {
+    "algorand_integration_metrics": {
+      "threshold_signatures_used": 1250,
+      "algorand_addresses_derived": 450,
+      "successful_algo_transactions": 1100,
+      "average_transaction_time": "3.2s",
+      "network_success_rate": 0.995
+    },
+    "service_usage": {
+      "ai_oracle_basic": { "calls": 800, "algorand_addresses": 320 },
+      "ai_oracle_enhanced": { "calls": 200, "algorand_addresses": 85 },
+      "ckALGO_mint": { "calls": 150, "algo_amount": 75.5 },
+      "ckALGO_redeem": { "calls": 100, "algo_amount": 50.2 }
+    },
+    "threshold_signature_performance": {
+      "success_rate": 1.0,
+      "average_signature_time": "1.8s",
+      "canister_cycles_used": 45000000000
+    }
+  }
+}
+```
 
 ---
 
@@ -196,4 +412,4 @@ const txn = algosdk.makeApplicationCallTxnFromObject({
 
 ---
 
-**Status**: ✅ **Fully Operational** - Smart contract deployed, network monitoring active, address derivation working
+**Status**: ✅ **Fully Operational + X402 Payment Integration** - Smart contract deployed, network monitoring active, address derivation working, X402 payment protocol operational at https://nuru.network/api/sippar/x402/

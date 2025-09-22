@@ -127,30 +127,76 @@ const RedeemFlow: React.FC = () => {
       if (user?.principal) {
         console.log('💸 Starting real ckALGO redemption (Phase 3)...');
         
-        // Phase 3: Real redemption via confirmed endpoint
-        const response = await fetch('https://nuru.network/api/sippar/ck-algo/redeem-confirmed', {
+        // Phase 3: Real redemption via production endpoint
+        const response = await fetch('https://nuru.network/api/sippar/ck-algo/redeem', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             amount: parseFloat(redeemAmount),
-            targetAddress: destinationAddress,
-            userPrincipal: user.principal
+            destinationAddress: destinationAddress,
+            principal: user.principal
           })
         });
         
         const redeemResult = await response.json();
         
-        if (redeemResult.success) {
+        console.log('🔍 Full redeem API response:', redeemResult);
+        
+        // Check both HTTP status and response success field
+        if (response.ok && redeemResult.success === true) {
           console.log('✅ ALGO redeemed successfully (Phase 3):', redeemResult);
+          
+          // Check if the response actually contains transaction details
+          if (!redeemResult.algorandTxId && !redeemResult.transactionId) {
+            console.warn('⚠️ Success response but no transaction ID - possible backend issue');
+          }
+          
           setTransactionResult(redeemResult);
+          
+          // Wait a moment before refreshing balance to allow backend processing
+          setTimeout(async () => {
+            console.log('🔄 Refreshing balance after redemption...');
+            const oldBalance = ckAlgoBalance;
+            console.log(`📊 Pre-refresh balance: ${oldBalance} ckALGO`);
+            
+            try {
+              // Call balance API directly to get fresh data
+              const response = await fetch(`https://nuru.network/api/sippar/ck-algo/balance/${user.principal}`);
+              const balanceData = await response.json();
+              
+              if (response.ok && balanceData.success && balanceData.balances?.ck_algo_balance !== undefined) {
+                const newBalance = balanceData.balances.ck_algo_balance;
+                setCkAlgoBalance(newBalance);
+                console.log(`📊 Fresh balance from API: ${newBalance} ckALGO`);
+                
+                if (Math.abs(newBalance - oldBalance) < 0.001) {
+                  console.warn('⚠️ Balance did not change after redemption - checking if this is expected');
+                  console.log(`Old balance: ${oldBalance}, Current balance: ${newBalance}`);
+                } else {
+                  const burned = oldBalance - newBalance;
+                  console.log(`✅ Balance updated successfully! Burned: ${burned.toFixed(6)} ckALGO`);
+                  console.log(`📊 Balance change: ${oldBalance} → ${newBalance} ckALGO`);
+                }
+                
+                // Trigger balance refresh in Dashboard and other components
+                window.dispatchEvent(new CustomEvent('sipparBalanceRefresh'));
+              } else {
+                console.error('❌ Failed to get fresh balance:', balanceData);
+              }
+            } catch (error) {
+              console.error('❌ Failed to refresh balance:', error);
+            }
+          }, 1000);
+          
           setCurrentStep(4); // Success
           setIsProcessing(false);
-          // Refresh balance after successful redemption
-          loadCkAlgoBalance();
         } else {
-          throw new Error(redeemResult.error || 'Redemption failed');
+          // Backend returned error or HTTP error occurred
+          const errorMessage = redeemResult.error || `API Error: ${response.status} ${response.statusText}`;
+          console.error('❌ Backend redemption failed:', errorMessage);
+          throw new Error(errorMessage);
         }
       }
     } catch (error) {

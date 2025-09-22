@@ -12,6 +12,12 @@
       "package": "algorand_threshold_signer_backend",
       "candid": "src/canisters/threshold_signer/src/algorand_threshold_signer_backend/algorand_threshold_signer_backend.did",
       "wasm": "src/canisters/threshold_signer/target/wasm32-unknown-unknown/release/algorand_threshold_signer_backend.wasm"
+    },
+    "simplified_bridge": {
+      "type": "rust",
+      "package": "simplified_bridge",
+      "candid": "src/canisters/simplified_bridge/simplified_bridge.did",
+      "wasm": "target/wasm32-unknown-unknown/release/simplified_bridge.wasm"
     }
   },
   "networks": {
