@@ -27,6 +27,10 @@ export interface DepositDetectionConfig {
   maxPendingDeposits: number;
 }
 
+export interface DepositHandler {
+  handleConfirmedDeposit(deposit: PendingDeposit): Promise<void>;
+}
+
 export interface AddressMapping {
   custodyAddress: string;
   userPrincipal: string;
@@ -42,6 +46,7 @@ export class DepositDetectionService {
   private pendingDeposits: Map<string, PendingDeposit> = new Map();
   private isRunning: boolean = false;
   private pollingInterval: NodeJS.Timeout | null = null;
+  private depositHandlers: DepositHandler[] = [];
 
   constructor(algorandService: AlgorandService, simplifiedBridgeService: SimplifiedBridgeService, config?: Partial<DepositDetectionConfig>) {
     this.algorandService = algorandService;
@@ -53,6 +58,14 @@ export class DepositDetectionService {
       maxPendingDeposits: 1000,
       ...config
     };
+  }
+
+  /**
+   * Register a deposit handler for confirmed deposits
+   */
+  registerDepositHandler(handler: DepositHandler): void {
+    this.depositHandlers.push(handler);
+    console.log(`📋 Registered deposit handler: ${handler.constructor.name}`);
   }
 
   /**
@@ -257,7 +270,7 @@ export class DepositDetectionService {
   }
 
   /**
-   * Handle a confirmed deposit - trigger ckALGO minting
+   * Handle a confirmed deposit - trigger registered deposit handlers
    */
   private async handleConfirmedDeposit(deposit: PendingDeposit): Promise<void> {
     console.log(`🎉 Handling confirmed deposit: ${deposit.txId} for ${deposit.amount} ALGO`);
@@ -271,8 +284,25 @@ export class DepositDetectionService {
         custodyAddress: deposit.custodyAddress
       });
 
-      // Automatically trigger ckALGO minting for confirmed deposit
-      console.log(`🔄 Automatically minting ckALGO for confirmed deposit ${deposit.txId}`);
+      // Process with registered deposit handlers first (e.g., AutomaticMintingService)
+      if (this.depositHandlers.length > 0) {
+        console.log(`🔄 Processing deposit ${deposit.txId} with ${this.depositHandlers.length} registered handlers`);
+
+        for (const handler of this.depositHandlers) {
+          try {
+            await handler.handleConfirmedDeposit(deposit);
+          } catch (handlerError) {
+            console.error(`❌ Deposit handler ${handler.constructor.name} failed for ${deposit.txId}:`, handlerError);
+          }
+        }
+
+        // Remove from pending since handlers took over
+        this.pendingDeposits.delete(deposit.txId);
+        return;
+      }
+
+      // Fallback: Legacy direct minting (for backward compatibility)
+      console.log(`🔄 No registered handlers, using legacy automatic minting for ${deposit.txId}`);
 
       try {
         // Call simplified bridge canister to mint ckALGO tokens
@@ -283,10 +313,10 @@ export class DepositDetectionService {
         // Mark deposit as processed (remove from pending)
         this.pendingDeposits.delete(deposit.txId);
 
-        console.log(`🎉 AUTOMATIC MINTING COMPLETE: ${deposit.amount} ckALGO minted for user ${deposit.userPrincipal}`);
+        console.log(`🎉 LEGACY AUTOMATIC MINTING COMPLETE: ${deposit.amount} ckALGO minted for user ${deposit.userPrincipal}`);
 
       } catch (mintError) {
-        console.error(`❌ Automatic minting failed for deposit ${deposit.txId}:`, mintError);
+        console.error(`❌ Legacy automatic minting failed for deposit ${deposit.txId}:`, mintError);
         // Keep deposit in pending state for manual processing if automatic minting fails
         console.log(`⚠️ Deposit ${deposit.txId} remains available for manual minting`);
       }

@@ -1,0 +1,25 @@
+nd": "ls",
+      "args": ["/Users/eladm/Projects/CollaborativeIntelligence/AGENTS/"],
+      "description": "List all available CI agents"
+    },
+    "/protect": {
+      "command": "/Users/eladm/Projects/CollaborativeIntelligence/interfaces/claude-bridge/scripts/agent-protector.sh",
+      "description": "Run agent protection and integrity check"
+    },
+    "/session": {
+      "command": "ls",
+      "args": ["-la", "/Users/eladm/Projects/CollaborativeIntelligence/Sessions/"],
+      "description": "Show current CI session files"
+    },
+    "/logs": {
+      "command": "ls",
+      "args": ["-la", "/Users/eladm/Projects/CollaborativeIntelligence/.claude/logs/"],
+      "description": "Show CI integration logs"
+    },
+    "/trustwrapper": {
+      "command": "/Users/eladm/Projects/CollaborativeIntelligence/interfaces/claude-bridge/monitoring/hallucination_dashboard.py",
+      "args": ["--generate-only"],
+      "description": "Generate TrustWrapper hallucination detection dashboard"
+    }
+  }
+}

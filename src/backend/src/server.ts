@@ -19,10 +19,16 @@ import { simplifiedBridgeService } from './services/simplifiedBridgeService.js';
 import { DepositDetectionService } from './services/depositDetectionService.js';
 import { CustodyAddressService } from './services/custodyAddressService.js';
 import { ReserveVerificationService } from './services/reserveVerificationService.js';
+import { AutomaticMintingService } from './services/automaticMintingService.js';
+import { AutomaticMintingHandler } from './services/automaticMintingHandler.js';
+import { AutomaticRedemptionService } from './services/automaticRedemptionService.js';
+import { BalanceSynchronizationService } from './services/balanceSynchronizationService.js';
+import { TransactionHistoryService } from './services/transactionHistoryService.js';
 import { migrationService } from './services/migrationService.js';
 import { productionMonitoringService } from './services/productionMonitoringService.js';
 import { alertManager } from './services/alertManager.js';
 import { x402Service } from './services/x402Service.js';
+import { ElnaIntegration } from './services/elnaIntegration.js';
 
 // Load environment variables
 config();
@@ -73,7 +79,42 @@ const PORT = process.env.PORT || 3004;
 const depositDetectionService = new DepositDetectionService(algorandService, simplifiedBridgeService);
 const custodyAddressService = new CustodyAddressService();
 const reserveVerificationService = new ReserveVerificationService();
+
+// Initialize Sprint 012.5 Enhanced Automatic Minting System
+const automaticMintingService = new AutomaticMintingService(
+  depositDetectionService,
+  simplifiedBridgeService,
+  ckAlgoService,
+  productionMonitoringService,
+  alertManager
+);
+const automaticMintingHandler = new AutomaticMintingHandler(automaticMintingService);
+
+// Initialize Sprint 012.5 Enhanced Automatic Redemption System
+const automaticRedemptionService = new AutomaticRedemptionService(
+  ckAlgoService,
+  productionMonitoringService,
+  alertManager
+);
+
+// Initialize Sprint 012.5 Balance Synchronization System
+const balanceSynchronizationService = new BalanceSynchronizationService(
+  productionMonitoringService,
+  alertManager
+);
+
+// Initialize Sprint 012.5 Transaction History System
+const transactionHistoryService = new TransactionHistoryService(
+  productionMonitoringService
+);
+
+// Register the automatic minting handler with deposit detection service
+depositDetectionService.registerDepositHandler(automaticMintingHandler);
+
 console.log('🏦 Sprint X services initialized: deposit detection + custody address management');
+console.log('🪙 Sprint 012.5 services initialized: enhanced automatic minting & redemption system');
+console.log('⚖️ Sprint 012.5 balance sync initialized: real-time Algorand ↔ ICP balance monitoring');
+console.log('📚 Sprint 012.5 transaction history initialized: comprehensive audit trails for all operations');
 
 // Transaction monitoring metrics
 interface TransactionMetrics {
@@ -806,6 +847,888 @@ app.post('/ck-algo/monitoring/stop', async (req, res) => {
     });
   }
 });
+
+// ============================================================================
+// SPRINT 012.5: AUTOMATIC MINTING SERVICE ENDPOINTS
+// ============================================================================
+
+/**
+ * Get automatic minting statistics
+ */
+app.get('/ck-algo/minting/stats', async (req, res) => {
+  try {
+    const stats = automaticMintingService.getMintingStats();
+
+    res.json({
+      success: true,
+      operation: 'minting_stats',
+      stats,
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to get minting stats:', error);
+    res.status(500).json({
+      success: false,
+      operation: 'minting_stats',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+/**
+ * Get minting job status
+ */
+app.get('/ck-algo/minting/job/:jobId', async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const job = automaticMintingService.getMintingJob(jobId);
+
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        operation: 'get_minting_job',
+        error: 'Minting job not found',
+        job_id: jobId,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    res.json({
+      success: true,
+      operation: 'get_minting_job',
+      job,
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to get minting job:', error);
+    res.status(500).json({
+      success: false,
+      operation: 'get_minting_job',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+/**
+ * Get minting jobs for a user
+ */
+app.get('/ck-algo/minting/user/:principal', async (req, res) => {
+  try {
+    const { principal } = req.params;
+    const jobs = automaticMintingService.getUserMintingJobs(principal);
+
+    res.json({
+      success: true,
+      operation: 'get_user_minting_jobs',
+      principal,
+      jobs,
+      total_jobs: jobs.length,
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to get user minting jobs:', error);
+    res.status(500).json({
+      success: false,
+      operation: 'get_user_minting_jobs',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+/**
+ * Retry a failed minting job
+ */
+app.post('/ck-algo/minting/retry/:jobId', async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const retried = automaticMintingService.retryMintingJob(jobId);
+
+    if (!retried) {
+      return res.status(400).json({
+        success: false,
+        operation: 'retry_minting_job',
+        error: 'Job not found or cannot be retried (must be in failed status)',
+        job_id: jobId,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    res.json({
+      success: true,
+      operation: 'retry_minting_job',
+      job_id: jobId,
+      message: 'Minting job queued for retry',
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to retry minting job:', error);
+    res.status(500).json({
+      success: false,
+      operation: 'retry_minting_job',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+/**
+ * Cancel a pending minting job
+ */
+app.post('/ck-algo/minting/cancel/:jobId', async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const cancelled = automaticMintingService.cancelMintingJob(jobId);
+
+    if (!cancelled) {
+      return res.status(400).json({
+        success: false,
+        operation: 'cancel_minting_job',
+        error: 'Job not found or cannot be cancelled (must be in pending status)',
+        job_id: jobId,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    res.json({
+      success: true,
+      operation: 'cancel_minting_job',
+      job_id: jobId,
+      message: 'Minting job cancelled',
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to cancel minting job:', error);
+    res.status(500).json({
+      success: false,
+      operation: 'cancel_minting_job',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+/**
+ * Force process the minting queue (for debugging)
+ */
+app.post('/ck-algo/minting/process-queue', async (req, res) => {
+  try {
+    await automaticMintingService.forceProcessQueue();
+
+    res.json({
+      success: true,
+      operation: 'force_process_queue',
+      message: 'Minting queue processed',
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to process minting queue:', error);
+    res.status(500).json({
+      success: false,
+      operation: 'force_process_queue',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+// ============================================================================
+// SPRINT 012.5: AUTOMATIC REDEMPTION SERVICE ENDPOINTS
+// ============================================================================
+
+/**
+ * Queue a redemption request
+ */
+app.post('/ck-algo/redemption/queue', async (req, res) => {
+  try {
+    const { principal, amount, destinationAddress } = z.object({
+      principal: z.string().min(1),
+      amount: z.number().positive(),
+      destinationAddress: z.string().min(1)
+    }).parse(req.body);
+
+    const jobId = await automaticRedemptionService.queueRedemption(
+      principal,
+      amount,
+      destinationAddress
+    );
+
+    res.json({
+      success: true,
+      operation: 'queue_redemption',
+      job_id: jobId,
+      principal,
+      amount,
+      destination_address: destinationAddress,
+      message: 'Redemption queued for automatic processing',
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to queue redemption:', error);
+    res.status(400).json({
+      success: false,
+      operation: 'queue_redemption',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+/**
+ * Get automatic redemption statistics
+ */
+app.get('/ck-algo/redemption/stats', async (req, res) => {
+  try {
+    const stats = automaticRedemptionService.getRedemptionStats();
+
+    res.json({
+      success: true,
+      operation: 'redemption_stats',
+      stats,
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to get redemption stats:', error);
+    res.status(500).json({
+      success: false,
+      operation: 'redemption_stats',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+/**
+ * Get redemption job status
+ */
+app.get('/ck-algo/redemption/job/:jobId', async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const job = automaticRedemptionService.getRedemptionJob(jobId);
+
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        operation: 'get_redemption_job',
+        error: 'Redemption job not found',
+        job_id: jobId,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    res.json({
+      success: true,
+      operation: 'get_redemption_job',
+      job,
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to get redemption job:', error);
+    res.status(500).json({
+      success: false,
+      operation: 'get_redemption_job',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+/**
+ * Get redemption jobs for a user
+ */
+app.get('/ck-algo/redemption/user/:principal', async (req, res) => {
+  try {
+    const { principal } = req.params;
+    const jobs = automaticRedemptionService.getUserRedemptionJobs(principal);
+
+    res.json({
+      success: true,
+      operation: 'get_user_redemption_jobs',
+      principal,
+      jobs,
+      total_jobs: jobs.length,
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to get user redemption jobs:', error);
+    res.status(500).json({
+      success: false,
+      operation: 'get_user_redemption_jobs',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+/**
+ * Retry a failed redemption job
+ */
+app.post('/ck-algo/redemption/retry/:jobId', async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const retried = automaticRedemptionService.retryRedemptionJob(jobId);
+
+    if (!retried) {
+      return res.status(400).json({
+        success: false,
+        operation: 'retry_redemption_job',
+        error: 'Job not found or cannot be retried (must be in failed status)',
+        job_id: jobId,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    res.json({
+      success: true,
+      operation: 'retry_redemption_job',
+      job_id: jobId,
+      message: 'Redemption job queued for retry',
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to retry redemption job:', error);
+    res.status(500).json({
+      success: false,
+      operation: 'retry_redemption_job',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+/**
+ * Cancel a pending redemption job
+ */
+app.post('/ck-algo/redemption/cancel/:jobId', async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const cancelled = automaticRedemptionService.cancelRedemptionJob(jobId);
+
+    if (!cancelled) {
+      return res.status(400).json({
+        success: false,
+        operation: 'cancel_redemption_job',
+        error: 'Job not found or cannot be cancelled (must be pending or not yet fully processed)',
+        job_id: jobId,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    res.json({
+      success: true,
+      operation: 'cancel_redemption_job',
+      job_id: jobId,
+      message: 'Redemption job cancelled',
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to cancel redemption job:', error);
+    res.status(500).json({
+      success: false,
+      operation: 'cancel_redemption_job',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+/**
+ * Force process the redemption queue (for debugging)
+ */
+app.post('/ck-algo/redemption/process-queue', async (req, res) => {
+  try {
+    await automaticRedemptionService.forceProcessQueue();
+
+    res.json({
+      success: true,
+      operation: 'force_process_redemption_queue',
+      message: 'Redemption queue processed',
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to process redemption queue:', error);
+    res.status(500).json({
+      success: false,
+      operation: 'force_process_redemption_queue',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+// ============================================================================
+// SPRINT 012.5: BALANCE SYNCHRONIZATION SERVICE ENDPOINTS
+// ============================================================================
+
+/**
+ * Register a user for balance synchronization
+ */
+app.post('/ck-algo/balance/register/:principal', async (req, res) => {
+  try {
+    const { principal } = req.params;
+
+    await balanceSynchronizationService.registerUser(principal);
+
+    res.json({
+      success: true,
+      operation: 'register_balance_sync',
+      principal,
+      message: 'User registered for balance synchronization',
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to register user for balance sync:', error);
+    res.status(500).json({
+      success: false,
+      operation: 'register_balance_sync',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+/**
+ * Get balance synchronization statistics
+ */
+app.get('/ck-algo/balance/stats', async (req, res) => {
+  try {
+    const stats = balanceSynchronizationService.getSyncStats();
+
+    res.json({
+      success: true,
+      operation: 'balance_sync_stats',
+      stats,
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to get balance sync stats:', error);
+    res.status(500).json({
+      success: false,
+      operation: 'balance_sync_stats',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+/**
+ * Get balance snapshot for a user
+ */
+app.get('/ck-algo/balance/user/:principal', async (req, res) => {
+  try {
+    const { principal } = req.params;
+    const balance = balanceSynchronizationService.getUserBalance(principal);
+
+    if (!balance) {
+      return res.status(404).json({
+        success: false,
+        operation: 'get_user_balance',
+        error: 'User not registered for balance synchronization',
+        principal,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    res.json({
+      success: true,
+      operation: 'get_user_balance',
+      principal,
+      balance,
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to get user balance:', error);
+    res.status(500).json({
+      success: false,
+      operation: 'get_user_balance',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+/**
+ * Get all user balances
+ */
+app.get('/ck-algo/balance/all', async (req, res) => {
+  try {
+    const balances = balanceSynchronizationService.getAllBalances();
+
+    res.json({
+      success: true,
+      operation: 'get_all_balances',
+      balances,
+      total_users: balances.length,
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to get all balances:', error);
+    res.status(500).json({
+      success: false,
+      operation: 'get_all_balances',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+/**
+ * Get balance discrepancies
+ */
+app.get('/ck-algo/balance/discrepancies', async (req, res) => {
+  try {
+    const discrepancies = balanceSynchronizationService.getDiscrepancies();
+
+    res.json({
+      success: true,
+      operation: 'get_balance_discrepancies',
+      discrepancies,
+      total_discrepancies: discrepancies.length,
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to get balance discrepancies:', error);
+    res.status(500).json({
+      success: false,
+      operation: 'get_balance_discrepancies',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+/**
+ * Force sync balance for a specific user
+ */
+app.post('/ck-algo/balance/sync/:principal', async (req, res) => {
+  try {
+    const { principal } = req.params;
+
+    const balance = await balanceSynchronizationService.forceSyncUser(principal);
+
+    res.json({
+      success: true,
+      operation: 'force_sync_user',
+      principal,
+      balance,
+      message: 'Balance synchronized successfully',
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to force sync user balance:', error);
+    res.status(500).json({
+      success: false,
+      operation: 'force_sync_user',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+/**
+ * Force sync all user balances
+ */
+app.post('/ck-algo/balance/sync-all', async (req, res) => {
+  try {
+    await balanceSynchronizationService.forceSyncAll();
+
+    res.json({
+      success: true,
+      operation: 'force_sync_all',
+      message: 'All balances synchronized successfully',
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to force sync all balances:', error);
+    res.status(500).json({
+      success: false,
+      operation: 'force_sync_all',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+/**
+ * Unregister a user from balance synchronization
+ */
+app.delete('/ck-algo/balance/unregister/:principal', async (req, res) => {
+  try {
+    const { principal } = req.params;
+
+    balanceSynchronizationService.unregisterUser(principal);
+
+    res.json({
+      success: true,
+      operation: 'unregister_balance_sync',
+      principal,
+      message: 'User unregistered from balance synchronization',
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to unregister user from balance sync:', error);
+    res.status(500).json({
+      success: false,
+      operation: 'unregister_balance_sync',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+// ============================================================================
+// SPRINT 012.5: TRANSACTION HISTORY SERVICE ENDPOINTS
+// ============================================================================
+
+/**
+ * Get service statistics (must come before /:txId route)
+ */
+app.get('/ck-algo/transactions/stats', async (req, res) => {
+  try {
+    const stats = transactionHistoryService.getServiceStats();
+
+    res.json({
+      success: true,
+      operation: 'get_transaction_service_stats',
+      stats,
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to get transaction service stats:', error);
+    res.status(500).json({
+      success: false,
+      operation: 'get_transaction_service_stats',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+/**
+ * Get transaction summary statistics (must come before /:txId route)
+ */
+app.get('/ck-algo/transactions/summary', async (req, res) => {
+  try {
+    const {
+      userPrincipal,
+      type,
+      status,
+      currency,
+      startDate,
+      endDate
+    } = req.query;
+
+    const filter = {
+      userPrincipal: userPrincipal as string,
+      type: type as any,
+      status: status as any,
+      currency: currency as any,
+      startDate: startDate ? new Date(startDate as string) : undefined,
+      endDate: endDate ? new Date(endDate as string) : undefined
+    };
+
+    const summary = transactionHistoryService.getTransactionSummary(filter);
+
+    res.json({
+      success: true,
+      operation: 'get_transaction_summary',
+      filter,
+      summary,
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to get transaction summary:', error);
+    res.status(500).json({
+      success: false,
+      operation: 'get_transaction_summary',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+/**
+ * Clean up old transactions (admin endpoint, must come before /:txId route)
+ */
+app.post('/ck-algo/transactions/cleanup', async (req, res) => {
+  try {
+    const cleanedCount = transactionHistoryService.cleanupOldTransactions();
+
+    res.json({
+      success: true,
+      operation: 'cleanup_transactions',
+      cleaned_count: cleanedCount,
+      message: `Cleaned up ${cleanedCount} old transactions`,
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to cleanup transactions:', error);
+    res.status(500).json({
+      success: false,
+      operation: 'cleanup_transactions',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+/**
+ * Get transaction by ID
+ */
+app.get('/ck-algo/transactions/:txId', async (req, res) => {
+  try {
+    const { txId } = req.params;
+    const transaction = transactionHistoryService.getTransaction(txId);
+
+    if (!transaction) {
+      return res.status(404).json({
+        success: false,
+        operation: 'get_transaction',
+        error: 'Transaction not found',
+        tx_id: txId,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    res.json({
+      success: true,
+      operation: 'get_transaction',
+      transaction,
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to get transaction:', error);
+    res.status(500).json({
+      success: false,
+      operation: 'get_transaction',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+/**
+ * Get transactions for a user
+ */
+app.get('/ck-algo/transactions/user/:principal', async (req, res) => {
+  try {
+    const { principal } = req.params;
+    const { type, status, currency, limit, offset } = req.query;
+
+    const filter = {
+      type: type as any,
+      status: status as any,
+      currency: currency as any,
+      limit: limit ? parseInt(limit as string) : undefined,
+      offset: offset ? parseInt(offset as string) : undefined
+    };
+
+    const transactions = transactionHistoryService.getUserTransactions(principal, filter);
+
+    res.json({
+      success: true,
+      operation: 'get_user_transactions',
+      principal,
+      transactions,
+      total: transactions.length,
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to get user transactions:', error);
+    res.status(500).json({
+      success: false,
+      operation: 'get_user_transactions',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+/**
+ * Search transactions with filters
+ */
+app.get('/ck-algo/transactions', async (req, res) => {
+  try {
+    const {
+      userPrincipal,
+      type,
+      status,
+      currency,
+      minAmount,
+      maxAmount,
+      startDate,
+      endDate,
+      custodyAddress,
+      destinationAddress,
+      limit,
+      offset
+    } = req.query;
+
+    const filter = {
+      userPrincipal: userPrincipal as string,
+      type: type as any,
+      status: status as any,
+      currency: currency as any,
+      minAmount: minAmount ? parseFloat(minAmount as string) : undefined,
+      maxAmount: maxAmount ? parseFloat(maxAmount as string) : undefined,
+      startDate: startDate ? new Date(startDate as string) : undefined,
+      endDate: endDate ? new Date(endDate as string) : undefined,
+      custodyAddress: custodyAddress as string,
+      destinationAddress: destinationAddress as string,
+      limit: limit ? parseInt(limit as string) : undefined,
+      offset: offset ? parseInt(offset as string) : undefined
+    };
+
+    const transactions = transactionHistoryService.searchTransactions(filter);
+
+    res.json({
+      success: true,
+      operation: 'search_transactions',
+      filter,
+      transactions,
+      total: transactions.length,
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to search transactions:', error);
+    res.status(500).json({
+      success: false,
+      operation: 'search_transactions',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
 
 // SPRINT X: New endpoint for minting from existing balance
 app.post('/ck-algo/mint-existing-balance', async (req, res) => {
@@ -3038,6 +3961,143 @@ app.get('/monitoring/history', async (req, res) => {
 });
 
 // ==========================================
+// ELNA.ai Integration Endpoints - Sprint 018
+// ==========================================
+
+app.get('/api/sippar/elna/agents', async (req, res) => {
+  try {
+    const elna = new ElnaIntegration();
+    await elna.connect();
+    const agents = await elna.listAgents();
+
+    res.json({
+      success: true,
+      count: agents.length,
+      agents: agents
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+  }
+});
+
+app.get('/api/sippar/elna/agents/:agentId', async (req, res) => {
+  try {
+    const { agentId } = req.params;
+    const elna = new ElnaIntegration();
+    await elna.connect();
+    const agentDetails = await elna.getAgentDetails(agentId);
+
+    if (agentDetails) {
+      res.json({
+        success: true,
+        agent: agentDetails
+      });
+    } else {
+      res.status(404).json({
+        success: false,
+        error: `Agent not found: ${agentId}`
+      });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+  }
+});
+
+// Day 3: ELNA Payment Routing endpoint
+app.post('/api/sippar/elna/payment', async (req, res) => {
+  try {
+    const { fromAgent, toAgent, amount, principal } = req.body;
+
+    if (!fromAgent || !toAgent || amount === undefined || amount === null) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: fromAgent, toAgent, amount'
+      });
+    }
+
+    // Validate amount is positive
+    if (amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Amount must be greater than zero',
+        transactionId: '',
+        amount: 0,
+        fee: 0,
+        timestamp: Date.now()
+      });
+    }
+
+    console.log('🔄 Processing ELNA payment request...');
+    const elna = new ElnaIntegration();
+    await elna.connect();
+
+    const result = await elna.routePayment({
+      fromAgent,
+      toAgent,
+      amount,
+      currency: 'ckALGO',
+      principal: principal || 'anonymous'
+    });
+
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      transactionId: '',
+      amount: 0,
+      fee: 0,
+      timestamp: Date.now()
+    });
+  }
+});
+
+// Day 3: Enable ckALGO payments for an agent
+app.post('/api/sippar/elna/agents/:agentId/enable-ckalgo', async (req, res) => {
+  try {
+    const { agentId } = req.params;
+
+    console.log(`🔧 Enabling ckALGO for agent: ${agentId}`);
+    const elna = new ElnaIntegration();
+    await elna.connect();
+
+    const success = await elna.enableCkAlgoPayments(agentId);
+
+    res.json({
+      success,
+      agentId,
+      paymentMethod: 'ckALGO',
+      feeRate: 0.001,
+      message: success ? 'ckALGO payments enabled' : 'Failed to enable ckALGO'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Day 3: Revenue stats endpoint
+app.get('/api/sippar/elna/revenue', async (req, res) => {
+  try {
+    const elna = new ElnaIntegration();
+    const stats = await elna.getRevenueStats();
+
+    res.json({
+      success: true,
+      revenue: stats,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// ==========================================
 // X402 Payment Protocol Endpoints
 // ==========================================
 
@@ -3781,6 +4841,30 @@ app.listen(PORT, async () => {
     console.log('🔍 Sprint X deposit monitoring started automatically');
   } catch (error) {
     console.error('❌ Failed to start deposit monitoring:', error);
+  }
+
+  // Start Sprint 012.5 Enhanced Automatic Minting Service
+  try {
+    await automaticMintingService.startService();
+    console.log('🪙 Sprint 012.5 enhanced automatic minting service started');
+  } catch (error) {
+    console.error('❌ Failed to start automatic minting service:', error);
+  }
+
+  // Start Sprint 012.5 Enhanced Automatic Redemption Service
+  try {
+    await automaticRedemptionService.startService();
+    console.log('💸 Sprint 012.5 enhanced automatic redemption service started');
+  } catch (error) {
+    console.error('❌ Failed to start automatic redemption service:', error);
+  }
+
+  // Start Sprint 012.5 Balance Synchronization Service
+  try {
+    await balanceSynchronizationService.startService();
+    console.log('⚖️ Sprint 012.5 balance synchronization service started');
+  } catch (error) {
+    console.error('❌ Failed to start balance synchronization service:', error);
   }
 });
 

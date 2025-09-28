@@ -1,0 +1,78 @@
+{
+  "name": "@sippar/x402-sdk",
+  "version": "1.0.0",
+  "description": "TypeScript SDK for X402 Payment Protocol with ICP Chain Fusion integration - World's first autonomous AI-to-AI payment system",
+  "main": "dist/index.js",
+  "module": "dist/index.esm.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "type": "module",
+  "scripts": {
+    "build": "rollup -c",
+    "dev": "rollup -c -w",
+    "test": "echo \"Tests will be implemented in future version\"",
+    "test:coverage": "echo \"Coverage will be implemented in future version\"",
+    "lint": "eslint src --ext .ts,.tsx",
+    "typecheck": "tsc --noEmit",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run typecheck && npm run build",
+    "publish:npm": "npm publish --access public",
+    "version:patch": "npm version patch",
+    "version:minor": "npm version minor",
+    "version:major": "npm version major"
+  },
+  "keywords": [
+    "x402",
+    "payment-protocol",
+    "http-402",
+    "chain-fusion",
+    "icp",
+    "algorand",
+    "ai-payments",
+    "autonomous-ai",
+    "threshold-signatures",
+    "blockchain-payments",
+    "sippar",
+    "agentic-commerce"
+  ],
+  "author": "Sippar Development Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Nuru-AI/sippar.git",
+    "directory": "packages/x402-sdk"
+  },
+  "homepage": "https://nuru.network/sippar/",
+  "bugs": {
+    "url": "https://github.com/Nuru-AI/sippar/issues"
+  },
+  "peerDependencies": {
+    "typescript": ">=4.5.0"
+  },
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-typescript": "^11.1.5",
+    "@types/node": "^20.8.0",
+    "@typescript-eslint/eslint-plugin": "^6.8.0",
+    "@typescript-eslint/parser": "^6.8.0",
+    "eslint": "^8.51.0",
+    "rollup": "^4.0.0",
+    "rollup-plugin-dts": "^6.1.0",
+    "tslib": "^2.6.2",
+    "typescript": "^5.2.2",
+    "vitest": "^0.34.6"
+  },
+  "dependencies": {
+    "axios": "^1.5.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

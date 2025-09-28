@@ -1,102 +1,102 @@
 # Sippar Business Model Canvas
 
-**The Payment Infrastructure for the Autonomous AI Economy**
-**Date**: September 22, 2025
+**Universal Payment Bridge for AI Agent Ecosystems**
+**Date**: September 25, 2025
 **Version**: 1.0
 
 ---
 
 ## 🎯 **Value Propositions**
 
-### **For Autonomous AI Agents**
-- **Mathematical Security**: Cryptographic proofs eliminate custody risks and private key management
-- **Instant Payments**: <200ms transaction processing optimized for agent-to-agent commerce
-- **Zero Blockchain Complexity**: HTTP 402 standard integration without cryptocurrency knowledge
-- **Universal Compatibility**: Cross-chain asset access through Chain Fusion technology
+### **For AI Agent Users**
+- **Cross-Platform Access**: Agents can access services across all connected platforms seamlessly
+- **Best-of-Breed Services**: Choose optimal AI services regardless of platform boundaries
+- **Transparent Payments**: Universal payment routing without platform switching complexity
+- **Competitive Pricing**: Cross-platform competition drives better service economics
 
-### **For Enterprise Customers**
-- **Regulatory Compliance**: No custody requirements eliminate primary regulatory barriers
-- **Enterprise Integration**: 5-minute setup with existing identity systems (Active Directory, SSO)
-- **Cost Efficiency**: Eliminate traditional payment infrastructure costs and complexity
-- **Risk Mitigation**: Mathematical security vs. vulnerable economic incentive models
+### **For AI Agent Platforms**
+- **Universal Connectivity**: Single integration connects to all other agent platforms
+- **Revenue Generation**: Additional revenue through cross-platform transaction fees
+- **Zero Development Overhead**: No need to build payment infrastructure - use existing bridge
+- **Network Effects**: Platform value increases with each additional connected ecosystem
 
-### **For Ecosystem Partners**
-- **First-Mover Advantage**: Only production X402 + Chain Fusion platform
-- **Proven Technology**: $1.8M+ in verified autonomous transactions processed
-- **Developer Tools**: Complete SDK with TypeScript, REST APIs, and integration guides
-- **Market Expansion**: Access to $3T+ multi-chain ecosystem through single integration
+### **For Integration Partners**
+- **Market Access**: Connect to growing network of AI agent platforms and users
+- **Revenue Sharing**: Participate in transaction fee revenue from universal bridge
+- **Simple Integration**: Standard APIs for connecting to payment routing infrastructure
+- **Ecosystem Growth**: Benefit from network effects as more platforms connect
 
 ---
 
 ## 🎭 **Customer Segments**
 
-### **Primary: Enterprise AI Deployers**
-- **Fortune 500 Corporations**: Deploying autonomous AI agents for treasury management and service procurement
-- **Financial Services**: Banks and investment firms needing secure autonomous trading systems
-- **Technology Companies**: AI platform providers requiring payment infrastructure for agent marketplaces
-- **Government Agencies**: Organizations needing compliant autonomous payment systems
+### **Primary: AI Agent Platform Providers**
+- **ELNA.ai**: AI agent platform seeking cross-ecosystem connectivity for enhanced user value
+- **x402 Bazaar**: HTTP 402 marketplace needing universal payment routing capabilities
+- **Google AP2**: Advanced AI platform requiring seamless cross-platform transaction capabilities
+- **Emerging Platforms**: New AI agent ecosystems needing immediate payment connectivity
 
-### **Secondary: AI Platform Providers**
-- **Agent Orchestration Platforms**: Systems coordinating multiple AI agents requiring payment automation
-- **AI Service Marketplaces**: Platforms monetizing AI services through autonomous micro-payments
-- **Trading System Providers**: Algorithmic trading platforms needing cross-chain asset access
-- **Enterprise Software Vendors**: SaaS providers integrating autonomous payment capabilities
+### **Secondary: AI Service Providers**
+- **AI Development Companies**: Building agents that need cross-platform payment capabilities
+- **Agent Orchestration Services**: Coordinating agents across multiple platforms requiring unified payments
+- **AI Marketplace Operators**: Enabling agent discovery and transactions across ecosystem boundaries
+- **Enterprise AI Vendors**: Providing agents that need to access services across platforms
 
-### **Tertiary: Individual Developers**
-- **Web3 Developers**: Building applications requiring secure cross-chain functionality
-- **AI Researchers**: Developing autonomous agents for academic and commercial applications
-- **Fintech Startups**: Creating next-generation payment and financial applications
-- **Blockchain Projects**: Teams needing proven bridge infrastructure for ecosystem expansion
+### **Tertiary: Individual Users and Developers**
+- **AI Agent Users**: Individuals wanting access to best agents across all platforms
+- **Independent Developers**: Building agents that need cross-platform service access
+- **AI Researchers**: Developing agents requiring diverse service ecosystem access
+- **Small Platform Operators**: Emerging AI platforms needing immediate payment connectivity
 
 ---
 
 ## 📈 **Revenue Streams**
 
-### **1. Agent Transaction Fees (Primary)**
-- **Model**: Micro-fees per autonomous transaction (0.01-0.1% of transaction value)
-- **Target**: 1M+ daily transactions by Year 2
-- **Revenue**: $1.8M+ annually at target volume
-- **Margin**: 80% gross margin (automated processing, minimal operational costs)
+### **1. Cross-Platform Transaction Routing Fees (Primary)**
+- **Model**: 0.1% fee on all cross-platform agent transactions routed through universal bridge
+- **Target**: Growing with overall agent ecosystem transaction volume
+- **Revenue**: Scales directly with cross-platform agent service usage
+- **Margin**: 95%+ gross margin (software routing, minimal infrastructure overhead)
 
-### **2. Enterprise SaaS Subscriptions**
-- **Tiers**: Starter ($99/month), Professional ($499/month), Enterprise ($2,499/month)
-- **Features**: Transaction limits, analytics, custom integrations, dedicated support
-- **Target**: 50+ enterprise clients by Year 3
-- **Revenue**: $1.8M+ annually from subscription base
+### **2. Platform Integration Revenue Sharing**
+- **Model**: Revenue sharing agreements with connected AI agent platforms
+- **Structure**: Percentage of additional revenue platforms generate from cross-ecosystem access
+- **Target**: All major connected platforms participating in revenue sharing
+- **Revenue**: Additional revenue stream growing with platform success
 
-### **3. Cross-Chain Bridge Operations**
-- **Model**: Bridge transaction fees (0.1-0.3% of bridged value)
-- **Target**: $10M+ monthly bridge volume by Year 2
-- **Revenue**: $2.4M+ annually from bridge operations
-- **Margin**: 90% gross margin (minimal infrastructure costs)
+### **3. Premium Integration Services**
+- **Model**: Enhanced integration features and priority routing for premium platforms
+- **Structure**: Tiered service levels with enhanced analytics and custom routing
+- **Target**: Major platforms requiring premium connectivity features
+- **Revenue**: Additional recurring revenue from enhanced service tiers
 
-### **4. Partnership & Integration Services**
-- **Model**: One-time integration fees + ongoing revenue sharing
-- **Pricing**: $50K-$200K integration + 10-25% revenue share
-- **Target**: 10+ strategic partnerships by Year 3
-- **Revenue**: $500K-$1M+ annually from partnerships
+### **4. Network Effect Multipliers**
+- **Model**: Volume bonuses and network effect incentives for high-transaction platforms
+- **Structure**: Increasing revenue share for platforms driving significant cross-ecosystem volume
+- **Target**: Incentivize platforms to drive maximum cross-platform agent usage
+- **Revenue**: Exponential growth through network effects and volume multipliers
 
 ---
 
 ## 🤝 **Key Partnerships**
 
-### **Technology Partners**
-- **Algorand Foundation**: Strategic partnership for X402 protocol development and ecosystem integration
-- **DFINITY Foundation**: ICP Chain Fusion technology collaboration and co-development initiatives
-- **Google**: X402 protocol standardization and enterprise ecosystem integration
-- **Coinbase**: Payment infrastructure integration and institutional customer access
+### **Platform Partners**
+- **ELNA.ai**: Primary AI agent platform integration providing immediate transaction volume
+- **x402 Bazaar**: HTTP 402 protocol ecosystem integration and marketplace connectivity
+- **Google AP2**: Advanced AI agent platform requiring enterprise-grade payment routing
+- **Emerging Platforms**: Pipeline of new AI agent ecosystems seeking connectivity
 
-### **Enterprise Channel Partners**
-- **System Integrators**: Accenture, IBM, Deloitte for enterprise customer deployment
-- **Cloud Providers**: AWS, Azure, GCP for infrastructure and enterprise distribution
-- **Financial Services**: Traditional banks and payment processors for regulatory compliance
-- **AI Platform Vendors**: Microsoft, OpenAI, Anthropic for agent ecosystem integration
+### **Technology Infrastructure Partners**
+- **Chain Fusion Providers**: ICP infrastructure for underlying payment technology
+- **API Gateway Providers**: Routing infrastructure for cross-platform transaction processing
+- **Monitoring Services**: Real-time transaction monitoring and analytics platforms
+- **Security Services**: Payment security and fraud detection for cross-platform transactions
 
-### **Ecosystem Partners**
-- **DeFi Protocols**: Uniswap, Aave, Compound for liquidity and yield optimization
-- **Wallet Providers**: MetaMask, Trust Wallet for user interface and experience
-- **Security Firms**: Audit partners for security validation and compliance certification
-- **Academic Institutions**: MIT, Stanford for research collaboration and talent pipeline
+### **Growth Partners**
+- **AI Development Tools**: Platforms providing agent development frameworks requiring payment integration
+- **Agent Discovery Services**: Directories and marketplaces helping users find cross-platform agents
+- **Industry Analysts**: Research firms tracking AI agent ecosystem growth and connectivity trends
+- **Investment Partners**: VCs and strategic investors with portfolio companies in AI agent space
 
 ---
 
@@ -240,23 +240,23 @@
 
 ## 🎯 **Competitive Advantages**
 
-### **Technology Moats**
-- **Mathematical Security**: Only platform with threshold cryptography for autonomous payments
-- **Cross-Chain Native**: Direct cryptographic control across multiple blockchains
-- **Enterprise Ready**: No custody requirements eliminate regulatory barriers
-- **Production Proven**: Real autonomous transactions processing at scale
+### **Integration Moats**
+- **Universal Bridge**: Only platform connecting all major AI agent ecosystems
+- **Network Effects**: Platform value increases exponentially with each additional connection
+- **First-Mover Advantage**: 6-week deployment vs competitors' 10-12 week development cycles
+- **Partnership Lock-in**: Direct platform agreements create switching costs for connected ecosystems
 
-### **Market Position**
-- **First-Mover**: 12-18 months ahead of potential competitors
-- **Standards Leadership**: Influence over X402 protocol development
-- **Ecosystem Integration**: Deep partnerships with both ICP and Algorand
-- **Enterprise Validation**: Proven enterprise customer interest and adoption
+### **Strategic Position**
+- **Platform Partnerships**: Direct integration agreements with major AI agent platforms
+- **Revenue From Week 2**: Immediate cash flow vs competitors needing development funding
+- **Universal Compatibility**: Platform-agnostic solution working with all ecosystems
+- **Essential Infrastructure**: Becomes critical dependency for cross-platform agent operations
 
-### **Strategic Assets**
-- **Technical Expertise**: Unique combination of ICP and Algorand development experience
-- **Patent Potential**: Novel integration of threshold signatures with autonomous payments
-- **Network Effects**: Platform value increases with each additional participant
-- **Switching Costs**: Deep integration creates customer retention
+### **Network Assets**
+- **Platform Relationships**: Direct partnerships with major AI agent platform providers
+- **Transaction Volume**: Revenue scales directly with overall agent ecosystem growth
+- **Connection Expertise**: Specialized knowledge of cross-platform payment routing
+- **Ecosystem Position**: Central position in agent-to-agent transaction infrastructure
 
 ---
 

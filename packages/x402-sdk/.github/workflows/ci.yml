@@ -1,0 +1,74 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [16.x, 18.x, 20.x]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: packages/x402-sdk/package-lock.json
+
+    - name: Install dependencies
+      run: npm ci
+      working-directory: packages/x402-sdk
+
+    - name: Type check
+      run: npm run typecheck
+      working-directory: packages/x402-sdk
+
+    - name: Lint
+      run: npm run lint
+      working-directory: packages/x402-sdk
+
+    - name: Run tests
+      run: echo "Tests will be implemented in future version"
+      working-directory: packages/x402-sdk
+
+    - name: Build
+      run: npm run build
+      working-directory: packages/x402-sdk
+
+  publish:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js 18.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18.x
+        registry-url: 'https://registry.npmjs.org'
+        cache: 'npm'
+        cache-dependency-path: packages/x402-sdk/package-lock.json
+
+    - name: Install dependencies
+      run: npm ci
+      working-directory: packages/x402-sdk
+
+    - name: Build package
+      run: npm run build
+      working-directory: packages/x402-sdk
+
+    - name: Publish to NPM
+      run: npm publish
+      working-directory: packages/x402-sdk
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

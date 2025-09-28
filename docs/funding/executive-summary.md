@@ -11,9 +11,9 @@
 
 ## **Investment Thesis**
 
-**The future of AI is autonomous agents conducting commerce independently - and they need payment infrastructure designed for them, not humans.**
+**The $52.6 billion autonomous AI agent market is forming now - and enterprises need payment infrastructure that eliminates custody risks for autonomous systems.**
 
-Sippar is building the payment backbone for the emerging autonomous AI economy using breakthrough technologies that solve fundamental problems plaguing current payment infrastructure:
+Sippar is building the enterprise payment infrastructure for autonomous AI agents using mathematical security that solves the #1 barrier to enterprise adoption: custody-free transactions without human oversight.
 
 **Mathematical Security**: Distributed cryptographic consensus eliminates the trust assumptions and custody risks that have resulted in over $2.3B in cryptocurrency exploits in 2024 alone¹. Unlike systems that rely on economic incentives or trusted validators who can be corrupted, our approach provides security through mathematical proofs distributed across multiple nodes.
 
@@ -21,17 +21,17 @@ Sippar is building the payment backbone for the emerging autonomous AI economy u
 
 **Autonomous-Native Architecture**: Purpose-built for machine characteristics rather than human limitations - enabling transaction speeds measured in milliseconds, micro-payment capabilities, and programmatic access without human oversight or traditional wallet management complexities.
 
-### **The Agent-to-Agent Commerce Revolution**
+### **The Enterprise AI Agent Payment Crisis**
 
-**Autonomous AI Commerce is Emerging**: AI agents are rapidly evolving from simple tools to autonomous business entities capable of making independent decisions, conducting research, negotiating contracts, and executing transactions. This represents a fundamental shift toward an AI-native economy where agents transact directly with each other at unprecedented scale and speed.
+**Massive Market Formation**: The AI agent market is exploding from $7.84B in 2025 to $52.6B by 2030 (46.3% CAGR), with 25% of gen AI companies launching agentic pilots in 2025. Financial services leads adoption, generating $87B in API value, but autonomous transactions require fundamentally different payment infrastructure.
 
-**Current Payment Systems Fail Autonomous Requirements**: Existing payment infrastructure assumes human oversight, private key management, and manual transaction approval. This creates critical gaps for autonomous agents:
+**Enterprise Adoption Blocked by Custody Risks**: Existing payment systems create unacceptable enterprise risks for autonomous agent deployment:
 
 - **Custody Risk Crisis**: Private key management vulnerabilities caused 81% of crypto exploit losses in 2024⁴, making it unsuitable for autonomous systems operating without human oversight
 - **Trusted Intermediary Vulnerabilities**: Traditional systems rely on validators or central authorities who can be corrupted, colluded with, or fail - unacceptable for autonomous agents requiring mathematical certainty
 - **Human-Speed Limitations**: Current systems operate at human decision-making speeds, incompatible with agents conducting hundreds of micro-transactions per second across multiple services
 
-**The Infrastructure Solution**: Autonomous AI commerce requires fundamentally different architecture - biometric-authenticated systems that eliminate custody risks, mathematical security guarantees that don't rely on trusted parties, and transaction processing optimized for machine-speed micro-payments rather than human approval workflows.
+**The Enterprise Infrastructure Gap**: While competitors like Skyfire ($14.5M funding), Google's AP2 protocol, and Circle focus on economic security models, enterprises require mathematical security guarantees that eliminate custody risks entirely for autonomous systems operating without human oversight.
 
 ### **Breakthrough Technologies Solving Core Problems**
 
@@ -104,31 +104,31 @@ Sippar is building the payment backbone for the emerging autonomous AI economy u
 
 ### **Target Market Segments**
 
-1. **Autonomous AI Service Platforms**
-   - **Market Size**: $70.53B autonomous AI market by 2030 (Grand View Research)³
-   - **Use Case**: AI agents purchasing compute, data, and services autonomously
-   - **Value Proposition**: Frictionless micro-payments enabling agent-to-agent commerce
-   - **Competitive Edge**: Only payment infrastructure designed specifically for agent interactions
+1. **Enterprise Financial Services**
+   - **Market Size**: BFSI sector leading agentic AI adoption in 2025, $87B API value generated in financial services
+   - **Use Case**: Autonomous procurement, treasury management, and service purchasing by enterprise AI agents
+   - **Value Proposition**: Mathematical security meeting SOX/GDPR compliance for custody-free autonomous transactions
+   - **Competitive Edge**: Only payment infrastructure eliminating private key management for enterprise autonomous systems
 
-2. **Enterprise AI Infrastructure**
-   - **Market Size**: $450B enterprise AI market transformation
-   - **Use Case**: Corporate AI agents managing cross-chain treasury operations and service procurement
-   - **Value Proposition**: Mathematical security guarantees meeting enterprise compliance requirements
-   - **Technical Advantage**: ICP's HTTP outcalls enable direct enterprise system integration
+2. **AI Platform Providers**
+   - **Market Size**: 25% of gen AI companies launching agentic pilots in 2025, growing to 50% by 2027
+   - **Use Case**: Payment infrastructure for AI agent platforms (AWS Bedrock, Salesforce Agentforce)
+   - **Value Proposition**: White-label payment infrastructure for AI agent ecosystems
+   - **Technical Advantage**: Production-ready APIs vs emerging standards from competitors
 
-3. **Cross-Chain DeFi Evolution**
-   - **Market Size**: $200B+ DeFi ecosystem seeking bridge alternatives
-   - **Use Case**: Automated trading strategies and yield optimization across ICP and Algorand
-   - **Security Innovation**: Threshold signatures eliminate custody risks that plague traditional bridges
-   - **Speed Advantage**: Agent-optimized transaction processing for high-frequency strategies
+3. **Autonomous Trading and DeFi**
+   - **Market Size**: Agent-to-agent commerce projected at $46B over next 3 years
+   - **Use Case**: High-frequency autonomous trading and yield optimization without human oversight
+   - **Security Innovation**: Mathematical security vs economic security models used by traditional bridges
+   - **Speed Advantage**: Sub-3-second finality optimized for machine-speed transactions
 
 ---
 
 ## **Competitive Position**
 
-### **Mathematical Security vs Industry Vulnerabilities**
+### **Mathematical Security vs Competitor Vulnerabilities**
 
-**Fundamental Security Architecture Advantage**: The blockchain industry suffered $2.3B in exploits during 2024 alone, with 81% caused by access control vulnerabilities¹, because traditional systems rely on economic incentives that can fail catastrophically. Validators can be bribed, collude, or make critical mistakes during network stress. Sippar employs distributed threshold cryptography that achieves security through mathematical proofs rather than trust assumptions - a fundamental architectural advantage that eliminates entire categories of attack vectors that have devastated the industry.
+**Critical Enterprise Advantage**: While the AI agent payment market heats up with Skyfire ($14.5M from a16z/Coinbase), Google's AP2 protocol (60+ partners), and Circle's USDC integration, these solutions rely on economic security models that create unacceptable custody risks for enterprise autonomous systems. Sippar's distributed threshold cryptography provides mathematical security guarantees that eliminate the trust assumptions and access control vulnerabilities causing 81% of crypto exploit losses¹.
 
 **Proven Technology Performance Metrics**:
 
@@ -218,17 +218,18 @@ Sippar is building the payment backbone for the emerging autonomous AI economy u
 - **Conversion Rate**: 5-10% of free tier users convert to paid plans
 - **Viral Coefficient**: 1.2-1.5 through developer referrals
 
-### **Business Model Risks**
+### **Business Model Validation**
 
-**Market Uncertainty**: Revenue projections are speculative
-- No proven demand for ICP-Algorand bridge solutions
-- Limited enterprise adoption of cross-chain infrastructure
-- HTTP 402 protocol adoption remains uncertain
+**Market Validation**: Strong enterprise demand signals
+- 25% of gen AI companies launching agentic pilots in 2025
+- BFSI sector leading adoption with $87B API infrastructure value
+- Agent-to-agent commerce market projected at $46B over 3 years
 
-**Competition**: Established players in cross-chain infrastructure
-- Major bridge providers with significant market share
-- Alternative technical approaches to cross-chain problems
-- Need to demonstrate clear advantages over existing solutions
+**Competitive Timing**: Well-funded competitors validate market demand
+- Skyfire: $14.5M funding, positioning as "Visa for AI economy"
+- Google AP2: 60+ partners including major payment providers
+- Circle: USDC integration for autonomous AI agents
+- Mathematical security provides enterprise differentiation vs economic security models
 
 ---
 
