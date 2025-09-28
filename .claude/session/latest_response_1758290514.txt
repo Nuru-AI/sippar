@@ -1,0 +1,1 @@
+2025-09-19 16:00:56.212045+0200 0x33a3e1   Default     0x0                  547    0    UserEventAgent: (com.apple.netsvcproxy) [com.apple.networkserviceproxy:] File Handle Maintainer got a readable event on a file handle: Network Agent Session socket (40) (null)

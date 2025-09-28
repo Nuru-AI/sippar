@@ -1,0 +1,27 @@
+{
+  "sippar_mainnet_config": {
+    "icp_canister": {
+      "id": "vj7ly-diaaa-aaaae-abvoq-cai",
+      "network": "https://ic0.app",
+      "candid_interface": "https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.icp0.io/?id=vj7ly-diaaa-aaaae-abvoq-cai"
+    },
+    "endpoints": {
+      "derive_address": "derive_algorand_address",
+      "sign_transaction": "sign_algorand_transaction",
+      "get_status": "get_canister_status"
+    },
+    "network_config": {
+      "threshold_key": "ecdsa:Secp256k1:key_1",
+      "signature_scheme": "secp256k1",
+      "address_format": "algorand_base32",
+      "checksum_algorithm": "sha512_256"
+    },
+    "integration_notes": {
+      "deployment_date": "2025-09-03",
+      "cycles_remaining": "~4.7T",
+      "security_level": "production_mainnet",
+      "algorand_compatibility": "validated",
+      "address_validation": "passes_algosdk_check"
+    }
+  }
+}

@@ -15,6 +15,7 @@ import AIOracle from './ai/AIOracle';
 import BackingEducation from './BackingEducation';
 import { X402AgentMarketplace } from './x402/X402AgentMarketplace';
 import { X402Analytics } from './x402/X402Analytics';
+import AgentPayments from './AgentPayments';
 import sipparAPI from '../services/SipparAPIService';
 
 const Dashboard: React.FC = () => {
@@ -27,7 +28,7 @@ const Dashboard: React.FC = () => {
   const setBalancesLoading = useAuthStore(state => state.setBalancesLoading);
   
   const [showChainFusionExplanation, setShowChainFusionExplanation] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'mint' | 'redeem' | 'history' | 'ai-oracle' | 'x402-marketplace' | 'x402-analytics' | 'education'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'mint' | 'redeem' | 'history' | 'ai-oracle' | 'x402-marketplace' | 'x402-analytics' | 'agent-payments' | 'education'>('overview');
 
   useEffect(() => {
     if (user?.principal) {
@@ -194,6 +195,16 @@ const Dashboard: React.FC = () => {
           }`}
         >
           📊 X402 Analytics
+        </button>
+        <button
+          onClick={() => setActiveTab('agent-payments')}
+          className={`flex-1 py-2 px-4 rounded-md font-medium transition-colors ${
+            activeTab === 'agent-payments'
+              ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
+              : 'text-gray-300 hover:text-white hover:bg-gray-700'
+          }`}
+        >
+          🌉 Agent Payments
         </button>
         <button
           onClick={() => setActiveTab('education')}
@@ -1070,6 +1081,13 @@ const Dashboard: React.FC = () => {
       {activeTab === 'x402-analytics' && (
         <div className="space-y-8">
           <X402Analytics />
+        </div>
+      )}
+
+      {/* Agent Payments Tab */}
+      {activeTab === 'agent-payments' && (
+        <div className="space-y-8">
+          <AgentPayments />
         </div>
       )}
 

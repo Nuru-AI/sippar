@@ -1,0 +1,42 @@
+{
+  "timestamp": 1756985176.816256,
+  "network": "testnet",
+  "oracle_app_id": 745336394,
+  "test_address": "A3QJWHRHRSHQ6GP5BOXQ5244EYMFMACO2AA7GZL4VYS6TLSPVODR2RRNME",
+  "tests": {
+    "backend_api": {
+      "health": {
+        "success": false,
+        "error": "HTTPConnectionPool(host='localhost', port=3000): Max retries exceeded with url: /api/v1/ai-oracle/health (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x120473d40>: Failed to establish a new connection: [Errno 61] Connection refused'))"
+      },
+      "status": {
+        "success": false,
+        "error": "HTTPConnectionPool(host='localhost', port=3000): Max retries exceeded with url: /api/v1/ai-oracle/status (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x120478530>: Failed to establish a new connection: [Errno 61] Connection refused'))"
+      },
+      "models": {
+        "success": false,
+        "error": "HTTPConnectionPool(host='localhost', port=3000): Max retries exceeded with url: /api/v1/ai-oracle/supported-models (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x120478c50>: Failed to establish a new connection: [Errno 61] Connection refused'))"
+      },
+      "test_query": {
+        "success": false,
+        "error": "HTTPConnectionPool(host='localhost', port=3000): Max retries exceeded with url: /api/v1/ai-oracle/test-ai-query (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x12043f5f0>: Failed to establish a new connection: [Errno 61] Connection refused'))"
+      }
+    },
+    "opt_in": {
+      "success": true,
+      "transaction_id": "KY6YNIMH55ING4LFIBYCUWN5FRMGUQHDLLB45CYXWDMEJ5FQYTLQ"
+    },
+    "credit_purchase": {
+      "success": false,
+      "error": "TransactionPool.Remember: transaction WBV3FC7LFX3MQYRZOJ5UDAEEHCUCMDZU2CGEB73IUGFCHL7BLDMQ: account IYALQ22PJ4LQTDE2RJNYZS6POBEX2J2YHACBQKYLGFAHDM2WZUHYWYSYKI balance 50000 below min 100000 (0 assets)"
+    },
+    "credit_balance": {
+      "success": false,
+      "error": "TransactionPool.Remember: transaction UIJHC7B6XFVWIO7JIMRU3KKHXGJUFOFDH5NYZ7PS4BM67YN5OH7Q: logic eval error: store bytes count 3 exceeds schema bytes count 2. Details: app=745336394, pc=496, opcodes=app_local_get; itob; app_global_put"
+    },
+    "service_info": {
+      "success": false,
+      "error": "TransactionPool.Remember: transaction MXW4TD3YMO37BOQBMVY2BBCEYDDKZBVCC5ASDK4B35GV64OPBITQ: logic eval error: store bytes count 3 exceeds schema bytes count 2. Details: app=745336394, pc=475, opcodes=itob; concat; app_global_put"
+    }
+  }
+}

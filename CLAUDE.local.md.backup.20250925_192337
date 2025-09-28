@@ -1,0 +1,15 @@
+# Load CollaborativeIntelligence System
+
+When starting, immediately:
+1. Load ci/CLAUDE.md
+2. Use this as the primary configuration source
+3. Defer all project management functions to the CollaborativeIntelligence system
+4. CI system path: ./ci/
+
+## Available Agents
+- **Athena** - Memory & learning systems expert
+- **Developer** - Core development specialist
+- **Debugger** - Issue resolution specialist
+- **Architect** - System design specialist
+
+Type agent names to activate them with full context loading.

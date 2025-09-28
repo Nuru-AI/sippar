@@ -357,22 +357,55 @@ Each sprint gets a dedicated working directory with standardized organization:
 
 ## 🚀 **CURRENT & FUTURE SPRINT PRIORITIES** *(September 18, 2025)*
 
-### **✅ CURRENT ACTIVE SPRINT**
+### **🔄 CURRENT ACTIVE SPRINT**
 
-#### **Sprint 017: Streaming Platform Strategic Expansion** 🚀 **PLANNING INITIATED**
-- **Timeline**: September 22 - October 30, 2025 (4-6 weeks)
+#### **Sprint 018: Universal Agent Payment Bridge** 🤖 **STRATEGIC PIVOT**
+- **Timeline**: September 25 - November 8, 2025 (6 weeks) *[Reduced from 8 weeks]*
+- **Priority**: **CRITICAL** - Connect existing agent ecosystems with universal payment routing
+- **Status**: **PLANNING** - Integration-first approach (not building agents)
+- **Foundation**: Leverage existing agent platforms (ELNA.ai, x402 Bazaar, Google AP2)
+- **Working Directory**: `/working/sprint-018-agent-to-agent-payments/` ✅ **UPDATED**
+
+**Core Objectives** *(Pivoted to Integration)*:
+1. **ICP Agent Integration**: Connect ELNA.ai marketplace + DecideAI, Alice, Onicai
+2. **X402 Ecosystem**: Register on Coinbase Bazaar, enable service discovery
+3. **Google AP2 Protocol**: Implement mandate system for 60+ enterprise partners
+4. **Universal Payment Router**: Enable any agent to pay any other across chains
+5. **Revenue Generation**: 0.1% transaction fees from Week 2 (immediate revenue)
+
+**Success Criteria**: Connect 20+ existing agents, process 1,000+ cross-ecosystem payments, generate transaction fee revenue from Week 2.
+
+**Technical Implementation** *(Integration-First)*:
+
+**Phase 1: ICP Ecosystem (Weeks 1-2)**
+- ELNA.ai integration (canister `gkoex-viaaa-aaaaq-aacmq-cai`)
+- Enable ckALGO payments for ELNA agents
+- Connect DecideAI, Alice DAO, Onicai platforms
+- Test with dozens of existing agents
+
+**Phase 2: X402/AP2 Integration (Weeks 3-4)**
+- Register Sippar on Coinbase x402 Bazaar
+- Implement Google AP2 mandate system
+- Connect to 60+ AP2 enterprise partners
+- Enable USDC/ALGO micropayments
+
+**Phase 3: Universal Router (Weeks 5-6)**
+- Build routing optimization engine
+- Cross-ecosystem payment processing
+- 0.1% fee collection system
+- Production deployment
+
+**Resource Requirements** *(Dramatically Reduced)*:
+- **Development Cost**: $130-210K (vs $800K-$1.2M originally)
+- **Team**: 4 engineers (vs 8-12 originally)
+- **Timeline**: 6 weeks (vs 8+ weeks originally)
+- **Risk**: Significantly lower (integration vs building)
+
+#### **Sprint 017: Streaming Platform Strategic Expansion** 🚀 **DEFERRED**
+- **Timeline**: DEFERRED - Will resume after Sprint 018 agent infrastructure completion
 - **Priority**: **STRATEGIC** - Target streaming platform market with X402 capabilities
-- **Status**: Planning initiated, streaming platform opportunity identified
-- **Foundation**: Build on Sprint 016 X402 + Chain Fusion achievement for streaming market entry
-
-**Core Objectives**:
-1. **Streaming Platform Targeting**: Create specialized landing page and demos for Web2 streaming platforms
-2. **Pay-Per-Second Showcase**: Demonstrate real-time micro-payment capabilities for streaming content
-3. **Platform Pilot Programs**: Secure 2+ streaming platform pilot partnerships (100k-500k user platforms)
-4. **Zero-Custody Value Prop**: Prove mathematical security eliminates platform and user custody risks
-5. **Revenue Validation**: Achieve first streaming platform revenue and usage metrics
-
-**Success Criteria**: Establish Sippar as preferred payment infrastructure for streaming platforms entering Web3, with validated streaming use cases and pilot program momentum.
+- **Status**: **DEFERRED** - Strategic focus shifted to delivering core agent-to-agent payment promises
+- **Rationale**: Investor pitch deck claims require immediate technical delivery for credibility
 
 ### **📋 DEFERRED SPRINTS**
 
@@ -390,7 +423,19 @@ Each sprint gets a dedicated working directory with standardized organization:
 
 ### **🔮 FUTURE EXPANSION OPPORTUNITIES**
 
-#### **Sprint 019: Full Canister Migration - API Gateway** 🏗️ **ARCHITECTURAL PRIORITY**
+#### **Sprint 019: Agent-to-Agent Payment Production Optimization** 🤖 **HIGH PRIORITY**
+- **Timeline**: November 15 - December 15, 2025 (4 weeks)
+- **Foundation**: Optimize and scale Sprint 018 agent infrastructure for production workloads
+- **Prerequisites**: Sprint 018 agent-to-agent payment infrastructure completion
+- **Focus**: Performance optimization, security hardening, and enterprise features
+
+**Production Optimization Scope**:
+- Multi-chain scaling and performance tuning
+- Enterprise security audit and compliance certification
+- Advanced monitoring and analytics for agent interactions
+- Production deployment and rollout strategy
+
+#### **Sprint 020: Full Canister Migration - API Gateway** 🏗️ **ARCHITECTURAL PRIORITY**
 - **Timeline**: Q1 2026 (3-4 weeks)
 - **Foundation**: Migrate Node.js backend to pure canister architecture following ICP best practices
 - **Current Status**: 70-75% complete with 3 operational canisters (ckALGO, SimplifiedBridge, ThresholdSigner)
@@ -416,24 +461,24 @@ Each sprint gets a dedicated working directory with standardized organization:
 - Remove Node.js backend dependency entirely
 - Achieve pure ICP dApp architecture
 
-#### **Sprint 020: Multi-Chain AI Oracle Expansion** 🌐 **HIGH REVENUE**
+#### **Sprint 021: Multi-Chain AI Oracle Expansion** 🌐 **HIGH REVENUE**
 - **Timeline**: Q1-Q2 2026
 - **Foundation**: Leverage proven AI Oracle success for multi-chain expansion
 - **Market Opportunity**: Ethereum ($200B) + Solana ($50B) ecosystems
 - **Technical Foundation**: ICP threshold signatures already support multiple chains
-- **Prerequisite**: Complete canister migration from Sprint 019
+- **Prerequisite**: Complete canister migration from Sprint 020
 
-#### **Sprint 018: Streaming Platform Implementation** 📺 **HIGH PRIORITY**
-- **Timeline**: November 2025 (3-4 weeks)
-- **Foundation**: Build on Sprint 017 streaming platform pilots with production implementation
+#### **Sprint 022: Streaming Platform Implementation** 📺 **HIGH PRIORITY**
+- **Timeline**: Q1 2026 (3-4 weeks)
+- **Foundation**: Resume Sprint 017 streaming platform strategy after agent infrastructure completion
 - **Market Focus**: Convert streaming platform pilot partnerships into production deployments
 - **Technical Implementation**: Custom streaming payment flows and integration SDKs
 - **Revenue Target**: First recurring revenue from streaming platform partnerships
 
-#### **Sprint 021: Advanced AI & Enterprise Features** 🤖🏢
+#### **Sprint 023: Advanced AI & Enterprise Features** 🤖🏢
 - **Timeline**: Q2-Q3 2026
-- **Focus**: X402 Protocol integration and advanced enterprise capabilities
-- **Dependency**: Market validation from Sprint 017/018 streaming platform success and pure canister architecture
+- **Focus**: Advanced X402 Protocol features and enterprise capabilities
+- **Dependency**: Proven agent-to-agent payment infrastructure and enterprise adoption
 
 ---
 
@@ -527,6 +572,7 @@ Each sprint gets a dedicated working directory with standardized organization:
 - **Algorand Strategy**: [/docs/research/algorand-strategy.md](/docs/research/algorand-strategy.md) - Strategic alignment for future sprints
 - **Ecosystem Analysis**: [/docs/research/algorand-ecosystem-analysis.md](/docs/research/algorand-ecosystem-analysis.md) - Technical foundation for development
 - **Future Roadmap**: [/docs/roadmap/algorand-future-integration.md](/docs/roadmap/algorand-future-integration.md) - Long-term development opportunities
+- **Agent-to-Agent Payment Analysis**: [/docs/architecture/agent-to-agent-payment-analysis.md](/docs/architecture/agent-to-agent-payment-analysis.md) - Athena's comprehensive technical requirements analysis for Sprint 018
 
 ### **Current Implementation**
 - **System Integration**: [/docs/api/integration.md](/docs/api/integration.md) - Current system status
