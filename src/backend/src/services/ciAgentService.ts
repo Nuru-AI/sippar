@@ -48,6 +48,11 @@ export interface CIAgentDefinition {
 const CI_AGENTS_PATH = '/Users/eladm/Projects/CollaborativeIntelligence/AGENTS';
 const CI_PROJECT_PATH = '/Users/eladm/Projects/Nuru-AI/CI';
 
+// Production CI API Configuration (Sprint 018.2)
+const CI_API_BASE_URL = process.env.CI_API_URL || 'http://74.50.113.152:8080';
+const CI_API_KEY = process.env.CI_API_KEY || 'ci-prod-key-2025-sippar-x402';
+const CI_API_TIMEOUT_MS = 120000; // 2 minutes for production API calls
+
 // Enhanced cache interfaces
 interface CacheEntry<T> {
   content: T;
@@ -114,6 +119,130 @@ class CIAgentService extends EventEmitter {
         lastCall: new Date()
       });
     });
+  }
+
+  /**
+   * Sprint 018.2: Check production CI API health
+   */
+  async checkCIAPIHealth(): Promise<{
+    status: string;
+    database: string;
+    redis: string;
+    agents_loaded: number;
+  }> {
+    try {
+      const response = await fetch(`${CI_API_BASE_URL}/health`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(10000) // 10 second timeout for health check
+      });
+
+      if (!response.ok) {
+        throw new Error(`CI API health check failed: ${response.status}`);
+      }
+
+      return await response.json() as {
+        status: string;
+        database: string;
+        redis: string;
+        agents_loaded: number;
+      };
+    } catch (error) {
+      console.error('❌ CI API health check failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Sprint 018.2: Get production CI agent list
+   */
+  async getProductionCIAgents(): Promise<Array<{
+    id: string;
+    name: string;
+    description: string;
+    capabilities: string[];
+    status: string;
+  }>> {
+    try {
+      const response = await fetch(`${CI_API_BASE_URL}/api/v1/agents/list`, {
+        method: 'GET',
+        headers: {
+          'X-API-Key': CI_API_KEY
+        },
+        signal: AbortSignal.timeout(15000) // 15 second timeout
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch CI agents: ${response.status}`);
+      }
+
+      const data = await response.json() as { agents: Array<{
+        id: string;
+        name: string;
+        description: string;
+        capabilities: string[];
+        status: string;
+      }>; total: number };
+      return data.agents || [];
+    } catch (error) {
+      console.error('❌ Failed to fetch CI agents from production API:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Sprint 018.2: Invoke production CI agent
+   */
+  async invokeProductionCIAgent(
+    agentId: string,
+    prompt: string,
+    sessionId: string,
+    context: any = {}
+  ): Promise<{
+    result: string;
+    quality_score?: number;
+    processing_time_ms?: number;
+  }> {
+    try {
+      const startTime = Date.now();
+
+      const response = await fetch(`${CI_API_BASE_URL}/api/v1/agents/${agentId}/invoke`, {
+        method: 'POST',
+        headers: {
+          'X-API-Key': CI_API_KEY,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          agent_id: agentId,
+          prompt,
+          session_id: sessionId,
+          context
+        }),
+        signal: AbortSignal.timeout(CI_API_TIMEOUT_MS)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`CI agent invocation failed: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json() as {
+        response?: string;
+        result?: string;
+        quality_score?: number;
+      };
+      const processingTime = Date.now() - startTime;
+
+      console.log(`✅ Production CI agent ${agentId} completed in ${processingTime}ms`);
+
+      return {
+        result: result.response || result.result || JSON.stringify(result),
+        quality_score: result.quality_score,
+        processing_time_ms: processingTime
+      };
+    } catch (error) {
+      console.error(`❌ Production CI agent invocation failed for ${agentId}:`, error);
+      throw error;
+    }
   }
 
   /**
