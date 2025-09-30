@@ -8,7 +8,6 @@ import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { spawn } from 'child_process';
 import { promisify } from 'util';
-import { EventEmitter } from 'events';
 
 export interface CIAgentRequest {
   agent: string;
@@ -46,33 +45,8 @@ export interface CIAgentDefinition {
 
 // CI Agent Path Configuration
 const CI_AGENTS_PATH = '/Users/eladm/Projects/CollaborativeIntelligence/AGENTS';
-const CI_PROJECT_PATH = '/Users/eladm/Projects/Nuru-AI/CI';
 
-// Enhanced cache interfaces
-interface CacheEntry<T> {
-  content: T;
-  timestamp: number;
-}
-
-interface AgentMetrics {
-  calls: number;
-  revenue: number;
-  avgQuality: number;
-  avgResponseTime: number;
-  successRate: number;
-  lastCall: Date;
-}
-
-class CIAgentService extends EventEmitter {
-  // Concurrency management
-  private static readonly MAX_CONCURRENT_AGENTS = 5;
-  private static readonly AGENT_TIMEOUT_MS = 45000; // 45 seconds
-  private activeAgentCalls = new Set<string>();
-
-  // Enhanced caching
-  private memoryCache = new Map<string, CacheEntry<string>>();
-  private metadataCache = new Map<string, CacheEntry<any>>();
-  private readonly CACHE_TTL_MS = 300000; // 5 minutes
+class CIAgentService {
   private metrics = {
     totalCalls: 0,
     totalRevenue: 0,
@@ -90,31 +64,6 @@ class CIAgentService extends EventEmitter {
     quality: number;
     principal: string;
   }> = [];
-
-  // Enhanced agent-specific metrics
-  private agentMetrics = new Map<string, AgentMetrics>();
-
-  constructor() {
-    super();
-    this.initializeAgentMetrics();
-  }
-
-  /**
-   * Initialize agent-specific metrics
-   */
-  private initializeAgentMetrics(): void {
-    const agents = ['athena', 'architect', 'developer', 'auditor', 'analyst'];
-    agents.forEach(agent => {
-      this.agentMetrics.set(agent, {
-        calls: 0,
-        revenue: 0,
-        avgQuality: 0,
-        avgResponseTime: 0,
-        successRate: 0,
-        lastCall: new Date()
-      });
-    });
-  }
 
   /**
    * Get available CI agents for X402 marketplace
@@ -180,27 +129,13 @@ class CIAgentService extends EventEmitter {
   }
 
   /**
-   * Load agent metadata from CollaborativeIntelligence system (with caching)
+   * Load agent metadata from CollaborativeIntelligence system
    */
   private async loadAgentMetadata(agentName: string): Promise<any> {
-    // Check cache first
-    const cached = this.metadataCache.get(agentName);
-    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL_MS) {
-      return cached.content;
-    }
-
     try {
       const metadataPath = join(CI_AGENTS_PATH, agentName, 'metadata.json');
       const metadataContent = await readFile(metadataPath, 'utf-8');
-      const metadata = JSON.parse(metadataContent);
-
-      // Cache the result
-      this.metadataCache.set(agentName, {
-        content: metadata,
-        timestamp: Date.now()
-      });
-
-      return metadata;
+      return JSON.parse(metadataContent);
     } catch (error) {
       console.warn(`⚠️ Could not load metadata for agent ${agentName}:`, error);
       return null;
@@ -208,26 +143,12 @@ class CIAgentService extends EventEmitter {
   }
 
   /**
-   * Load agent memory from CollaborativeIntelligence system (with caching)
+   * Load agent memory from CollaborativeIntelligence system
    */
   private async loadAgentMemory(agentName: string): Promise<string> {
-    // Check cache first
-    const cached = this.memoryCache.get(agentName);
-    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL_MS) {
-      return cached.content;
-    }
-
     try {
       const memoryPath = join(CI_AGENTS_PATH, agentName, 'MEMORY.md');
-      const memory = await readFile(memoryPath, 'utf-8');
-
-      // Cache the result
-      this.memoryCache.set(agentName, {
-        content: memory,
-        timestamp: Date.now()
-      });
-
-      return memory;
+      return await readFile(memoryPath, 'utf-8');
     } catch (error) {
       console.warn(`⚠️ Could not load memory for agent ${agentName}:`, error);
       return '';
@@ -250,8 +171,9 @@ class CIAgentService extends EventEmitter {
       // Create agent activation prompt
       const agentPrompt = this.createAgentPrompt(agentName, task, context, memory, metadata);
 
-      // ENHANCED: Use real CI agent invocation with simulation fallback
-      const response = await this.invokeRealCIAgent(agentName, task, agentPrompt, memory, context.sessionId);
+      // For MVP, we'll simulate agent response based on loaded context
+      // In production, this would integrate with the actual CI agent activation system
+      const response = await this.simulateAgentResponse(agentName, task, agentPrompt, memory);
 
       const duration = performance.now() - startTime;
 
@@ -290,135 +212,7 @@ Please provide a detailed response following the CI agent signature format:
   }
 
   /**
-   * REAL CI Agent Invocation - Enhanced Phase 1 Implementation
-   */
-  private async invokeRealCIAgent(agentName: string, task: string, prompt: string, memory: string, sessionId: string): Promise<string> {
-    this.emit('agentStarted', { agent: agentName, task, sessionId });
-
-    return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        if (ciProcess && !ciProcess.killed) {
-          ciProcess.kill('SIGTERM');
-        }
-        console.warn(`⏱️ CI Agent ${agentName} timeout - falling back to simulation`);
-        resolve(this.generateAgentResponse(agentName, task, memory));
-      }, CIAgentService.AGENT_TIMEOUT_MS);
-
-      console.log(`🚀 Invoking real CI agent: ${agentName} for task: ${task}`);
-
-      const ciProcess = spawn('ci', ['load', agentName, '--task', task], {
-        cwd: CI_PROJECT_PATH,
-        stdio: ['pipe', 'pipe', 'pipe'],
-        env: { ...process.env, CI_SESSION: sessionId }
-      });
-
-      let output = '';
-      let errorOutput = '';
-
-      ciProcess.stdout?.on('data', (data) => {
-        const chunk = data.toString();
-        output += chunk;
-        this.emit('agentProgress', { agent: agentName, sessionId, output: chunk });
-      });
-
-      ciProcess.stderr?.on('data', (data) => {
-        errorOutput += data.toString();
-      });
-
-      ciProcess.on('close', (code) => {
-        clearTimeout(timeout);
-
-        if (code === 0 && output.trim()) {
-          try {
-            // Try to parse as JSON first
-            const response = JSON.parse(output);
-            const formattedResponse = this.formatRealAgentResponse(agentName, response);
-            this.emit('agentCompleted', { agent: agentName, sessionId, success: true, response: formattedResponse });
-            resolve(formattedResponse);
-          } catch (jsonError) {
-            // Parse as text response
-            const textResponse = this.parseTextResponse(agentName, output);
-            this.emit('agentCompleted', { agent: agentName, sessionId, success: true, response: textResponse });
-            resolve(textResponse);
-          }
-        } else {
-          console.error(`❌ CI Agent ${agentName} failed with code ${code}:`, errorOutput || 'No error output');
-          // Fallback to simulation
-          const fallbackResponse = this.generateAgentResponse(agentName, task, memory);
-          this.emit('agentCompleted', { agent: agentName, sessionId, success: false, response: fallbackResponse, fallback: true });
-          resolve(fallbackResponse);
-        }
-      });
-
-      ciProcess.on('error', (error) => {
-        clearTimeout(timeout);
-        console.error(`💥 CI Agent spawn error for ${agentName}:`, error.message);
-        // Fallback to simulation
-        const fallbackResponse = this.generateAgentResponse(agentName, task, memory);
-        this.emit('agentCompleted', { agent: agentName, sessionId, success: false, response: fallbackResponse, fallback: true });
-        resolve(fallbackResponse);
-      });
-    });
-  }
-
-  /**
-   * Format real agent JSON response
-   */
-  private formatRealAgentResponse(agentName: string, response: any): string {
-    const agent = agentName.toUpperCase();
-    if (response.response || response.result) {
-      return `[${agent}]: ${response.response || response.result} -- [${agent}]`;
-    }
-    return `[${agent}]: ${JSON.stringify(response, null, 2)} -- [${agent}]`;
-  }
-
-  /**
-   * Parse text response from CI agent
-   */
-  private parseTextResponse(agentName: string, output: string): string {
-    const agent = agentName.toUpperCase();
-    const lines = output.trim().split('\n');
-
-    // Look for agent signature format
-    const agentLines = lines.filter(line =>
-      line.includes(`[${agent}]`) ||
-      line.toLowerCase().includes(agentName.toLowerCase())
-    );
-
-    if (agentLines.length > 0) {
-      return agentLines.join(' ').trim();
-    }
-
-    // If no specific agent format, wrap the output
-    const cleanOutput = lines.filter(line =>
-      !line.includes('Loading') &&
-      !line.includes('Initializing') &&
-      line.trim().length > 0
-    ).join(' ').trim();
-
-    return `[${agent}]: ${cleanOutput} -- [${agent}]`;
-  }
-
-  /**
-   * Wait for available agent slot (concurrency management)
-   */
-  private async waitForAgentSlot(sessionId: string): Promise<void> {
-    return new Promise((resolve) => {
-      const checkSlot = () => {
-        if (this.activeAgentCalls.size < CIAgentService.MAX_CONCURRENT_AGENTS) {
-          this.activeAgentCalls.add(sessionId);
-          resolve();
-        } else {
-          // Wait 100ms and check again
-          setTimeout(checkSlot, 100);
-        }
-      };
-      checkSlot();
-    });
-  }
-
-  /**
-   * Simulate agent response (MVP implementation - FALLBACK)
+   * Simulate agent response (MVP implementation)
    * In production, this would call the actual CI agent system
    */
   private async simulateAgentResponse(agentName: string, task: string, prompt: string, memory: string): Promise<string> {
@@ -561,7 +355,7 @@ Please provide a detailed response following the CI agent signature format:
   }
 
   /**
-   * Call CI agent with payment verification and concurrency management
+   * Call CI agent with payment verification
    */
   async callAgent(request: CIAgentRequest): Promise<CIAgentResponse> {
     const startTime = performance.now();
@@ -570,9 +364,6 @@ Please provide a detailed response following the CI agent signature format:
     if (!request.paymentVerified) {
       throw new Error('Payment verification required');
     }
-
-    // Wait for available agent slot (concurrency management)
-    await this.waitForAgentSlot(request.sessionId);
 
     try {
       // Activate CI agent
@@ -600,14 +391,11 @@ Please provide a detailed response following the CI agent signature format:
       console.error(`❌ CI Agent call failed for ${request.agent}:`, error);
 
       throw new Error(`CI Agent ${request.agent} failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      // Release agent slot
-      this.activeAgentCalls.delete(request.sessionId);
     }
   }
 
   /**
-   * Get enhanced service metrics
+   * Get service metrics
    */
   getMetrics() {
     return {
@@ -615,21 +403,7 @@ Please provide a detailed response following the CI agent signature format:
       totalAgents: this.getAvailableAgents().length,
       recentCalls: this.callHistory.slice(-10),
       uptime: '99.8%',
-      status: 'operational',
-      // Enhanced metrics
-      concurrency: {
-        maxConcurrent: CIAgentService.MAX_CONCURRENT_AGENTS,
-        currentActive: this.activeAgentCalls.size,
-        availableSlots: CIAgentService.MAX_CONCURRENT_AGENTS - this.activeAgentCalls.size
-      },
-      caching: {
-        memoryCache: this.memoryCache.size,
-        metadataCache: this.metadataCache.size,
-        cacheTTL: this.CACHE_TTL_MS / 1000 // in seconds
-      },
-      agentMetrics: Object.fromEntries(this.agentMetrics),
-      realAgentEnabled: true, // Flag to show real agent integration is active
-      fallbackAvailable: true // Simulation fallback is available
+      status: 'operational'
     };
   }
 
