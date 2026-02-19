@@ -3387,7 +3387,7 @@ app.post('/api/sippar/ci-agents/:agent/:service',
   async (req, res) => {
   const startTime = performance.now();
   const { agent, service } = req.params;
-  const { sessionId, requirements, paymentVerified = false } = req.body;
+  const { sessionId, requirements, paymentToken } = req.body;
 
   try {
     // Extract principal from request (would be set by authentication middleware)
@@ -3395,11 +3395,15 @@ app.post('/api/sippar/ci-agents/:agent/:service',
 
     console.log(`🤖 CI Agent service call: ${agent}/${service} for principal: ${principal.slice(0, 10)}...`);
 
-    // Payment verification check (handled by X402 middleware in production)
-    if (!paymentVerified) {
+    // Payment verification: require a valid X402 service token
+    // Token is obtained via POST /api/sippar/x402/create-payment
+    const isValidPayment = paymentToken && x402Service.verifyServiceToken(paymentToken);
+
+    if (!isValidPayment) {
       return res.status(402).json({
         success: false,
         error: 'Payment required',
+        message: 'Obtain a payment token via POST /api/sippar/x402/create-payment, then pass it as paymentToken in the request body',
         payment_endpoint: `/api/sippar/x402/create-payment`,
         service_info: {
           agent,
@@ -4480,7 +4484,28 @@ function validateServiceEndpoint(service: string): boolean {
     'external-openai-gpt4',
     'external-claude-sonnet',
     // Analytics Services
-    'blockchain-analytics'
+    'blockchain-analytics',
+    // CI Agent Services
+    'ci-developer-code-generation',
+    'ci-documenter-documentation',
+    'ci-refactorer-code-improvement',
+    'ci-tester-qa-testing',
+    'ci-debugger-issue-resolution',
+    'ci-analyst-data-analysis',
+    'ci-athena-memory-optimization',
+    'ci-architect-system-design',
+    'ci-ui-interface-development',
+    'ci-database-data-management',
+    'ci-builder-full-stack',
+    'ci-fixer-problem-resolution',
+    'ci-designer-design-systems',
+    'ci-optimizer-performance',
+    'ci-researcher-analysis',
+    'ci-auditor-security-review',
+    'ci-webarchitect-web-systems',
+    'ci-technicalarchitect-technical-design',
+    'ci-cryptographer-security-systems',
+    'ci-solutionarchitect-solution-design'
   ];
   return allowedServices.includes(service);
 }

@@ -892,14 +892,16 @@ Please provide a detailed response following the CI agent signature format:
 
     try {
       // Activate CI agent
-      const result = await this.activateCIAgent(request.agent, request.task, {
-        sessionId: request.sessionId,
-        requirements: request.requirements,
-        principal: request.principal
-      });
+      // Use HTTP API to invoke CI agent (Grok-powered)
+      const ciResult = await this.invokeProductionCIAgent(
+        request.agent,
+        `[Task: ${request.task}] ${request.requirements || ''}`.trim(),
+        request.sessionId
+      );
 
+      const result = ciResult.result;
       const processingTime = performance.now() - startTime;
-      const qualityScore = this.calculateQualityScore(request.agent, result);
+      const qualityScore = ciResult.quality_score || this.calculateQualityScore(request.agent, result);
 
       return {
         result,
