@@ -4,7 +4,38 @@
 
 ## What Sippar Is
 
-An ICP-Algorand bridge that lets users deposit ALGO and receive ckALGO (chain-key ALGO) on ICP, 1:1 backed. Uses ICP's threshold Ed25519 signatures to control Algorand custody addresses without trusted intermediaries.
+**The universal payment bridge for AI agent-to-agent commerce**, built on ICP-Algorand Chain Fusion.
+
+The bridge (ALGO → ckALGO) is the **infrastructure layer**. The product is **agent-to-agent payments** — AI agents discovering, negotiating with, and paying other agents across chains using ckALGO, secured by ICP threshold signatures with zero custody risk.
+
+### Vision Stack
+```
+┌─────────────────────────────────────────────┐
+│  Agent-to-Agent Commerce (the product)      │
+│  • X402 payment protocol (HTTP 402)         │
+│  • Agent discovery + marketplace            │
+│  • Cross-ecosystem routing (ELNA, Fetch.ai, │
+│    Google A2A, Coinbase Bazaar)              │
+│  • 0.1% routing fee revenue model           │
+├─────────────────────────────────────────────┤
+│  ckALGO Bridge (the infrastructure)         │
+│  • ICP threshold Ed25519 signatures         │
+│  • ICRC-1 token, 1:1 ALGO backed            │
+│  • Zero custody risk (mathematical security)│
+│  • Internet Identity (no seed phrases)      │
+├─────────────────────────────────────────────┤
+│  Algorand Settlement (the rails)            │
+│  • 2.8s finality, $0.001/tx                 │
+│  • x402 native support (Algorand 2025+)     │
+│  • ASIF framework (MCP + A2A + x402)        │
+└─────────────────────────────────────────────┘
+```
+
+### Why This Architecture
+- **Algorand's 2025+ roadmap** explicitly targets agentic commerce via x402 + MCP + A2A
+- **ICP Chain Fusion** provides mathematical security (threshold crypto) vs economic security (staking)
+- **Sippar is the payment highway** — agents are the cars, we're the roads
+- **Competitive moat**: 12-18 months to replicate threshold signature infrastructure
 
 ## System Components
 

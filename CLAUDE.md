@@ -1,12 +1,19 @@
 # Sippar — ICP-Algorand Bridge
 
-**Project**: Trustless bridge between ICP and Algorand using threshold Ed25519 signatures
-**Status**: Mainnet — deposit→mint flow working, 25+ ckALGO minted
+**Project**: Universal payment bridge for AI agent-to-agent commerce, built on ICP-Algorand Chain Fusion
+**Vision**: Agents paying agents across chains via X402 protocol, secured by ICP threshold signatures
+**Status**: Bridge layer working on mainnet (25+ ckALGO minted). Agent payment layer prototyped, not production.
 **Last Updated**: 2026-02-19
 
 ## What This Is
 
-Users deposit ALGO to a threshold-controlled custody address. Backend detects the deposit, registers it with the bridge canister, and mints ckALGO (ICRC-1 token) 1:1. Redemption burns ckALGO and uses threshold signatures to send ALGO back.
+Sippar is the **payment highway for AI agents**. The bridge (ALGO↔ckALGO) is infrastructure. The product is agent-to-agent payments via X402 protocol with mathematical security from ICP threshold signatures — no custody risk, no seed phrases.
+
+**Bridge layer**: Users deposit ALGO → get ckALGO (ICRC-1, 1:1 backed). Redemption burns ckALGO → threshold-signed ALGO withdrawal.
+
+**Agent payment layer**: X402 protocol enables agents to discover, negotiate with, and pay other agents across ecosystems (ELNA, Fetch.ai, Google A2A, Coinbase Bazaar). Sippar collects 0.1% routing fee. Currently prototyped, not production.
+
+**Strategic context**: Algorand's 2025+ roadmap explicitly targets agentic commerce via ASIF (MCP + A2A + x402). Sippar is positioned as the payment bridge that all agent platforms need.
 
 ## Architecture
 

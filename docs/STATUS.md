@@ -2,6 +2,11 @@
 
 **Last Updated**: 2026-02-19
 
+## Vision
+Sippar is a **universal payment bridge for AI agent-to-agent commerce**. The ICP-Algorand bridge (ckALGO) is the infrastructure layer. The product is agents paying agents across chains via X402, with mathematical security from ICP threshold signatures.
+
+See `docs/ARCHITECTURE.md` for the full vision stack and `working/sprint-018-agent-to-agent-payments/` for the agent payment sprint docs.
+
 ## What Works ✅
 
 ### Deposit → Mint (Mainnet, Automated)
@@ -63,9 +68,33 @@
 - Updated backend services to match new canister interface
 - Both canisters redeployed to mainnet
 
+## What's Prototyped But Not Production
+
+### X402 Agent Payment Infrastructure
+- X402 middleware exists (`x402Service.ts`, 10KB)
+- Frontend components: `X402PaymentModal.tsx`, `X402AgentMarketplace.tsx`, `X402Analytics.tsx`
+- CI agent integration service (`ciAgentService.ts`, 40KB, 5 agent types)
+- Smart routing system built (Sprint 018.1-018.2)
+- **Status**: Code exists, not connected to real agent platforms yet
+- **Honest assessment** (from `honest-implementation-status.md`): prototypes use mock data, no real ELNA/Fetch.ai connections
+
+### Agent Platform Integrations (Planned, Not Built)
+- ELNA.ai — SNS canister identified, no IDL/API access yet
+- Fetch.ai — SDK integration designed, not implemented
+- Google A2A — mandate system designed, not implemented
+- Coinbase Bazaar — x402 registration planned
+
 ## Next Steps (Priority Order)
 
+### Infrastructure (bridge must work first)
 1. **Per-user custody addresses** — derive unique address per user via threshold_signer, register with simplified_bridge
 2. **Test redemption flow end-to-end** — burn ckALGO → sign withdrawal → submit to Algorand
 3. **Phase 2 confirmations** — canister-side HTTP outcalls to verify Algorand deposits (no trusted backend)
-4. **VPS cleanup** — kill unused services eating memory, or upgrade server
+
+### Product (agent payments)
+4. **X402 integration with real agents** — connect to at least one live agent platform
+5. **Agent registry canister** — on-chain agent discovery and capability advertisement
+6. **Universal payment router** — cross-ecosystem routing with 0.1% fee collection
+
+### Ops
+7. **VPS cleanup** — kill unused services eating memory, or upgrade server
