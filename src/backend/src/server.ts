@@ -691,7 +691,7 @@ app.post('/ck-algo/generate-deposit-address', async (req, res) => {
     
     res.json({
       success: true,
-      operation: 'generate_deposit_address',
+      operation: 'register_custody_address',
       principal: principal,
       custody_address: custodyInfo.custodyAddress,
       deposit_id: custodyInfo.depositId,
@@ -708,10 +708,10 @@ app.post('/ck-algo/generate-deposit-address', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('❌ Failed to generate deposit address:', error);
+    console.error('❌ Failed to register custody address:', error);
     res.status(500).json({
       success: false,
-      operation: 'generate_deposit_address',
+      operation: 'register_custody_address',
       error: error instanceof Error ? error.message : 'Unknown error',
       timestamp: new Date().toISOString(),
     });
