@@ -1,6 +1,6 @@
 # Sippar Status
 
-**Last Updated**: 2026-02-19 18:51 CET
+**Last Updated**: 2026-02-19 19:59 CET
 
 ## Vision
 Sippar is the **cross-chain payment rail for AI agent commerce**. ICP is invisible middleware (chain fusion, threshold crypto, ckTokens) — not a competing L1. Agents on Ethereum or Solana pay in their native token; Sippar swaps via ICP DEX, burns ckALGO, and settles native ALGO to the receiving agent. No bridges, no seed phrases, no human intervention.
@@ -36,9 +36,9 @@ See also: `docs/ARCHITECTURE.md`, `working/sprint-018-agent-to-agent-payments/`.
 - **Smart routing**: NLP → agent team assembly, 3ms response time
 - **Agent invocation**: Developer (225ms), Auditor (19ms), all agents responding
 - **Payment gating**: X402 payment-required flow implemented (needs hardening)
-- **⚠️ LLM responses are mock/templated** — no LLM API keys configured yet
-- **⚠️ Payment verification is trivially bypassable** — `paymentVerified` body param
-- **⚠️ CI agent services not in X402 payment whitelist** (server.ts:4465)
+- **✅ Real LLM responses** — Grok (grok-3-mini-fast) via xAI API, 6-12s response times
+- **✅ Payment verification fixed** — requires valid X402 token, old `paymentVerified` bypass removed
+- **✅ CI agent services in X402 payment whitelist** — all 20 agent service IDs added
 
 ### Infrastructure
 - Backend running on VPS (74.50.113.152:3004)
@@ -60,27 +60,22 @@ See also: `docs/ARCHITECTURE.md`, `working/sprint-018-agent-to-agent-payments/`.
 - But the live flow hardcodes the single address on startup
 - **Scaling blocker**: Can't distinguish deposits from different users without tx metadata
 
-### Real LLM Agent Responses
-- CI API has OPENAI_API_KEY and ANTHROPIC_API_KEY empty
-- Agents return templated mock responses, not actual AI output
-- Need to configure Grok (xAI) or other LLM API key
-
 ### Real Payment Settlement
 - X402 payment tokens are base64-encoded JSON (not on-chain)
 - No actual blockchain transaction verification
-- Payment gate bypassable via request body parameter
+- Payment gate now requires valid token (bypass fixed) but tokens themselves are simulated
 
 ## Known Issues
 
 ### Critical
 1. **Single custody address** — all users share one address. Works for demo/testing, not for multi-user production.
 2. **Confirmation architecture is temporary** — backend reports confirmations to canister (trusted party). Phase 2 should use canister-side HTTP outcalls (ckETH pattern) for trustless verification.
-3. **Payment verification is fake** — `paymentVerified: true` in body bypasses payment gate. No server-side token validation.
+3. **Payment tokens are simulated** — X402 tokens are base64 JSON with expiry, not backed by on-chain transactions. Gate requires valid token now (bypass fixed).
 
 ### Important
 4. **VPS memory pressure** — 3.8GB RAM, frequently near OOM. npm install fails, services compete for memory.
 5. **Backend principal `2vxsx-fae`** — the anonymous principal is used as authorized minter. Should be replaced with the actual deploy identity for production.
-6. **CI agent services not in payment whitelist** — need to add 20 CI agent service IDs to `server.ts:4465`
+6. ~~CI agent services not in payment whitelist~~ — **FIXED**: all 20 CI agent service IDs added
 
 ### Cleanup
 7. **`ck_algo` canister on mainnet** — archived in code but still deployed. Consider stopping to reclaim cycles.
@@ -95,10 +90,18 @@ See also: `docs/ARCHITECTURE.md`, `working/sprint-018-agent-to-agent-payments/`.
 - Updated backend services to match new canister interface
 - Both canisters redeployed to mainnet
 
-### Evening
+### Evening (early)
 - Fixed CI API Docker container (dead for 2 months — log dir permission error on bind mount)
 - Verified full agent marketplace pipeline: marketplace → routing → payment gate → agent invocation
-- Confirmed LLM keys missing, payment verification needs hardening
+- Discovered Grok API already configured on CI API (grok-3-mini-fast, real LLM responses)
+
+### Evening (Tier 1 complete ~19:58 CET)
+- Fixed payment bypass: replaced `paymentVerified` body param with `paymentToken` (X402 service access token)
+- Root cause: `sanitizeString` middleware was corrupting base64 tokens (stripping `=` and `/`)
+- Fix: skip sanitization for `paymentToken` field in `sanitizeObject`
+- Added 20 CI agent service IDs to X402 payment whitelist
+- All deployed to VPS, verified on production: valid token → Grok response, no token → 402, old bypass → 402
+- Created `docs/strategy/LAVA-SIPPAR-AGENT-INFRA.md` — combined Lava+Sippar agent infrastructure strategy
 
 ## What's Prototyped But Not Production
 
