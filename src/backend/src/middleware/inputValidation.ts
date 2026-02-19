@@ -40,6 +40,10 @@ const agentInvocationSchema = z.object({
 
   paymentVerified: z.boolean().optional(),
 
+  paymentToken: z.string()
+    .max(2000, 'Payment token too long')
+    .optional(),
+
   principal: z.string()
     .max(100, 'Principal too long')
     .optional(),
@@ -106,21 +110,27 @@ function sanitizeString(input: string): string {
 
 /**
  * Sanitize object recursively
+ * Skips sanitization for fields that contain cryptographic tokens
  */
-function sanitizeObject(obj: any): any {
+function sanitizeObject(obj: any, parentKey?: string): any {
   if (typeof obj === 'string') {
+    // Skip sanitization for paymentToken - it's base64 encoded and will be validated by x402Service
+    if (parentKey === 'paymentToken') {
+      return obj;
+    }
     return sanitizeString(obj);
   }
 
   if (Array.isArray(obj)) {
-    return obj.map(item => sanitizeObject(item));
+    return obj.map(item => sanitizeObject(item, parentKey));
   }
 
   if (obj !== null && typeof obj === 'object') {
     const sanitized: any = {};
     for (const [key, value] of Object.entries(obj)) {
       const sanitizedKey = sanitizeString(key);
-      sanitized[sanitizedKey] = sanitizeObject(value);
+      // Pass the original key (not sanitized) as context for nested sanitization
+      sanitized[sanitizedKey] = sanitizeObject(value, key);
     }
     return sanitized;
   }
@@ -334,7 +344,7 @@ export function sanitizeRequest(req: Request, res: Response, next: NextFunction)
 
     // Sanitize body if present
     if (req.body && typeof req.body === 'object') {
-      req.body = sanitizeObject(req.body);
+      req.body = sanitizeObject(req.body, undefined);
     }
 
     next();
