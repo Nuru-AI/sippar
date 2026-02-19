@@ -51,14 +51,11 @@ export class CustodyAddressService {
 
       console.log(`🔐 Real threshold-controlled address: ${thresholdAddress.address}`);
 
-      // Step 2: Register this address with the simplified bridge canister
-      // This ensures the bridge knows about this deposit address
+      // Step 2: Register this threshold-derived address with the simplified bridge canister
       try {
-        const bridgeAddress = await simplifiedBridgeService.generateDepositAddress(principal);
-        console.log(`📋 Bridge registered address: ${bridgeAddress}`);
+        await simplifiedBridgeService.registerCustodyAddress(thresholdAddress.address, principal);
+        console.log(`📋 Bridge registered custody address: ${thresholdAddress.address}`);
 
-        // Use the threshold-controlled address as the real custody address
-        // The bridge registration is for tracking purposes
         const custodyInfo: CustodyAddressInfo = {
           custodyAddress: thresholdAddress.address, // REAL threshold-controlled address
           publicKey: thresholdAddress.public_key,
@@ -70,7 +67,6 @@ export class CustodyAddressService {
           purpose,
           metadata: {
             ...metadata,
-            bridgeRegistration: bridgeAddress,
             thresholdCanister: icpCanisterService.getCanisterId(),
             derivedAt: timestamp.toString()
           }
@@ -84,7 +80,6 @@ export class CustodyAddressService {
 
         console.log(`✅ Generated REAL custody address: ${thresholdAddress.address}`);
         console.log(`📍 Derivation path: ${custodyInfo.derivationPath}`);
-        console.log(`🔗 Bridge tracking: ${bridgeAddress}`);
 
         return custodyInfo;
 

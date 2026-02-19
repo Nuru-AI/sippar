@@ -39,7 +39,8 @@ const simplifiedBridgeIdl = ({ IDL }: any) => {
     'icrc1_supported_standards': IDL.Func([], [IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text))], ['query']),
 
     // Bridge Core Functions
-    'generate_deposit_address': IDL.Func([IDL.Principal], [IDL.Variant({ 'Ok': IDL.Text, 'Err': IDL.Text })], []),
+    // REMOVED: generate_deposit_address — use threshold_signer for real addresses
+    'register_custody_address': IDL.Func([IDL.Text, IDL.Principal], [IDL.Variant({ 'Ok': IDL.Text, 'Err': IDL.Text })], []),
     'register_pending_deposit': IDL.Func([IDL.Principal, IDL.Text, IDL.Nat, IDL.Text, IDL.Nat8], [IDL.Variant({ 'Ok': IDL.Text, 'Err': IDL.Text })], []),
     'update_deposit_confirmations': IDL.Func([IDL.Text, IDL.Nat8], [IDL.Variant({ 'Ok': IDL.Text, 'Err': IDL.Text })], []),
     'mint_after_deposit_confirmed': IDL.Func([IDL.Text], [IDL.Variant({ 'Ok': IDL.Nat, 'Err': IDL.Text })], []),
@@ -230,15 +231,20 @@ export class SimplifiedBridgeService {
   // Bridge Core Functions
   // ============================================================================
 
-  async generateDepositAddress(user: Principal): Promise<string> {
+  // REMOVED: generateDepositAddress — canister no longer has this function.
+  // Real custody addresses come from threshold_signer canister via icpCanisterService.
+  // Use registerCustodyAddress() to register a threshold-derived address with the bridge.
+
+  async registerCustodyAddress(custodyAddress: string, user: Principal): Promise<string> {
     return this.retryOperation(async () => {
-      const result = await this.actor.generate_deposit_address(user);
+      const result = await this.actor.register_custody_address(custodyAddress, user);
       if ('Ok' in result) {
+        console.log(`✅ Registered custody address ${custodyAddress} for ${user.toString()}`);
         return result.Ok;
       } else {
-        throw new Error(`Generate deposit address failed: ${result.Err}`);
+        throw new Error(`Register custody address failed: ${result.Err}`);
       }
-    }, `generateDepositAddress(${user.toString()})`);
+    }, `registerCustodyAddress(${custodyAddress}, ${user.toString()})`);
   }
 
   async registerPendingDeposit(
