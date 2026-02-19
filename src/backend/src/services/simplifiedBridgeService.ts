@@ -40,6 +40,8 @@ const simplifiedBridgeIdl = ({ IDL }: any) => {
 
     // Bridge Core Functions
     'generate_deposit_address': IDL.Func([IDL.Principal], [IDL.Variant({ 'Ok': IDL.Text, 'Err': IDL.Text })], []),
+    'register_pending_deposit': IDL.Func([IDL.Principal, IDL.Text, IDL.Nat, IDL.Text, IDL.Nat8], [IDL.Variant({ 'Ok': IDL.Text, 'Err': IDL.Text })], []),
+    'update_deposit_confirmations': IDL.Func([IDL.Text, IDL.Nat8], [IDL.Variant({ 'Ok': IDL.Text, 'Err': IDL.Text })], []),
     'mint_after_deposit_confirmed': IDL.Func([IDL.Text], [IDL.Variant({ 'Ok': IDL.Nat, 'Err': IDL.Text })], []),
     'redeem_ck_algo': IDL.Func([IDL.Nat, IDL.Text], [IDL.Variant({ 'Ok': IDL.Text, 'Err': IDL.Text })], []),
     'get_reserve_ratio': IDL.Func([], [ReserveStatus], ['query']),
@@ -141,9 +143,15 @@ export class SimplifiedBridgeService {
                               lastError.message.includes('timeout') ||
                               lastError.message.includes('fetch');
 
+        // Non-retryable errors — bail immediately
+        const isNonRetryable = lastError.message.includes('already processed') ||
+                               lastError.message.includes('already exists') ||
+                               lastError.message.includes('Minimum deposit') ||
+                               lastError.message.includes('not found in pending');
+
         console.warn(`⚠️ ${operationName} failed on attempt ${attempt}/${this.maxRetries}:`, lastError.message);
 
-        if (attempt === this.maxRetries) {
+        if (isNonRetryable || attempt === this.maxRetries) {
           break;
         }
 
@@ -231,6 +239,52 @@ export class SimplifiedBridgeService {
         throw new Error(`Generate deposit address failed: ${result.Err}`);
       }
     }, `generateDepositAddress(${user.toString()})`);
+  }
+
+  async registerPendingDeposit(
+    userPrincipal: Principal,
+    txId: string,
+    amount: bigint,
+    custodyAddress: string,
+    requiredConfirmations: number
+  ): Promise<string> {
+    return this.retryOperation(async () => {
+      const result = await this.actor.register_pending_deposit(
+        userPrincipal,
+        txId,
+        amount,
+        custodyAddress,
+        requiredConfirmations
+      );
+      if ('Ok' in result) {
+        console.log(`✅ Registered pending deposit in canister: ${result.Ok}`);
+        return result.Ok;
+      } else {
+        throw new Error(`Register pending deposit failed: ${result.Err}`);
+      }
+    }, `registerPendingDeposit(${txId} for ${userPrincipal.toString()})`);
+  }
+
+  /**
+   * TEMPORARY ARCHITECTURE: Update deposit confirmations
+   * Phase 2 will replace with canister-side HTTP outcalls
+   */
+  async updateDepositConfirmations(
+    txId: string,
+    confirmations: number
+  ): Promise<string> {
+    return this.retryOperation(async () => {
+      const result = await this.actor.update_deposit_confirmations(
+        txId,
+        confirmations
+      );
+      if ('Ok' in result) {
+        console.log(`✅ Updated deposit ${txId} confirmations: ${result.Ok}`);
+        return result.Ok;
+      } else {
+        throw new Error(`Update confirmations failed: ${result.Err}`);
+      }
+    }, `updateDepositConfirmations(${txId}, ${confirmations})`);
   }
 
   async mintAfterDepositConfirmed(depositTxId: string): Promise<bigint> {

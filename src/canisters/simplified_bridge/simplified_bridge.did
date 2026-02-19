@@ -40,7 +40,11 @@ service : {
   icrc1_transfer : (principal, nat) -> (variant { Ok : nat; Err : text });
 
   // Bridge Core Functions
-  generate_deposit_address : (principal) -> (variant { Ok : text; Err : text });
+  // REMOVED: generate_deposit_address — use threshold_signer canister for real addresses
+  register_custody_address : (text, principal) -> (variant { Ok : text; Err : text });
+  register_pending_deposit : (principal, text, nat, text, nat8) -> (variant { Ok : text; Err : text });
+  // TEMPORARY: Update deposit confirmations (Phase 2 will use HTTP outcalls)
+  update_deposit_confirmations : (text, nat8) -> (variant { Ok : text; Err : text });
   mint_after_deposit_confirmed : (text) -> (variant { Ok : nat; Err : text });
   redeem_ck_algo : (nat, text) -> (variant { Ok : text; Err : text });
   get_reserve_ratio : () -> (ReserveStatus) query;

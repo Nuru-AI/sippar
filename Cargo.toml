@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "src/canisters/ck_algo",
+    # "src/canisters/ck_algo",  # ARCHIVED → archive/canisters/ck_algo/
     "src/canisters/threshold_signer/src/algorand_threshold_signer_backend",
     "src/canisters/simplified_bridge"
 ]

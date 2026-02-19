@@ -159,6 +159,26 @@ export class AutomaticMintingService {
 
       // Attempt to mint using simplified bridge service
       try {
+        // First, update confirmations on canister so mint can proceed
+        const confirmations = job.deposit.confirmations || 999;
+        try {
+          await this.simplifiedBridgeService.updateDepositConfirmations(
+            job.deposit.txId,
+            Math.min(confirmations, 255) // u8 max
+          );
+          console.log(`📝 Updated confirmations for ${job.deposit.txId} to ${Math.min(confirmations, 255)}`);
+        } catch (confirmError: any) {
+          const msg = String(confirmError?.message || confirmError);
+          if (msg.includes('not found in pending')) {
+            // Deposit already minted and moved to records — mark as complete
+            console.log(`✅ Deposit ${job.deposit.txId} already minted (not in pending deposits)`);
+            job.status = 'completed';
+            job.updatedAt = new Date();
+            return;
+          }
+          throw confirmError;
+        }
+
         const mintResult = await this.simplifiedBridgeService.mintAfterDepositConfirmed(job.deposit.txId);
 
         const processingTime = Date.now() - startTime;

@@ -5,7 +5,7 @@
 
 import { CkAlgoService } from './ckAlgoService.js';
 import { icpCanisterService } from './icpCanisterService.js';
-import { algorandService } from './algorandService.js';
+import { algorandService, algorandMainnet } from './algorandService.js';
 import { ProductionMonitoringService, Alert } from './productionMonitoringService.js';
 import { AlertManager } from './alertManager.js';
 import algosdk from 'algosdk';
@@ -209,7 +209,7 @@ export class AutomaticRedemptionService {
         }
 
         // Create ALGO withdrawal transaction
-        const suggestedParams = await algorandService.getSuggestedParams();
+        const suggestedParams = await algorandMainnet.getSuggestedParams();
         const microAlgos = Math.floor(job.amount * 1_000_000);
 
         const withdrawalTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
@@ -229,11 +229,16 @@ export class AutomaticRedemptionService {
           new Uint8Array(txnBytesToSign)
         );
 
-        // TODO: In production, submit to Algorand network
-        // For now, simulate successful submission
-        job.algoTransactionId = `THRESHOLD-WITHDRAW-${signedWithdrawal.signed_tx_id.slice(0, 8)}`;
+        // Submit threshold-signed transaction to Algorand mainnet
+        const signedTxnData = {
+          sig: new Uint8Array(signedWithdrawal.signature),
+          txn: withdrawalTxn.get_obj_for_encoding()
+        };
+        const encodedSignedTxn = algosdk.encodeObj(signedTxnData);
+        const submissionResult = await algorandMainnet.submitTransaction(new Uint8Array(encodedSignedTxn));
+        job.algoTransactionId = submissionResult.txId;
 
-        console.log(`✅ Successfully created threshold-signed withdrawal: ${job.algoTransactionId}`);
+        console.log(`✅ ALGO withdrawal submitted to Algorand mainnet: ${job.algoTransactionId} (round ${submissionResult.confirmedRound})`);
       }
 
       // Step 3: Mark as completed

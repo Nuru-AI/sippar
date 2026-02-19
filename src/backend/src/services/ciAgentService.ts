@@ -36,6 +36,7 @@ export interface CIAgentDefinition {
   pricing: {
     base: number;
     currency: string;
+    tier?: 'FREE' | 'STANDARD' | 'PREMIUM'; // Sprint 018.2 Phase H
   };
   endpoint: string;
   category: string;
@@ -106,9 +107,18 @@ class CIAgentService extends EventEmitter {
 
   /**
    * Initialize agent-specific metrics
+   * Sprint 018.2 Phase H: Updated for 20-agent marketplace
    */
   private initializeAgentMetrics(): void {
-    const agents = ['athena', 'architect', 'developer', 'auditor', 'analyst'];
+    const agents = [
+      // FREE TIER
+      'developer', 'documenter', 'refactorer', 'tester', 'debugger',
+      // STANDARD TIER
+      'analyst', 'athena', 'architect', 'ui', 'database',
+      'builder', 'fixer', 'designer', 'optimizer', 'researcher',
+      // PREMIUM TIER
+      'auditor', 'webarchitect', 'technicalarchitect', 'cryptographer', 'solutionarchitect'
+    ];
     agents.forEach(agent => {
       this.agentMetrics.set(agent, {
         calls: 0,
@@ -247,14 +257,84 @@ class CIAgentService extends EventEmitter {
 
   /**
    * Get available CI agents for X402 marketplace
+   * Sprint 018.2 Phase H: Expanded to 20 agents across 3 tiers
    */
   getAvailableAgents(): CIAgentDefinition[] {
     return [
+      // ===== FREE TIER (5 agents - $5-10 USDC) =====
+      {
+        id: 'ci-developer-code-generation',
+        name: 'Developer Code Generation',
+        description: 'AI-powered code generation and implementation using Developer\'s 15KB+ coding expertise',
+        pricing: { base: 8, currency: 'USDC', tier: 'FREE' },
+        endpoint: '/ci-agents/developer/code-generation',
+        category: 'development',
+        capabilities: ['Code Implementation', 'Debugging', 'Development Patterns', 'Technical Solutions'],
+        memory_size: '15KB+',
+        response_time: '5-20 seconds'
+      },
+      {
+        id: 'ci-documenter-documentation',
+        name: 'Documenter Documentation',
+        description: 'Comprehensive documentation generation and technical writing for codebases',
+        pricing: { base: 5, currency: 'USDC', tier: 'FREE' },
+        endpoint: '/ci-agents/documenter/documentation',
+        category: 'development',
+        capabilities: ['Documentation', 'Technical Writing', 'API Docs', 'README Generation'],
+        memory_size: '8KB+',
+        response_time: '5-15 seconds'
+      },
+      {
+        id: 'ci-refactorer-code-improvement',
+        name: 'Refactorer Code Improvement',
+        description: 'Code refactoring and modularization for improved maintainability',
+        pricing: { base: 7, currency: 'USDC', tier: 'FREE' },
+        endpoint: '/ci-agents/refactorer/code-improvement',
+        category: 'development',
+        capabilities: ['Code Refactoring', 'Module Organization', 'Code Quality', 'Pattern Application'],
+        memory_size: '12KB+',
+        response_time: '10-25 seconds'
+      },
+      {
+        id: 'ci-tester-qa-testing',
+        name: 'Tester QA & Testing',
+        description: 'Comprehensive testing and quality assurance across test types',
+        pricing: { base: 8, currency: 'USDC', tier: 'FREE' },
+        endpoint: '/ci-agents/tester/qa-testing',
+        category: 'development',
+        capabilities: ['Unit Testing', 'Integration Testing', 'E2E Testing', 'Test Coverage'],
+        memory_size: '10KB+',
+        response_time: '10-20 seconds'
+      },
+      {
+        id: 'ci-debugger-issue-resolution',
+        name: 'Debugger Issue Resolution',
+        description: 'Code debugging and error resolution specialist',
+        pricing: { base: 8, currency: 'USDC', tier: 'FREE' },
+        endpoint: '/ci-agents/debugger/issue-resolution',
+        category: 'development',
+        capabilities: ['Debugging', 'Error Analysis', 'Stack Traces', 'Root Cause Analysis'],
+        memory_size: '10KB+',
+        response_time: '5-15 seconds'
+      },
+
+      // ===== STANDARD TIER (10 agents - $10-20 USDC) =====
+      {
+        id: 'ci-analyst-data-analysis',
+        name: 'Analyst Data Analysis',
+        description: 'Strategic data analysis and insights using specialized analyst capabilities',
+        pricing: { base: 12, currency: 'USDC', tier: 'STANDARD' },
+        endpoint: '/ci-agents/analyst/data-analysis',
+        category: 'analysis',
+        capabilities: ['Data Analysis', 'Market Intelligence', 'Strategic Insights', 'Research'],
+        memory_size: '10KB+',
+        response_time: '10-25 seconds'
+      },
       {
         id: 'ci-athena-memory-optimization',
         name: 'Athena Memory Optimization',
         description: 'Advanced memory and learning systems optimization using Athena\'s strategic intelligence (6KB memory)',
-        pricing: { base: 10, currency: 'USDC' },
+        pricing: { base: 10, currency: 'USDC', tier: 'STANDARD' },
         endpoint: '/ci-agents/athena/memory-optimization',
         category: 'ai-analysis',
         capabilities: ['Strategic Intelligence', 'System Oversight', 'Memory Analysis', 'Performance Optimization'],
@@ -265,7 +345,7 @@ class CIAgentService extends EventEmitter {
         id: 'ci-architect-system-design',
         name: 'Architect System Design Review',
         description: 'Comprehensive system architecture analysis using Architect\'s 16KB+ design knowledge',
-        pricing: { base: 15, currency: 'USDC' },
+        pricing: { base: 15, currency: 'USDC', tier: 'STANDARD' },
         endpoint: '/ci-agents/architect/system-design',
         category: 'architecture',
         capabilities: ['Architecture Patterns', 'System Design', 'Technical Planning', 'Design Review'],
@@ -273,21 +353,89 @@ class CIAgentService extends EventEmitter {
         response_time: '10-30 seconds'
       },
       {
-        id: 'ci-developer-code-generation',
-        name: 'Developer Code Generation',
-        description: 'AI-powered code generation and implementation using Developer\'s 15KB+ coding expertise',
-        pricing: { base: 8, currency: 'USDC' },
-        endpoint: '/ci-agents/developer/code-generation',
+        id: 'ci-ui-interface-development',
+        name: 'UI Interface Development',
+        description: 'User interface development and implementation specialist',
+        pricing: { base: 12, currency: 'USDC', tier: 'STANDARD' },
+        endpoint: '/ci-agents/ui/interface-development',
         category: 'development',
-        capabilities: ['Code Implementation', 'Debugging', 'Development Patterns', 'Technical Solutions'],
-        memory_size: '15KB+',
-        response_time: '5-20 seconds'
+        capabilities: ['UI Implementation', 'Component Development', 'React/Vue', 'Accessibility'],
+        memory_size: '12KB+',
+        response_time: '10-25 seconds'
       },
+      {
+        id: 'ci-database-data-management',
+        name: 'Database Data Management',
+        description: 'Database design, optimization, and data management specialist',
+        pricing: { base: 12, currency: 'USDC', tier: 'STANDARD' },
+        endpoint: '/ci-agents/database/data-management',
+        category: 'development',
+        capabilities: ['Schema Design', 'Query Optimization', 'Data Integrity', 'Database Migration'],
+        memory_size: '14KB+',
+        response_time: '10-20 seconds'
+      },
+      {
+        id: 'ci-builder-full-stack',
+        name: 'Builder Full Stack Development',
+        description: 'Complete application building and full-stack development',
+        pricing: { base: 15, currency: 'USDC', tier: 'STANDARD' },
+        endpoint: '/ci-agents/builder/full-stack',
+        category: 'development',
+        capabilities: ['Full Stack Development', 'API Design', 'Frontend+Backend', 'Deployment'],
+        memory_size: '16KB+',
+        response_time: '15-40 seconds'
+      },
+      {
+        id: 'ci-fixer-problem-resolution',
+        name: 'Fixer Problem Resolution',
+        description: 'Critical issue resolution and emergency bug fixes',
+        pricing: { base: 12, currency: 'USDC', tier: 'STANDARD' },
+        endpoint: '/ci-agents/fixer/problem-resolution',
+        category: 'development',
+        capabilities: ['Emergency Fixes', 'Bug Resolution', 'System Recovery', 'Critical Issues'],
+        memory_size: '12KB+',
+        response_time: '5-15 seconds'
+      },
+      {
+        id: 'ci-designer-design-systems',
+        name: 'Designer Design Systems',
+        description: 'Design systems and visual design strategy',
+        pricing: { base: 15, currency: 'USDC', tier: 'STANDARD' },
+        endpoint: '/ci-agents/designer/design-systems',
+        category: 'design',
+        capabilities: ['Design Systems', 'Visual Design', 'Component Libraries', 'Design Tokens'],
+        memory_size: '10KB+',
+        response_time: '10-25 seconds'
+      },
+      {
+        id: 'ci-optimizer-performance',
+        name: 'Optimizer Performance Tuning',
+        description: 'Performance optimization and efficiency improvements',
+        pricing: { base: 18, currency: 'USDC', tier: 'STANDARD' },
+        endpoint: '/ci-agents/optimizer/performance',
+        category: 'development',
+        capabilities: ['Performance Optimization', 'Code Efficiency', 'Resource Management', 'Profiling'],
+        memory_size: '12KB+',
+        response_time: '15-30 seconds'
+      },
+      {
+        id: 'ci-researcher-analysis',
+        name: 'Researcher Analysis & Research',
+        description: 'Comprehensive research and analysis across domains',
+        pricing: { base: 10, currency: 'USDC', tier: 'STANDARD' },
+        endpoint: '/ci-agents/researcher/analysis',
+        category: 'analysis',
+        capabilities: ['Research', 'Market Analysis', 'Technical Investigation', 'Data Gathering'],
+        memory_size: '10KB+',
+        response_time: '15-45 seconds'
+      },
+
+      // ===== PREMIUM TIER (5 agents - $20-30 USDC) =====
       {
         id: 'ci-auditor-security-review',
         name: 'Auditor Security Analysis',
         description: 'Comprehensive security audit and validation using Auditor\'s 14KB+ security knowledge',
-        pricing: { base: 20, currency: 'USDC' },
+        pricing: { base: 20, currency: 'USDC', tier: 'PREMIUM' },
         endpoint: '/ci-agents/auditor/security-review',
         category: 'security',
         capabilities: ['Security Analysis', 'Accuracy Validation', 'Evidence Assessment', 'Risk Analysis'],
@@ -295,15 +443,48 @@ class CIAgentService extends EventEmitter {
         response_time: '15-45 seconds'
       },
       {
-        id: 'ci-analyst-data-analysis',
-        name: 'Analyst Data Analysis',
-        description: 'Strategic data analysis and insights using specialized analyst capabilities',
-        pricing: { base: 12, currency: 'USDC' },
-        endpoint: '/ci-agents/analyst/data-analysis',
-        category: 'analysis',
-        capabilities: ['Data Analysis', 'Market Intelligence', 'Strategic Insights', 'Research'],
-        memory_size: '10KB+',
-        response_time: '10-25 seconds'
+        id: 'ci-webarchitect-web-systems',
+        name: 'WebArchitect Web Systems',
+        description: 'Advanced web architecture and scalable system design',
+        pricing: { base: 25, currency: 'USDC', tier: 'PREMIUM' },
+        endpoint: '/ci-agents/webarchitect/web-systems',
+        category: 'architecture',
+        capabilities: ['Web Architecture', 'Scalability', 'Microservices', 'Cloud Infrastructure'],
+        memory_size: '18KB+',
+        response_time: '20-45 seconds'
+      },
+      {
+        id: 'ci-technicalarchitect-technical-design',
+        name: 'TechnicalArchitect Technical Design',
+        description: 'Enterprise technical architecture and system integration',
+        pricing: { base: 25, currency: 'USDC', tier: 'PREMIUM' },
+        endpoint: '/ci-agents/technicalarchitect/technical-design',
+        category: 'architecture',
+        capabilities: ['Technical Architecture', 'Enterprise Systems', 'Integration Design', 'Technical Strategy'],
+        memory_size: '20KB+',
+        response_time: '20-50 seconds'
+      },
+      {
+        id: 'ci-cryptographer-security-systems',
+        name: 'Cryptographer Security Systems',
+        description: 'Advanced cryptography and security protocol design',
+        pricing: { base: 30, currency: 'USDC', tier: 'PREMIUM' },
+        endpoint: '/ci-agents/cryptographer/security-systems',
+        category: 'security',
+        capabilities: ['Cryptography', 'Security Protocols', 'Encryption', 'Blockchain Security'],
+        memory_size: '16KB+',
+        response_time: '20-40 seconds'
+      },
+      {
+        id: 'ci-solutionarchitect-solution-design',
+        name: 'SolutionArchitect Solution Design',
+        description: 'End-to-end solution architecture and strategic planning',
+        pricing: { base: 28, currency: 'USDC', tier: 'PREMIUM' },
+        endpoint: '/ci-agents/solutionarchitect/solution-design',
+        category: 'architecture',
+        capabilities: ['Solution Architecture', 'Strategic Planning', 'Enterprise Solutions', 'Technology Selection'],
+        memory_size: '20KB+',
+        response_time: '25-50 seconds'
       }
     ];
   }
@@ -606,6 +787,7 @@ Please provide a detailed response following the CI agent signature format:
 
   /**
    * Calculate quality score for response
+   * Returns score in 0.7-1.0 range for X402 payment protocol
    */
   private calculateQualityScore(agentName: string, response: string): number {
     // Base quality metrics
@@ -642,7 +824,12 @@ Please provide a detailed response following the CI agent signature format:
         break;
     }
 
-    return Math.min(100, Math.max(60, score)); // Clamp between 60-100
+    const rawScore = Math.min(100, Math.max(60, score)); // Clamp between 60-100
+
+    // Normalize to 0.7-1.0 range for X402 payment protocol
+    // Map 60-100 range to 0.70-1.00 range
+    const normalizedScore = 0.70 + ((rawScore - 60) / 40) * 0.30;
+    return parseFloat(normalizedScore.toFixed(2));
   }
 
   /**
@@ -769,6 +956,187 @@ Please provide a detailed response following the CI agent signature format:
     return this.callHistory
       .slice(-limit)
       .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+  }
+
+  /**
+   * Sprint 018.2 Phase J: Smart Routing
+   * Select optimal agent based on natural language task description
+   * Uses keyword matching with priority ordering
+   */
+  selectAgentForTask(taskDescription: string): string {
+    const lowerTask = taskDescription.toLowerCase();
+
+    // Refactorer keywords (check before developer since both might match "code")
+    if (lowerTask.match(/\b(refactor|restructure|clean.*up|optimize.*code)\b/)) {
+      return 'refactorer';
+    }
+
+    // Documenter keywords
+    if (lowerTask.match(/\b(document|documentation|api.*doc|write.*guide|readme|tutorial)\b/)) {
+      return 'documenter';
+    }
+
+    // UI keywords
+    if (lowerTask.match(/\b(design|ui|ux|interface|frontend|dashboard|layout|component)\b/)) {
+      return 'ui';
+    }
+
+    // Analyst keywords
+    if (lowerTask.match(/\b(analyze|analysis|metrics|data|insights|statistics|report|trends)\b/)) {
+      return 'analyst';
+    }
+
+    // Database keywords (check before developer)
+    if (lowerTask.match(/\b(database|sql|query|schema|migration)\b/)) {
+      return 'database';
+    }
+
+    // Athena Memory keywords
+    if (lowerTask.match(/\b(memory|remember|recall|context|history|knowledge)\b/)) {
+      return 'athena';
+    }
+
+    // Tester keywords
+    if (lowerTask.match(/\b(test|testing|qa|quality|validation|verify)\b/)) {
+      return 'tester';
+    }
+
+    // Debugger keywords
+    if (lowerTask.match(/\b(debug|debugging|error|exception|crash|failure)\b/)) {
+      return 'debugger';
+    }
+
+    // Builder keywords
+    if (lowerTask.match(/\b(build|construct|assemble|deploy|pipeline)\b/)) {
+      return 'builder';
+    }
+
+    // Fixer keywords
+    if (lowerTask.match(/\b(fix|repair|resolve|patch|hotfix)\b/)) {
+      return 'fixer';
+    }
+
+    // Designer keywords
+    if (lowerTask.match(/\b(visual|graphics|style|theme|branding|aesthetic)\b/)) {
+      return 'designer';
+    }
+
+    // Optimizer keywords
+    if (lowerTask.match(/\b(optimize|optimization|performance|speed|efficiency|resource)\b/)) {
+      return 'optimizer';
+    }
+
+    // Researcher keywords
+    if (lowerTask.match(/\b(research|investigate|study|explore|survey|review)\b/)) {
+      return 'researcher';
+    }
+
+    // Auditor keywords (PREMIUM)
+    if (lowerTask.match(/\b(audit|security|validate|compliance|risk|vulnerability)\b/)) {
+      return 'auditor';
+    }
+
+    // Architect keywords
+    if (lowerTask.match(/\b(architect|architecture|system.*design|infrastructure|structure)\b/)) {
+      return 'architect';
+    }
+
+    // WebArchitect keywords (PREMIUM)
+    if (lowerTask.match(/\b(web.*architect|web.*system|api.*design|microservice)\b/)) {
+      return 'webarchitect';
+    }
+
+    // TechnicalArchitect keywords (PREMIUM)
+    if (lowerTask.match(/\b(technical.*architect|technical.*design|enterprise.*architecture)\b/)) {
+      return 'technicalarchitect';
+    }
+
+    // Cryptographer keywords (PREMIUM)
+    if (lowerTask.match(/\b(crypto|encrypt|decrypt|cipher|hash|signature|blockchain)\b/)) {
+      return 'cryptographer';
+    }
+
+    // SolutionArchitect keywords (PREMIUM)
+    if (lowerTask.match(/\b(solution.*architect|solution.*design|business.*architecture|strategic.*design)\b/)) {
+      return 'solutionarchitect';
+    }
+
+    // Developer keywords (broader, so check last)
+    if (lowerTask.match(/\b(develop|code|implement|create|add|feature|functionality|program)\b/)) {
+      return 'developer';
+    }
+
+    // Default to developer if no specific match
+    return 'developer';
+  }
+
+  /**
+   * Sprint 018.2 Phase J: Smart Routing
+   * Assemble multi-agent team based on task complexity
+   * Identifies multiple task components and assigns specialist agents
+   */
+  assembleTeamForTask(taskDescription: string): string[] {
+    const agents: Set<string> = new Set();
+    const lowerTask = taskDescription.toLowerCase();
+
+    // Documentation component
+    if (lowerTask.match(/\b(document|documentation|with.*doc|and.*doc)\b/)) {
+      agents.add('documenter');
+    }
+
+    // UI/Visualization component
+    if (lowerTask.match(/\b(visualiz|dashboard|interface|with.*ui|and.*ui|design.*interface)\b/)) {
+      agents.add('ui');
+    }
+
+    // Database component
+    if (lowerTask.match(/\b(database|schema|and.*database|update.*schema|migrate|sql)\b/)) {
+      agents.add('database');
+    }
+
+    // Analysis component
+    if (lowerTask.match(/\b(analyze|analysis|and.*data|data.*and|metrics|insights)\b/)) {
+      agents.add('analyst');
+    }
+
+    // Refactoring component
+    if (lowerTask.match(/\b(refactor|restructure|clean.*up|and.*refactor|with.*refactor)\b/)) {
+      agents.add('refactorer');
+    }
+
+    // Testing component
+    if (lowerTask.match(/\b(test|testing|qa|and.*test|with.*test)\b/)) {
+      agents.add('tester');
+    }
+
+    // Optimization component
+    if (lowerTask.match(/\b(optimize|optimization|performance|and.*optimize|with.*optimization)\b/)) {
+      agents.add('optimizer');
+    }
+
+    // Security component
+    if (lowerTask.match(/\b(security|audit|secure|and.*security|with.*security)\b/)) {
+      agents.add('auditor');
+    }
+
+    // Architecture component
+    if (lowerTask.match(/\b(architect|architecture|design.*system|and.*architecture)\b/)) {
+      agents.add('architect');
+    }
+
+    // Research component
+    if (lowerTask.match(/\b(research|investigate|study|and.*research)\b/)) {
+      agents.add('researcher');
+    }
+
+    // If multiple agents identified, return team
+    if (agents.size > 0) {
+      return Array.from(agents);
+    }
+
+    // Otherwise, use single agent selection
+    const primaryAgent = this.selectAgentForTask(taskDescription);
+    return [primaryAgent];
   }
 }
 

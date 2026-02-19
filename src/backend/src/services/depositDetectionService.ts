@@ -5,6 +5,7 @@
 
 import { AlgorandService, AlgorandTransaction } from './algorandService.js';
 import { SimplifiedBridgeService } from './simplifiedBridgeService.js';
+import { Principal } from '@dfinity/principal';
 
 export interface PendingDeposit {
   txId: string;
@@ -38,6 +39,15 @@ export interface AddressMapping {
   lastCheckedRound: number;
 }
 
+// CRITICAL FIX 4: Failed registration recovery structure
+export interface FailedRegistration {
+  deposit: AlgorandTransaction;
+  mapping: AddressMapping;
+  attempts: number;
+  lastAttempt: number;
+  error: string;
+}
+
 export class DepositDetectionService {
   private algorandService: AlgorandService;
   private simplifiedBridgeService: SimplifiedBridgeService;
@@ -47,6 +57,15 @@ export class DepositDetectionService {
   private isRunning: boolean = false;
   private pollingInterval: NodeJS.Timeout | null = null;
   private depositHandlers: DepositHandler[] = [];
+
+  // CRITICAL FIX 4: Track failed registrations for retry
+  private failedRegistrations: Map<string, FailedRegistration> = new Map();
+  private readonly MAX_RETRY_ATTEMPTS = 5;
+  private readonly RETRY_BACKOFF_MS = 60000; // 1 minute base backoff
+  
+  // Track processed transactions to avoid re-processing
+  private processedTransactions: Set<string> = new Set();
+  private readonly MIN_DEPOSIT_ALGO = 0.1; // Skip dust deposits
 
   constructor(algorandService: AlgorandService, simplifiedBridgeService: SimplifiedBridgeService, config?: Partial<DepositDetectionConfig>) {
     this.algorandService = algorandService;
@@ -125,6 +144,9 @@ export class DepositDetectionService {
   private async checkForDeposits(): Promise<void> {
     console.log(`🔍 Checking ${this.addressMappings.size} addresses for deposits...`);
 
+    // CRITICAL FIX 4: Retry failed registrations first
+    await this.retryFailedRegistrations();
+
     for (const [address, mapping] of this.addressMappings) {
       try {
         await this.checkAddressForDeposits(address, mapping);
@@ -135,6 +157,102 @@ export class DepositDetectionService {
 
     // Update confirmation status for pending deposits
     await this.updatePendingDeposits();
+  }
+
+  /**
+   * CRITICAL FIX 4: Retry failed canister registrations with exponential backoff
+   */
+  private async retryFailedRegistrations(): Promise<void> {
+    if (this.failedRegistrations.size === 0) return;
+
+    console.log(`🔄 Retrying ${this.failedRegistrations.size} failed registrations...`);
+
+    const now = Date.now();
+    const toRetry: string[] = [];
+
+    // Find registrations ready for retry (exponential backoff)
+    for (const [txId, failed] of this.failedRegistrations) {
+      const backoffTime = this.RETRY_BACKOFF_MS * Math.pow(2, failed.attempts - 1);
+      const nextRetryTime = failed.lastAttempt + backoffTime;
+
+      if (now >= nextRetryTime) {
+        toRetry.push(txId);
+      }
+    }
+
+    // Retry each failed registration
+    for (const txId of toRetry) {
+      const failed = this.failedRegistrations.get(txId);
+      if (!failed) continue;
+
+      console.log(`🔄 Retry attempt ${failed.attempts + 1}/${this.MAX_RETRY_ATTEMPTS} for deposit ${txId}`);
+
+      try {
+        // Get network status for required confirmations
+        const networkStatus = await this.algorandService.getNetworkStatus();
+        const requiredConfirmations = networkStatus.network === 'mainnet'
+          ? this.config.mainnetConfirmations
+          : this.config.testnetConfirmations;
+
+        const amountMicroAlgos = BigInt(Math.floor(failed.deposit.amount * 1_000_000));
+        const userPrincipal = Principal.fromText(failed.mapping.userPrincipal);
+
+        // Attempt registration again
+        await this.simplifiedBridgeService.registerPendingDeposit(
+          userPrincipal,
+          failed.deposit.id,
+          amountMicroAlgos,
+          failed.mapping.custodyAddress,
+          requiredConfirmations
+        );
+
+        console.log(`✅ Retry successful for deposit ${txId} after ${failed.attempts + 1} attempts`);
+
+        // Success! Remove from failed registrations and add to pending
+        this.failedRegistrations.delete(txId);
+
+        const currentConfirmations = networkStatus.round - failed.deposit.round;
+        const pendingDeposit: PendingDeposit = {
+          txId: failed.deposit.id,
+          userPrincipal: failed.mapping.userPrincipal,
+          custodyAddress: failed.mapping.custodyAddress,
+          amount: failed.deposit.amount,
+          sender: failed.deposit.sender,
+          round: failed.deposit.round,
+          timestamp: failed.deposit.timestamp,
+          confirmations: currentConfirmations,
+          requiredConfirmations,
+          status: currentConfirmations >= requiredConfirmations ? 'confirmed' : 'pending',
+          detectedAt: Date.now()
+        };
+
+        this.pendingDeposits.set(txId, pendingDeposit);
+
+        if (pendingDeposit.status === 'confirmed') {
+          await this.handleConfirmedDeposit(pendingDeposit);
+        }
+
+      } catch (retryError) {
+        const errorMsg = retryError instanceof Error ? retryError.message : String(retryError);
+        console.error(`❌ Retry ${failed.attempts + 1} failed for deposit ${txId}:`, errorMsg);
+
+        // Update retry state
+        failed.attempts++;
+        failed.lastAttempt = now;
+        failed.error = errorMsg;
+
+        if (failed.attempts >= this.MAX_RETRY_ATTEMPTS) {
+          console.error(`🚨 CRITICAL: Deposit ${txId} failed after ${this.MAX_RETRY_ATTEMPTS} attempts. Manual intervention required!`);
+          console.error(`   User: ${failed.mapping.userPrincipal}`);
+          console.error(`   Amount: ${failed.deposit.amount} ALGO`);
+          console.error(`   Custody Address: ${failed.mapping.custodyAddress}`);
+          console.error(`   Last Error: ${errorMsg}`);
+          // Keep in failed registrations map for manual recovery
+        }
+      }
+    }
+
+    console.log(`🔄 Retry complete. Remaining failed: ${this.failedRegistrations.size}`);
   }
 
   /**
@@ -168,30 +286,67 @@ export class DepositDetectionService {
 
         // Process all historical deposits as confirmed (they're already on blockchain)
         for (const deposit of historicalDeposits) {
-          // Check if we've already processed this deposit
-          if (!this.pendingDeposits.has(deposit.id)) {
-            console.log(`📥 Processing historical deposit: ${deposit.id} for ${deposit.amount} ALGO`);
-
-            // Historical deposits are automatically confirmed since they're already on blockchain
-            const confirmedDeposit: PendingDeposit = {
-              txId: deposit.id,
-              userPrincipal: mapping.userPrincipal,
-              custodyAddress: mapping.custodyAddress,
-              amount: deposit.amount,
-              sender: deposit.sender,
-              round: deposit.round,
-              timestamp: deposit.timestamp,
-              confirmations: 999, // Historical deposits are already confirmed
-              requiredConfirmations: 1,
-              status: 'confirmed',
-              detectedAt: Date.now()
-            };
-
-            this.pendingDeposits.set(deposit.id, confirmedDeposit);
-
-            // Immediately trigger automatic minting for historical deposit
-            await this.handleConfirmedDeposit(confirmedDeposit);
+          // Skip already-processed or dust deposits
+          if (this.processedTransactions.has(deposit.id) || this.pendingDeposits.has(deposit.id)) {
+            continue;
           }
+          if (deposit.amount < this.MIN_DEPOSIT_ALGO) {
+            this.processedTransactions.add(deposit.id); // Don't check again
+            continue;
+          }
+
+          console.log(`📥 Processing historical deposit: ${deposit.id} for ${deposit.amount} ALGO`);
+
+          // Register historical deposit with canister
+          try {
+            const networkStatus = await this.algorandService.getNetworkStatus();
+            const requiredConfirmations = networkStatus.network === 'mainnet'
+              ? this.config.mainnetConfirmations
+              : this.config.testnetConfirmations;
+
+            const amountMicroAlgos = BigInt(Math.floor(deposit.amount * 1_000_000));
+            const userPrincipal = Principal.fromText(mapping.userPrincipal);
+
+            await this.simplifiedBridgeService.registerPendingDeposit(
+              userPrincipal,
+              deposit.id,
+              amountMicroAlgos,
+              mapping.custodyAddress,
+              requiredConfirmations
+            );
+
+            console.log(`✅ Historical deposit ${deposit.id} registered in canister`);
+            this.processedTransactions.add(deposit.id);
+          } catch (registrationError: any) {
+            const errMsg = String(registrationError?.message || registrationError);
+            if (errMsg.includes('already processed') || errMsg.includes('already exists')) {
+              console.log(`✅ Historical deposit ${deposit.id} already registered (treating as success)`);
+              this.processedTransactions.add(deposit.id);
+            } else {
+              console.error(`❌ Failed to register historical deposit ${deposit.id}:`, registrationError);
+              continue;
+            }
+          }
+
+          // Historical deposits are automatically confirmed since they're already on blockchain
+          const confirmedDeposit: PendingDeposit = {
+            txId: deposit.id,
+            userPrincipal: mapping.userPrincipal,
+            custodyAddress: mapping.custodyAddress,
+            amount: deposit.amount,
+            sender: deposit.sender,
+            round: deposit.round,
+            timestamp: deposit.timestamp,
+            confirmations: 999,
+            requiredConfirmations: 1,
+            status: 'confirmed',
+            detectedAt: Date.now()
+          };
+
+          this.pendingDeposits.set(deposit.id, confirmedDeposit);
+
+          // Immediately trigger automatic minting for historical deposit
+          await this.handleConfirmedDeposit(confirmedDeposit);
         }
       }
     } catch (error) {
@@ -215,8 +370,8 @@ export class DepositDetectionService {
 
     // Get network status to determine required confirmations
     const networkStatus = await this.algorandService.getNetworkStatus();
-    const requiredConfirmations = networkStatus.network === 'mainnet' 
-      ? this.config.mainnetConfirmations 
+    const requiredConfirmations = networkStatus.network === 'mainnet'
+      ? this.config.mainnetConfirmations
       : this.config.testnetConfirmations;
 
     const currentConfirmations = networkStatus.round - deposit.round;
@@ -235,6 +390,44 @@ export class DepositDetectionService {
       detectedAt: Date.now()
     };
 
+    // CRITICAL FIX: Register deposit with canister BEFORE adding to local pending
+    try {
+      console.log(`🔗 Registering deposit ${deposit.id} with canister...`);
+
+      // Convert amount to microAlgos (bigint) - ALGO has 6 decimals
+      const amountMicroAlgos = BigInt(Math.floor(deposit.amount * 1_000_000));
+
+      // Parse user principal from string
+      const userPrincipal = Principal.fromText(mapping.userPrincipal);
+
+      // Register the deposit in the canister's PENDING_DEPOSITS map
+      await this.simplifiedBridgeService.registerPendingDeposit(
+        userPrincipal,
+        deposit.id,
+        amountMicroAlgos,
+        mapping.custodyAddress,
+        requiredConfirmations
+      );
+
+      console.log(`✅ Deposit ${deposit.id} registered in canister successfully`);
+    } catch (registrationError) {
+      const errorMsg = registrationError instanceof Error ? registrationError.message : String(registrationError);
+      console.error(`❌ Failed to register deposit ${deposit.id} in canister:`, errorMsg);
+
+      // CRITICAL FIX 4: Track failed registration for retry instead of dropping it
+      this.failedRegistrations.set(deposit.id, {
+        deposit,
+        mapping,
+        attempts: 1,
+        lastAttempt: Date.now(),
+        error: errorMsg
+      });
+
+      console.log(`⚠️ Deposit ${deposit.id} added to retry queue (will retry with exponential backoff)`);
+      return;
+    }
+
+    // Now add to local tracking after successful canister registration
     this.pendingDeposits.set(deposit.id, pendingDeposit);
 
     if (pendingDeposit.status === 'confirmed') {
@@ -259,7 +452,24 @@ export class DepositDetectionService {
       const currentConfirmations = currentRound - deposit.round;
       deposit.confirmations = currentConfirmations;
 
+      // PHASE 1: Update canister when deposit becomes confirmed
       if (currentConfirmations >= deposit.requiredConfirmations) {
+        // Only update canister once when first confirmed
+        if ((deposit.status as string) !== 'confirmed') {
+          try {
+            console.log(`🔄 Updating canister confirmations for ${txId}...`);
+            await this.simplifiedBridgeService.updateDepositConfirmations(
+              txId,
+              currentConfirmations
+            );
+            console.log(`✅ Canister updated: ${txId} confirmations = ${currentConfirmations}`);
+          } catch (updateError) {
+            console.error(`❌ Failed to update canister confirmations for ${txId}:`, updateError);
+            // Don't fail the whole flow, continue with local confirmation
+            // The retry mechanism in automaticMintingService will handle minting failures
+          }
+        }
+
         deposit.status = 'confirmed';
         console.log(`✅ Deposit ${txId} confirmed: ${currentConfirmations}/${deposit.requiredConfirmations} confirmations`);
         await this.handleConfirmedDeposit(deposit);
@@ -400,8 +610,23 @@ export class DepositDetectionService {
       confirmedDeposits: confirmedCount,
       failedDeposits: failedCount,
       totalDeposits: this.pendingDeposits.size,
+      failedRegistrations: this.failedRegistrations.size, // CRITICAL FIX 4: Add failed registration count
       config: this.config
     };
+  }
+
+  /**
+   * CRITICAL FIX 4: Get failed registration details for monitoring/debugging
+   */
+  getFailedRegistrations(): FailedRegistration[] {
+    return Array.from(this.failedRegistrations.values());
+  }
+
+  /**
+   * CRITICAL FIX 4: Manually clear a failed registration (for admin recovery)
+   */
+  clearFailedRegistration(txId: string): boolean {
+    return this.failedRegistrations.delete(txId);
   }
 
   /**

@@ -1,7 +1,7 @@
 // Simplified Bridge Canister - Sprint X Architecture Fix
 // Core Bridge Functionality Only (<500 lines vs 68k+ monolithic)
 
-use ic_cdk::{init, query, update, caller, api::time};
+use ic_cdk::{init, query, update, caller, api::time, pre_upgrade, post_upgrade};
 use candid::{CandidType, Principal, Nat, Deserialize};
 use std::collections::HashMap;
 use std::cell::RefCell;
@@ -40,6 +40,20 @@ pub struct ReserveStatus {
     pub reserve_ratio: f64,
     pub is_healthy: bool,
     pub last_verification: u64,
+}
+
+// CRITICAL FIX 2: Stable storage structure for canister upgrades
+#[derive(Clone, Debug, CandidType, Deserialize, Serialize)]
+pub struct StableStorage {
+    pub pending_deposits: Vec<(String, PendingDeposit)>,
+    pub deposit_records: Vec<DepositRecord>,
+    pub deposit_addresses: Vec<(String, Principal)>,
+    pub balances: Vec<(String, Nat)>,
+    pub total_supply: Nat,
+    pub locked_algo_reserves: Nat,
+    pub authorized_minters: Vec<Principal>,
+    pub reserve_health_status: bool,
+    pub last_reserve_check: u64,
 }
 
 // ============================================================================
@@ -93,9 +107,90 @@ fn init() {
     RESERVE_HEALTH_STATUS.with(|health| *health.borrow_mut() = true);
 }
 
-#[ic_cdk::post_upgrade]
+// CRITICAL FIX 2: Stable storage for canister upgrades
+// Save all state before upgrade to prevent data loss
+#[pre_upgrade]
+fn pre_upgrade() {
+    let stable_data = StableStorage {
+        pending_deposits: PENDING_DEPOSITS.with(|deposits| {
+            deposits.borrow().iter().map(|(k, v)| (k.clone(), v.clone())).collect()
+        }),
+        deposit_records: DEPOSIT_RECORDS.with(|records| records.borrow().clone()),
+        deposit_addresses: DEPOSIT_ADDRESSES.with(|addresses| {
+            addresses.borrow().iter().map(|(k, v)| (k.clone(), *v)).collect()
+        }),
+        balances: BALANCES.with(|balances| {
+            balances.borrow().iter().map(|(k, v)| (k.clone(), v.clone())).collect()
+        }),
+        total_supply: TOTAL_SUPPLY.with(|supply| supply.borrow().clone()),
+        locked_algo_reserves: LOCKED_ALGO_RESERVES.with(|reserves| reserves.borrow().clone()),
+        authorized_minters: AUTHORIZED_MINTERS.with(|minters| minters.borrow().clone()),
+        reserve_health_status: RESERVE_HEALTH_STATUS.with(|health| *health.borrow()),
+        last_reserve_check: LAST_RESERVE_CHECK.with(|check| *check.borrow()),
+    };
+
+    // Store in stable memory
+    ic_cdk::storage::stable_save((stable_data,))
+        .expect("Failed to save state to stable memory");
+}
+
+// CRITICAL FIX 2: Restore all state after upgrade
+#[post_upgrade]
 fn post_upgrade() {
-    // Ensure backend authorization persists after upgrade
+    // Restore from stable memory
+    let (stable_data,): (StableStorage,) = ic_cdk::storage::stable_restore()
+        .expect("Failed to restore state from stable memory");
+
+    // Restore all state
+    PENDING_DEPOSITS.with(|deposits| {
+        let mut deposits_map = deposits.borrow_mut();
+        deposits_map.clear();
+        for (k, v) in stable_data.pending_deposits {
+            deposits_map.insert(k, v);
+        }
+    });
+
+    DEPOSIT_RECORDS.with(|records| {
+        *records.borrow_mut() = stable_data.deposit_records;
+    });
+
+    DEPOSIT_ADDRESSES.with(|addresses| {
+        let mut addresses_map = addresses.borrow_mut();
+        addresses_map.clear();
+        for (k, v) in stable_data.deposit_addresses {
+            addresses_map.insert(k, v);
+        }
+    });
+
+    BALANCES.with(|balances| {
+        let mut balances_map = balances.borrow_mut();
+        balances_map.clear();
+        for (k, v) in stable_data.balances {
+            balances_map.insert(k, v);
+        }
+    });
+
+    TOTAL_SUPPLY.with(|supply| {
+        *supply.borrow_mut() = stable_data.total_supply;
+    });
+
+    LOCKED_ALGO_RESERVES.with(|reserves| {
+        *reserves.borrow_mut() = stable_data.locked_algo_reserves;
+    });
+
+    AUTHORIZED_MINTERS.with(|minters| {
+        *minters.borrow_mut() = stable_data.authorized_minters;
+    });
+
+    RESERVE_HEALTH_STATUS.with(|health| {
+        *health.borrow_mut() = stable_data.reserve_health_status;
+    });
+
+    LAST_RESERVE_CHECK.with(|check| {
+        *check.borrow_mut() = stable_data.last_reserve_check;
+    });
+
+    // Ensure backend authorization persists
     AUTHORIZED_MINTERS.with(|minters| {
         let mut minters_vec = minters.borrow_mut();
         let backend_principal = Principal::from_text("2vxsx-fae").unwrap();
@@ -182,30 +277,156 @@ fn icrc1_transfer(to: Principal, amount: Nat) -> Result<Nat, String> {
 // BRIDGE CORE FUNCTIONS
 // ============================================================================
 
+// REMOVED: generate_deposit_address — returned fake "BRIDGE..." strings.
+// Real Algorand custody addresses are derived by threshold_signer canister
+// (vj7ly-diaaa-aaaae-abvoq-cai) via derive_algorand_address().
+// Use register_custody_address() to register a real threshold-derived address.
+
+/// Admin function: register an existing custody address for a user
+/// Authorized minters OR canister controllers can call this
 #[update]
-async fn generate_deposit_address(user: Principal) -> Result<String, String> {
-    // In real implementation, this would use threshold signatures to generate
-    // a unique Algorand address controlled by the ICP subnet
-    let user_id = user.to_text();
-    let deposit_address = format!("BRIDGE{}", &user_id[..10].to_uppercase());
-    
-    DEPOSIT_ADDRESSES.with(|addresses| {
-        addresses.borrow_mut().insert(deposit_address.clone(), user);
+fn register_custody_address(custody_address: String, user: Principal) -> Result<String, String> {
+    let caller_principal = caller();
+
+    let is_authorized = AUTHORIZED_MINTERS.with(|minters| {
+        minters.borrow().contains(&caller_principal)
     });
-    
-    Ok(deposit_address)
+
+    // Also allow the canister controller (deploy identity)
+    let is_controller = ic_cdk::api::is_controller(&caller_principal);
+
+    if !is_authorized && !is_controller {
+        return Err(format!("Unauthorized: only authorized minters or controllers can register custody addresses. Caller: {}", caller_principal));
+    }
+
+    DEPOSIT_ADDRESSES.with(|addresses| {
+        addresses.borrow_mut().insert(custody_address.clone(), user);
+    });
+
+    Ok(format!("Custody address {} registered for user {}", custody_address, user.to_text()))
+}
+
+#[update]
+async fn register_pending_deposit(
+    user: Principal,
+    algorand_tx_id: String,
+    amount: Nat,
+    custody_address: String,
+    confirmations: u8
+) -> Result<String, String> {
+    let caller_principal = caller();
+
+    // Check authorization - only authorized minters can register deposits
+    let is_authorized = AUTHORIZED_MINTERS.with(|minters| {
+        minters.borrow().contains(&caller_principal)
+    });
+
+    if !is_authorized {
+        return Err(format!("Unauthorized: only authorized minters can register deposits. Caller: {}", caller_principal));
+    }
+
+    // CRITICAL FIX 1: Verify custody address belongs to the claimed user
+    let address_owner = DEPOSIT_ADDRESSES.with(|addresses| {
+        addresses.borrow().get(&custody_address).cloned()
+    });
+
+    match address_owner {
+        Some(owner) if owner == user => {
+            // Valid - custody address belongs to user
+        },
+        Some(owner) => {
+            return Err(format!(
+                "Security violation: Custody address {} belongs to {}, not {}",
+                custody_address, owner.to_text(), user.to_text()
+            ));
+        },
+        None => {
+            return Err(format!("Unknown custody address: {}", custody_address));
+        }
+    }
+
+    // CRITICAL FIX 3: Check BOTH pending and completed deposits for duplicates
+    let already_pending = PENDING_DEPOSITS.with(|deposits| {
+        deposits.borrow().contains_key(&algorand_tx_id)
+    });
+
+    let already_completed = DEPOSIT_RECORDS.with(|records| {
+        records.borrow().iter().any(|r| r.algorand_tx_id == algorand_tx_id)
+    });
+
+    if already_pending || already_completed {
+        return Err(format!("Deposit {} already processed", algorand_tx_id));
+    }
+
+    // Validate amount (must be > 0)
+    if amount == Nat::from(0u64) {
+        return Err("Deposit amount must be greater than 0".to_string());
+    }
+
+    // HIGH-PRIORITY FIX: Add minimum deposit validation (0.1 ALGO = 100,000 microALGO)
+    const MIN_DEPOSIT_MICROALGOS: u64 = 100_000;
+    const MAX_DEPOSIT_MICROALGOS: u64 = 1_000_000_000_000; // 1M ALGO
+
+    let amount_u64 = amount.0.to_u64().ok_or("Amount too large to process")?;
+
+    if amount_u64 < MIN_DEPOSIT_MICROALGOS {
+        return Err(format!("Minimum deposit is 0.1 ALGO (100,000 microALGO). Got: {} microALGO", amount_u64));
+    }
+
+    if amount_u64 > MAX_DEPOSIT_MICROALGOS {
+        return Err(format!("Maximum deposit is 1M ALGO. Got: {} microALGO", amount_u64));
+    }
+
+    // HIGH-PRIORITY FIX: Add max pending deposits cap to prevent spam attacks
+    const MAX_PENDING_DEPOSITS: usize = 10_000;
+
+    let pending_count = PENDING_DEPOSITS.with(|deposits| deposits.borrow().len());
+    if pending_count >= MAX_PENDING_DEPOSITS {
+        return Err(format!("Maximum pending deposits limit reached ({}). Please wait for confirmations.", MAX_PENDING_DEPOSITS));
+    }
+
+    // HIGH-PRIORITY FIX: Clarify that confirmations parameter is REQUIRED confirmations
+    // Validate required confirmations (3 for testnet, 6 for mainnet)
+    let required_confirmations = confirmations;
+    if required_confirmations != 3 && required_confirmations != 6 {
+        return Err(format!("Invalid required_confirmations: {} (must be 3 for testnet or 6 for mainnet)", required_confirmations));
+    }
+
+    // Create pending deposit record
+    let pending_deposit = PendingDeposit {
+        user,
+        algorand_tx_id: algorand_tx_id.clone(),
+        amount: amount.clone(),
+        timestamp: time(),
+        confirmations: 0, // Will be updated as confirmations increase
+        required_confirmations,
+    };
+
+    // Store in pending deposits
+    PENDING_DEPOSITS.with(|deposits| {
+        deposits.borrow_mut().insert(algorand_tx_id.clone(), pending_deposit);
+    });
+
+    // Also track the custody address mapping if not already present
+    DEPOSIT_ADDRESSES.with(|addresses| {
+        if !addresses.borrow().contains_key(&custody_address) {
+            addresses.borrow_mut().insert(custody_address.clone(), user);
+        }
+    });
+
+    Ok(format!("Deposit {} registered successfully for user {}", algorand_tx_id, user.to_text()))
 }
 
 #[update]
 async fn mint_after_deposit_confirmed(deposit_tx_id: String) -> Result<Nat, String> {
     let caller_principal = caller();
     
-    // Check authorization
     let is_authorized = AUTHORIZED_MINTERS.with(|minters| {
         minters.borrow().contains(&caller_principal)
     });
+    let is_controller = ic_cdk::api::is_controller(&caller_principal);
     
-    if !is_authorized {
+    if !is_authorized && !is_controller {
         return Err(format!("Unauthorized minting attempt from principal: {}", caller_principal));
     }
     
@@ -268,6 +489,46 @@ async fn mint_after_deposit_confirmed(deposit_tx_id: String) -> Result<Nat, Stri
     });
     
     Ok(deposit.amount)
+}
+
+/// TEMPORARY ARCHITECTURE: Update deposit confirmations
+///
+/// SECURITY WARNING: This function trusts the authorized backend to report
+/// accurate confirmation counts. In Phase 2, this will be replaced with
+/// canister-side verification via HTTP outcalls (ckETH pattern).
+///
+/// Only authorized minters (backend principal 2vxsx-fae) can call this function.
+#[update]
+async fn update_deposit_confirmations(
+    algorand_tx_id: String,
+    confirmations: u8
+) -> Result<String, String> {
+    let caller_principal = caller();
+
+    let is_authorized = AUTHORIZED_MINTERS.with(|minters| {
+        minters.borrow().contains(&caller_principal)
+    });
+    let is_controller = ic_cdk::api::is_controller(&caller_principal);
+
+    if !is_authorized && !is_controller {
+        return Err(format!(
+            "Unauthorized: only authorized minters or controllers can update confirmations. Caller: {}",
+            caller_principal
+        ));
+    }
+
+    // Update confirmations in pending deposits
+    PENDING_DEPOSITS.with(|deposits| {
+        if let Some(deposit) = deposits.borrow_mut().get_mut(&algorand_tx_id) {
+            deposit.confirmations = confirmations;
+            Ok(format!(
+                "Updated deposit {} to {} confirmations (required: {})",
+                algorand_tx_id, confirmations, deposit.required_confirmations
+            ))
+        } else {
+            Err(format!("Deposit {} not found in pending deposits", algorand_tx_id))
+        }
+    })
 }
 
 #[update]

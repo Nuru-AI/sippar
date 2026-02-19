@@ -1,4 +1,4 @@
-use candid::{CandidType, Principal, Nat};
+use candid::{CandidType, Principal};
 use ic_cdk::api::management_canister::schnorr::{
     SchnorrAlgorithm, SchnorrKeyId, SchnorrPublicKeyArgument,
     SignWithSchnorrArgument, SchnorrPublicKeyResponse, SignWithSchnorrResponse,
@@ -279,48 +279,6 @@ fn greet(name: String) -> String {
     format!("Hello, {}! This is the Sippar Algorand Threshold Signer.", name)
 }
 
-/// Sign Algorand transaction and mint ckALGO tokens in one atomic operation
-/// This combines threshold signature generation with ckALGO minting
-#[ic_cdk::update]
-async fn sign_and_mint_ck_algo(
-    user_principal: Principal,
-    transaction_bytes: Vec<u8>,
-    ck_algo_amount: u64, // Amount in microALGO (6 decimals)
-) -> SigningResult<SignedTransaction> {
-    // Step 1: Generate threshold signature for the transaction
-    let signed_transaction = sign_algorand_transaction(user_principal, transaction_bytes).await?;
-    
-    // Step 2: Mint ckALGO tokens using inter-canister call
-    let ck_algo_canister_id = Principal::from_text("gbmxj-yiaaa-aaaak-qulqa-cai")
-        .map_err(|e| SigningError {
-            code: 3,
-            message: format!("Invalid ckALGO canister ID: {}", e),
-        })?;
-    
-    // Call ckALGO canister to mint tokens
-    match ic_cdk::api::call::call::<(Principal, Nat), (Result<Nat, String>,)>(
-        ck_algo_canister_id,
-        "mint_ck_algo",
-        (user_principal, Nat::from(ck_algo_amount)),
-    ).await {
-        Ok((Ok(minted_amount),)) => {
-            // Minting successful
-            ic_cdk::println!("✅ Minted {} microckALGO for {}", minted_amount, user_principal);
-        },
-        Ok((Err(mint_error),)) => {
-            return Err(SigningError {
-                code: 4,
-                message: format!("ckALGO minting failed: {}", mint_error),
-            });
-        },
-        Err((rejection_code, msg)) => {
-            return Err(SigningError {
-                code: 5,
-                message: format!("Failed to call ckALGO canister: {:?} - {}", rejection_code, msg),
-            });
-        }
-    }
-    
-    // Return the signed transaction (minting was successful)
-    Ok(signed_transaction)
-}
+// REMOVED: sign_and_mint_ck_algo — was calling archived ck_algo canister (gbmxj).
+// Minting now handled by simplified_bridge canister (hldvt-2yaaa-aaaak-qulxa-cai).
+// Threshold signer's job is ONLY: derive addresses + sign transactions.

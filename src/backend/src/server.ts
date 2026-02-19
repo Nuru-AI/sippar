@@ -13,6 +13,7 @@ import { Principal } from '@dfinity/principal';
 import { HttpAgent, Actor } from '@dfinity/agent';
 import algosdk from 'algosdk';
 import { algorandService, algorandMainnet, AlgorandAccount } from './services/algorandService.js';
+// Use mainnet for deposit detection since custody address is on mainnet
 import { icpCanisterService } from './services/icpCanisterService.js';
 import { ckAlgoService } from './services/ckAlgoService.js';
 import { simplifiedBridgeService } from './services/simplifiedBridgeService.js';
@@ -30,6 +31,15 @@ import { alertManager } from './services/alertManager.js';
 import { x402Service } from './services/x402Service.js';
 import { ElnaIntegration } from './services/elnaIntegration.js';
 import { ciAgentService } from './services/ciAgentService.js';
+import { createRateLimiter, createStrictRateLimiter, createLenientRateLimiter } from './middleware/rateLimiter.js';
+import {
+  validateAgentInvocation,
+  validatePaymentCreation,
+  validateSmartRouting,
+  validatePathParams,
+  pathValidators,
+  sanitizeRequest
+} from './middleware/inputValidation.js';
 
 // Load environment variables
 config();
@@ -77,7 +87,7 @@ const app = express();
 const PORT = process.env.PORT || 3004;
 
 // Initialize Sprint X services
-const depositDetectionService = new DepositDetectionService(algorandService, simplifiedBridgeService);
+const depositDetectionService = new DepositDetectionService(algorandMainnet, simplifiedBridgeService);
 const custodyAddressService = new CustodyAddressService();
 const reserveVerificationService = new ReserveVerificationService();
 
@@ -189,19 +199,59 @@ function logOperation(operation: string, success: boolean, processingTime: numbe
 }
 
 // Middleware
-app.use(helmet());
-app.use(cors({
-  origin: [
-    'http://localhost:5175',
-    'http://localhost:5176',
-    'http://localhost:5177',
-    'https://nuru.network',
-    'https://*.nuru.network'
-  ],
-  credentials: true
+// Sprint 018.2 Phase F: Enhanced Security Configuration
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'", 'https://nuru.network', 'https://*.nuru.network'],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"]
+    }
+  },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  }
 }));
+
+// CORS Configuration - Production hardened
+const allowedOrigins = [
+  'http://localhost:5175',
+  'http://localhost:5176',
+  'http://localhost:5177',
+  'https://nuru.network',
+  'http://nuru.network'
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, curl, Postman)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`🚫 CORS blocked request from origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Test-Session', 'X-API-Key'],
+  exposedHeaders: ['X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset'],
+  maxAge: 86400 // 24 hours
+}));
+
 app.use(morgan('combined'));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' })); // Set payload size limit
+app.use(sanitizeRequest); // Global request sanitization
 
 // X402 Payment Protocol Middleware
 console.log('🔒 Initializing X402 payment middleware for AI and ckALGO services');
@@ -3321,10 +3371,20 @@ app.post('/migrate-algo', async (req, res) => {
 
 // ==========================================
 // Sprint 018.1: CI Agent Integration Endpoints
+// Sprint 018.2 Phase E: Rate Limiting Applied
 // ==========================================
 
+// Create rate limiters
+const ciAgentRateLimiter = createRateLimiter(); // Default: 100 req/min, 5 concurrent
+const ciAgentStrictLimiter = createStrictRateLimiter(); // 20 req/min, 2 concurrent
+const ciAgentLenientLimiter = createLenientRateLimiter(); // 200 req/min, 10 concurrent
+
 // CI Agent Service Call
-app.post('/api/sippar/ci-agents/:agent/:service', async (req, res) => {
+app.post('/api/sippar/ci-agents/:agent/:service',
+  ciAgentRateLimiter,
+  validatePathParams({ agent: pathValidators.agentId, service: pathValidators.serviceName }),
+  validateAgentInvocation,
+  async (req, res) => {
   const startTime = performance.now();
   const { agent, service } = req.params;
   const { sessionId, requirements, paymentVerified = false } = req.body;
@@ -3392,8 +3452,8 @@ app.post('/api/sippar/ci-agents/:agent/:service', async (req, res) => {
   }
 });
 
-// CI Agent Marketplace Discovery
-app.get('/api/sippar/ci-agents/marketplace', async (req, res) => {
+// CI Agent Marketplace Discovery (lenient rate limit for read-only)
+app.get('/api/sippar/ci-agents/marketplace', ciAgentLenientLimiter, async (req, res) => {
   const startTime = performance.now();
 
   try {
@@ -3435,8 +3495,8 @@ app.get('/api/sippar/ci-agents/marketplace', async (req, res) => {
   }
 });
 
-// CI Agent Service Analytics
-app.get('/api/sippar/ci-agents/analytics', async (req, res) => {
+// CI Agent Service Analytics (lenient rate limit for read-only)
+app.get('/api/sippar/ci-agents/analytics', ciAgentLenientLimiter, async (req, res) => {
   const startTime = performance.now();
 
   try {
@@ -3478,8 +3538,8 @@ app.get('/api/sippar/ci-agents/analytics', async (req, res) => {
   }
 });
 
-// CI Agent Health Check
-app.get('/api/sippar/ci-agents/health', async (req, res) => {
+// CI Agent Health Check (lenient rate limit for read-only)
+app.get('/api/sippar/ci-agents/health', ciAgentLenientLimiter, async (req, res) => {
   const startTime = performance.now();
 
   try {
@@ -3513,6 +3573,85 @@ app.get('/api/sippar/ci-agents/health', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'CI agents health check failed',
+      details: errorMessage,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Sprint 018.2 Phase J: Smart Routing Endpoint
+app.post('/api/sippar/ci-agents/route', ciAgentLenientLimiter, validateSmartRouting, async (req, res) => {
+  const startTime = performance.now();
+
+  try {
+    const { taskDescription, sessionId, userId } = req.body;
+
+    // Try team assembly first - it will intelligently detect multi-component tasks
+    const potentialTeam = ciAgentService.assembleTeamForTask(taskDescription);
+
+    // Select agent(s) based on team assembly results
+    let recommendation;
+    if (potentialTeam.length > 1) {
+      // Multiple agents identified - this is a team task
+      const agentDetails = potentialTeam.map(agentId => {
+        const agentDef = ciAgentService.getAvailableAgents().find(a =>
+          a.id.includes(agentId.toLowerCase())
+        );
+        return {
+          agent: agentId,
+          name: agentDef?.name || agentId,
+          pricing: agentDef?.pricing || { base: 0, currency: 'USDC' },
+          endpoint: agentDef?.endpoint || `/ci-agents/${agentId}/task`
+        };
+      });
+
+      recommendation = {
+        type: 'team',
+        agents: agentDetails,
+        total_agents: potentialTeam.length,
+        estimated_cost: agentDetails.reduce((sum, a) => sum + a.pricing.base, 0),
+        reasoning: `Multi-agent team assembled for complex task requiring ${potentialTeam.length} specialists`
+      };
+    } else {
+      // Single agent - use the one returned by team assembly
+      const agentId = potentialTeam[0];
+      const agentDef = ciAgentService.getAvailableAgents().find(a =>
+        a.id.includes(agentId.toLowerCase())
+      );
+
+      recommendation = {
+        type: 'single',
+        agent: {
+          agent: agentId,
+          name: agentDef?.name || agentId,
+          pricing: agentDef?.pricing || { base: 0, currency: 'USDC' },
+          endpoint: agentDef?.endpoint || `/ci-agents/${agentId}/task`
+        },
+        reasoning: `Optimal single agent selected based on task keywords`
+      };
+    }
+
+    const duration = performance.now() - startTime;
+    logOperation('smart-routing', true, duration, userId);
+
+    res.json({
+      success: true,
+      taskDescription,
+      sessionId,
+      recommendation,
+      processing_time_ms: Math.round(duration),
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    const duration = performance.now() - startTime;
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    logOperation('smart-routing', false, duration, undefined, errorMessage);
+
+    res.status(500).json({
+      success: false,
+      error: 'Smart routing failed',
       details: errorMessage,
       timestamp: new Date().toISOString()
     });
@@ -5055,6 +5194,12 @@ app.listen(PORT, async () => {
   
   // Start Sprint X deposit monitoring
   try {
+    // Auto-register known custody address for monitoring
+    const KNOWN_CUSTODY_ADDRESS = '7KJLCGZSMYMF6CKUGSTHRU75TN6CHJQZEUJZPSAO3AQLTMVLFPL6W5YX7I';
+    const DEFAULT_PRINCIPAL = '2vxsx-fae'; // Anonymous principal for testing
+    await depositDetectionService.registerCustodyAddress(KNOWN_CUSTODY_ADDRESS, DEFAULT_PRINCIPAL);
+    console.log(`🏦 Auto-registered custody address ${KNOWN_CUSTODY_ADDRESS} for deposit monitoring`);
+    
     await depositDetectionService.startMonitoring();
     console.log('🔍 Sprint X deposit monitoring started automatically');
   } catch (error) {
@@ -5165,7 +5310,10 @@ app.use('*', (req, res) => {
       'POST /api/sippar/ci-agents/:agent/:service',
       'GET /api/sippar/ci-agents/marketplace',
       'GET /api/sippar/ci-agents/analytics',
-      'GET /api/sippar/ci-agents/health'
+      'GET /api/sippar/ci-agents/health',
+
+      // Sprint 018.2 Phase J: Smart Routing Endpoint
+      'POST /api/sippar/ci-agents/route'
     ],
     timestamp: new Date().toISOString(),
   });
