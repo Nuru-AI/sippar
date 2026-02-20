@@ -98,6 +98,7 @@ pub struct ExchangeRate {
 #[derive(Clone, Debug, CandidType, Deserialize)]
 pub enum ExchangeRateError {
     AnonymousPrincipalNotAllowed,
+    Pending,
     CryptoQuoteAssetNotFound,
     CryptoBaseAssetNotFound,
     StablecoinRateTooFewRates,
@@ -109,6 +110,7 @@ pub enum ExchangeRateError {
     ForexAssetsNotFound,
     RateLimited,
     NotEnoughCycles,
+    FailedToAcceptCycles,
     InconsistentRatesReceived,
     Other { code: u32, description: String },
 }
@@ -996,10 +998,14 @@ async fn get_eth_algo_rate() -> Result<f64, String> {
         timestamp: None,
     };
 
-    let eth_usd_result: Result<(GetExchangeRateResult,), _> = ic_cdk::call(
+    // XRC requires cycles - send 1B cycles (1T = 1 ICP, 1B = 0.001 ICP)
+    const XRC_CYCLES: u128 = 1_000_000_000; // 1B cycles
+
+    let eth_usd_result: Result<(GetExchangeRateResult,), _> = ic_cdk::api::call::call_with_payment128(
         xrc_canister,
         "get_exchange_rate",
-        (eth_usd_request,)
+        (eth_usd_request,),
+        XRC_CYCLES
     ).await;
 
     // Get ALGO/USD rate
@@ -1015,10 +1021,11 @@ async fn get_eth_algo_rate() -> Result<f64, String> {
         timestamp: None,
     };
 
-    let algo_usd_result: Result<(GetExchangeRateResult,), _> = ic_cdk::call(
+    let algo_usd_result: Result<(GetExchangeRateResult,), _> = ic_cdk::api::call::call_with_payment128(
         xrc_canister,
         "get_exchange_rate",
-        (algo_usd_request,)
+        (algo_usd_request,),
+        XRC_CYCLES
     ).await;
 
     match (eth_usd_result, algo_usd_result) {
