@@ -27,7 +27,9 @@ type TransactionSigningResult = variant {
 service : {
     "greet": (text) -> (text) query;
     "derive_algorand_address": (principal) -> (SigningResult);
+    "derive_old_algorand_address": (principal) -> (SigningResult);
     "sign_algorand_transaction": (principal, vec nat8) -> (TransactionSigningResult);
+    "sign_migration_transaction": (principal, vec nat8) -> (TransactionSigningResult);
     "get_canister_status": () -> (vec record { text; text }) query;
     "verify_signature": (vec nat8, vec nat8, vec nat8) -> (bool) query;
 }

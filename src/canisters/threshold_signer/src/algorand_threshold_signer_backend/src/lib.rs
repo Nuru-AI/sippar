@@ -84,8 +84,46 @@ async fn derive_algorand_address(user_principal: Principal) -> SigningResult<Alg
     }
 }
 
+/// MIGRATION: Derive address using OLD derivation method (for verification)
+#[ic_cdk::update]
+async fn derive_old_algorand_address(user_principal: Principal) -> SigningResult<AlgorandAddress> {
+    // Use OLD derivation method (raw principal bytes) for migration verification
+    let derivation_path = vec![
+        user_principal.as_slice().to_vec(),
+        b"algorand".to_vec(),
+        b"sippar".to_vec(),
+    ];
+
+    // Call management canister with cycles for threshold operations
+    match call_with_payment::<(SchnorrPublicKeyArgument,), (SchnorrPublicKeyResponse,)>(
+        Principal::management_canister(),
+        "schnorr_public_key",
+        (SchnorrPublicKeyArgument {
+            canister_id: None,
+            derivation_path,
+            key_id: get_schnorr_key_id(),
+        },),
+        15_000_000_000, // 15 billion cycles for public key derivation
+    )
+    .await
+    {
+        Ok((public_key_response,)) => {
+            let algorand_address = ed25519_public_key_to_algorand_address(&public_key_response.public_key);
+
+            Ok(AlgorandAddress {
+                address: algorand_address,
+                public_key: public_key_response.public_key,
+            })
+        }
+        Err((rejection_code, msg)) => Err(SigningError {
+            code: rejection_code as u32,
+            message: format!("Failed to derive old public key: {}", msg),
+        }),
+    }
+}
+
 /// MIGRATION: Sign transaction using old derivation method for address migration
-#[ic_cdk::update] 
+#[ic_cdk::update]
 async fn sign_migration_transaction(
     user_principal: Principal,
     transaction_bytes: Vec<u8>,
@@ -279,6 +317,3 @@ fn greet(name: String) -> String {
     format!("Hello, {}! This is the Sippar Algorand Threshold Signer.", name)
 }
 
-// REMOVED: sign_and_mint_ck_algo — was calling archived ck_algo canister (gbmxj).
-// Minting now handled by simplified_bridge canister (hldvt-2yaaa-aaaak-qulxa-cai).
-// Threshold signer's job is ONLY: derive addresses + sign transactions.
