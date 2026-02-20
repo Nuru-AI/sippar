@@ -264,14 +264,7 @@ export class ReserveVerificationService {
       console.log('🏦 Getting REAL custody balances from threshold-controlled addresses (Phase A.2.3)...');
 
       // Get all REAL threshold-controlled custody addresses from service
-      let addresses = this.custodyAddressService.getAllRealCustodyAddresses();
-
-      // Add known active custody address if not already included
-      const knownCustodyAddress = '7KJLCGZSMYMF6CKUGSTHRU75TN6CHJQZEUJZPSAO3AQLTMVLFPL6W5YX7I';
-      if (!addresses.includes(knownCustodyAddress)) {
-        console.log('➕ Adding known active custody address to verification');
-        addresses.push(knownCustodyAddress);
-      }
+      const addresses = this.custodyAddressService.getAllRealCustodyAddresses();
 
       if (addresses.length === 0) {
         console.log('ℹ️ No custody addresses found - system in initial state');

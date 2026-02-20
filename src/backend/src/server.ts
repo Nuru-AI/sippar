@@ -5219,11 +5219,12 @@ app.listen(PORT, async () => {
   
   // Start Sprint X deposit monitoring
   try {
-    // Auto-register known custody address for monitoring
-    const KNOWN_CUSTODY_ADDRESS = '7KJLCGZSMYMF6CKUGSTHRU75TN6CHJQZEUJZPSAO3AQLTMVLFPL6W5YX7I';
-    const DEFAULT_PRINCIPAL = '2vxsx-fae'; // Anonymous principal for testing
-    await depositDetectionService.registerCustodyAddress(KNOWN_CUSTODY_ADDRESS, DEFAULT_PRINCIPAL);
-    console.log(`🏦 Auto-registered custody address ${KNOWN_CUSTODY_ADDRESS} for deposit monitoring`);
+    // Auto-register custody address derived from anonymous principal (2vxsx-fae)
+    // This is the actual address derivable via threshold_signer canister (NEW method)
+    const CUSTODY_ADDRESS = '6W47GCLXWEIEZ2LRQCXF7HGLOYSXYCXOPXJ5YE55EULFHB7O4RWIM3JDCI';
+    const DEFAULT_PRINCIPAL = '2vxsx-fae'; // Anonymous principal
+    await depositDetectionService.registerCustodyAddress(CUSTODY_ADDRESS, DEFAULT_PRINCIPAL);
+    console.log(`🏦 Auto-registered custody address ${CUSTODY_ADDRESS} for deposit monitoring`);
     
     await depositDetectionService.startMonitoring();
     console.log('🔍 Sprint X deposit monitoring started automatically');
