@@ -9,6 +9,146 @@ use serde::Serialize;
 use num_traits::cast::ToPrimitive;
 
 // ============================================================================
+// ICRC-2 TYPES (defined manually to avoid dependency conflicts)
+// ============================================================================
+
+/// ICRC-1 Account structure
+#[derive(Clone, Debug, CandidType, Deserialize)]
+pub struct Account {
+    pub owner: Principal,
+    pub subaccount: Option<[u8; 32]>,
+}
+
+/// ICRC-2 TransferFrom arguments
+#[derive(Clone, Debug, CandidType, Deserialize)]
+pub struct TransferFromArgs {
+    pub spender_subaccount: Option<[u8; 32]>,
+    pub from: Account,
+    pub to: Account,
+    pub amount: Nat,
+    pub fee: Option<Nat>,
+    pub memo: Option<Vec<u8>>,
+    pub created_at_time: Option<u64>,
+}
+
+/// ICRC-2 TransferFrom error types
+#[derive(Clone, Debug, CandidType, Deserialize)]
+pub enum TransferFromError {
+    BadFee { expected_fee: Nat },
+    BadBurn { min_burn_amount: Nat },
+    InsufficientFunds { balance: Nat },
+    InsufficientAllowance { allowance: Nat },
+    TooOld,
+    CreatedInFuture { ledger_time: u64 },
+    Duplicate { duplicate_of: Nat },
+    TemporarilyUnavailable,
+    GenericError { error_code: Nat, message: String },
+}
+
+// ============================================================================
+// CANISTER IDs
+// ============================================================================
+
+const CKETH_CANISTER_ID: &str = "ss2fx-dyaaa-aaaar-qacoq-cai";
+const XRC_CANISTER_ID: &str = "uf6dk-hyaaa-aaaaq-qaaaq-cai";
+
+// ============================================================================
+// EXCHANGE RATE CANISTER (XRC) TYPES
+// ============================================================================
+
+#[derive(Clone, Debug, CandidType, Deserialize)]
+pub enum AssetClass {
+    Cryptocurrency,
+    FiatCurrency,
+}
+
+#[derive(Clone, Debug, CandidType, Deserialize)]
+pub struct Asset {
+    pub symbol: String,
+    pub class: AssetClass,
+}
+
+#[derive(Clone, Debug, CandidType, Deserialize)]
+pub struct GetExchangeRateRequest {
+    pub base_asset: Asset,
+    pub quote_asset: Asset,
+    pub timestamp: Option<u64>,
+}
+
+#[derive(Clone, Debug, CandidType, Deserialize)]
+pub struct ExchangeRateMetadata {
+    pub decimals: u32,
+    pub base_asset_num_received_rates: u64,
+    pub base_asset_num_queried_sources: u64,
+    pub quote_asset_num_received_rates: u64,
+    pub quote_asset_num_queried_sources: u64,
+    pub standard_deviation: u64,
+    pub forex_timestamp: Option<u64>,
+}
+
+#[derive(Clone, Debug, CandidType, Deserialize)]
+pub struct ExchangeRate {
+    pub base_asset: Asset,
+    pub quote_asset: Asset,
+    pub timestamp: u64,
+    pub rate: u64,
+    pub metadata: ExchangeRateMetadata,
+}
+
+#[derive(Clone, Debug, CandidType, Deserialize)]
+pub enum ExchangeRateError {
+    AnonymousPrincipalNotAllowed,
+    CryptoQuoteAssetNotFound,
+    CryptoBaseAssetNotFound,
+    StablecoinRateTooFewRates,
+    StablecoinRateZeroRate,
+    StablecoinRateNotFound,
+    ForexInvalidTimestamp,
+    ForexBaseAssetNotFound,
+    ForexQuoteAssetNotFound,
+    ForexAssetsNotFound,
+    RateLimited,
+    NotEnoughCycles,
+    InconsistentRatesReceived,
+    Other { code: u32, description: String },
+}
+
+pub type GetExchangeRateResult = Result<ExchangeRate, ExchangeRateError>;
+
+// ============================================================================
+// SWAP DATA STRUCTURES
+// ============================================================================
+
+#[derive(Clone, Debug, CandidType, Deserialize, Serialize)]
+pub struct SwapRecord {
+    pub user: Principal,
+    pub cketh_in: Nat,
+    pub ckalgo_out: Nat,
+    pub rate_used: f64,       // ETH/ALGO rate at time of swap
+    pub fee_collected: Nat,   // Fee in microALGO
+    pub timestamp: u64,
+    pub tx_id: String,
+}
+
+#[derive(Clone, Debug, CandidType, Deserialize)]
+pub struct SwapConfig {
+    pub enabled: bool,
+    pub fee_bps: u64,         // Fee in basis points (30 = 0.3%)
+    pub min_cketh: Nat,       // Minimum swap amount (0.0001 ETH)
+    pub max_cketh: Nat,       // Maximum swap amount (1 ETH)
+    pub cketh_backed_ckalgo: Nat,   // Total ckALGO minted via swaps (not ALGO-backed)
+    pub total_cketh_received: Nat,  // Total ckETH held by canister
+}
+
+#[derive(Clone, Debug, CandidType, Deserialize)]
+pub struct SwapResult {
+    pub cketh_in: Nat,
+    pub ckalgo_out: Nat,
+    pub rate_used: f64,
+    pub cketh_block_index: Nat,
+}
+
+// ============================================================================
 // SIMPLIFIED DATA STRUCTURES - Core Bridge Only
 // ============================================================================
 
@@ -54,6 +194,14 @@ pub struct StableStorage {
     pub authorized_minters: Vec<Principal>,
     pub reserve_health_status: bool,
     pub last_reserve_check: u64,
+    // Swap state (added for ckETH → ckALGO swap feature)
+    pub swap_enabled: Option<bool>,
+    pub swap_fee_bps: Option<u64>,
+    pub min_swap_cketh: Option<Nat>,
+    pub max_swap_cketh: Option<Nat>,
+    pub swap_records: Option<Vec<SwapRecord>>,
+    pub cketh_backed_ckalgo: Option<Nat>,
+    pub total_cketh_received: Option<Nat>,
 }
 
 // ============================================================================
@@ -79,6 +227,16 @@ thread_local! {
     // Reserve verification
     static LAST_RESERVE_CHECK: RefCell<u64> = RefCell::new(0u64);
     static RESERVE_HEALTH_STATUS: RefCell<bool> = RefCell::new(true);
+
+    // Swap state (ckETH → ckALGO)
+    static SWAP_ENABLED: RefCell<bool> = RefCell::new(false);  // Disabled by default
+    static SWAP_FEE_BPS: RefCell<u64> = RefCell::new(30);      // 0.3% fee
+    static MIN_SWAP_CKETH: RefCell<Nat> = RefCell::new(Nat::from(100_000_000_000_000u64));      // 0.0001 ETH (18 decimals)
+    static MAX_SWAP_CKETH: RefCell<Nat> = RefCell::new(Nat::from(1_000_000_000_000_000_000u64)); // 1 ETH (18 decimals)
+    static SWAP_RECORDS: RefCell<Vec<SwapRecord>> = RefCell::new(Vec::new());
+    // Reserve tracking: separate ckETH-backed vs ALGO-backed ckALGO
+    static CKETH_BACKED_CKALGO: RefCell<Nat> = RefCell::new(Nat::from(0u64));  // Total ckALGO minted via swaps
+    static TOTAL_CKETH_RECEIVED: RefCell<Nat> = RefCell::new(Nat::from(0u64)); // Total ckETH held by canister
 }
 
 // ============================================================================
@@ -127,6 +285,14 @@ fn pre_upgrade() {
         authorized_minters: AUTHORIZED_MINTERS.with(|minters| minters.borrow().clone()),
         reserve_health_status: RESERVE_HEALTH_STATUS.with(|health| *health.borrow()),
         last_reserve_check: LAST_RESERVE_CHECK.with(|check| *check.borrow()),
+        // Swap state
+        swap_enabled: Some(SWAP_ENABLED.with(|e| *e.borrow())),
+        swap_fee_bps: Some(SWAP_FEE_BPS.with(|f| *f.borrow())),
+        min_swap_cketh: Some(MIN_SWAP_CKETH.with(|m| m.borrow().clone())),
+        max_swap_cketh: Some(MAX_SWAP_CKETH.with(|m| m.borrow().clone())),
+        swap_records: Some(SWAP_RECORDS.with(|r| r.borrow().clone())),
+        cketh_backed_ckalgo: Some(CKETH_BACKED_CKALGO.with(|b| b.borrow().clone())),
+        total_cketh_received: Some(TOTAL_CKETH_RECEIVED.with(|t| t.borrow().clone())),
     };
 
     // Store in stable memory
@@ -189,6 +355,29 @@ fn post_upgrade() {
     LAST_RESERVE_CHECK.with(|check| {
         *check.borrow_mut() = stable_data.last_reserve_check;
     });
+
+    // Restore swap state (with defaults for upgrades from older versions)
+    if let Some(enabled) = stable_data.swap_enabled {
+        SWAP_ENABLED.with(|e| *e.borrow_mut() = enabled);
+    }
+    if let Some(fee_bps) = stable_data.swap_fee_bps {
+        SWAP_FEE_BPS.with(|f| *f.borrow_mut() = fee_bps);
+    }
+    if let Some(min_cketh) = stable_data.min_swap_cketh {
+        MIN_SWAP_CKETH.with(|m| *m.borrow_mut() = min_cketh);
+    }
+    if let Some(max_cketh) = stable_data.max_swap_cketh {
+        MAX_SWAP_CKETH.with(|m| *m.borrow_mut() = max_cketh);
+    }
+    if let Some(records) = stable_data.swap_records {
+        SWAP_RECORDS.with(|r| *r.borrow_mut() = records);
+    }
+    if let Some(backed) = stable_data.cketh_backed_ckalgo {
+        CKETH_BACKED_CKALGO.with(|b| *b.borrow_mut() = backed);
+    }
+    if let Some(received) = stable_data.total_cketh_received {
+        TOTAL_CKETH_RECEIVED.with(|t| *t.borrow_mut() = received);
+    }
 
     // Ensure backend authorization persists
     AUTHORIZED_MINTERS.with(|minters| {
@@ -767,7 +956,7 @@ fn get_canister_status() -> String {
     let reserve_status = get_reserve_ratio();
     let total_deposits = DEPOSIT_RECORDS.with(|records| records.borrow().len());
     let pending_deposits = PENDING_DEPOSITS.with(|pending| pending.borrow().len());
-    
+
     format!(
         "Simplified Bridge Status: {} deposits, {} pending, {:.2}% reserve ratio, healthy: {}",
         total_deposits,
@@ -775,4 +964,338 @@ fn get_canister_status() -> String {
         reserve_status.reserve_ratio * 100.0,
         reserve_status.is_healthy
     )
+}
+
+// ============================================================================
+// SWAP FUNCTIONS (ckETH -> ckALGO)
+// ============================================================================
+
+/// Helper: Convert Nat to f64 for calculations
+fn nat_to_f64(n: &Nat) -> f64 {
+    n.0.to_f64().unwrap_or(0.0)
+}
+
+/// Get current ETH/ALGO exchange rate from the Exchange Rate Canister (XRC)
+///
+/// Returns ETH/ALGO rate (how many ALGO per 1 ETH)
+/// NO FALLBACK: If XRC unavailable, reject the request
+async fn get_eth_algo_rate() -> Result<f64, String> {
+    let xrc_canister = Principal::from_text(XRC_CANISTER_ID)
+        .map_err(|e| format!("Invalid XRC canister ID: {}", e))?;
+
+    // Get ETH/USD rate
+    let eth_usd_request = GetExchangeRateRequest {
+        base_asset: Asset {
+            symbol: "ETH".to_string(),
+            class: AssetClass::Cryptocurrency,
+        },
+        quote_asset: Asset {
+            symbol: "USD".to_string(),
+            class: AssetClass::FiatCurrency,
+        },
+        timestamp: None,
+    };
+
+    let eth_usd_result: Result<(GetExchangeRateResult,), _> = ic_cdk::call(
+        xrc_canister,
+        "get_exchange_rate",
+        (eth_usd_request,)
+    ).await;
+
+    // Get ALGO/USD rate
+    let algo_usd_request = GetExchangeRateRequest {
+        base_asset: Asset {
+            symbol: "ALGO".to_string(),
+            class: AssetClass::Cryptocurrency,
+        },
+        quote_asset: Asset {
+            symbol: "USD".to_string(),
+            class: AssetClass::FiatCurrency,
+        },
+        timestamp: None,
+    };
+
+    let algo_usd_result: Result<(GetExchangeRateResult,), _> = ic_cdk::call(
+        xrc_canister,
+        "get_exchange_rate",
+        (algo_usd_request,)
+    ).await;
+
+    match (eth_usd_result, algo_usd_result) {
+        (Ok((Ok(eth_rate),)), Ok((Ok(algo_rate),))) => {
+            // XRC uses rate with decimals specified in metadata (typically 9)
+            let eth_decimals = eth_rate.metadata.decimals;
+            let algo_decimals = algo_rate.metadata.decimals;
+
+            let eth_usd = eth_rate.rate as f64 / 10_f64.powi(eth_decimals as i32);
+            let algo_usd = algo_rate.rate as f64 / 10_f64.powi(algo_decimals as i32);
+
+            if algo_usd > 0.0 {
+                // ETH/ALGO = (ETH/USD) / (ALGO/USD)
+                Ok(eth_usd / algo_usd)
+            } else {
+                Err("ALGO/USD rate is zero".to_string())
+            }
+        }
+        (Ok((Err(e),)), _) => {
+            Err(format!("Failed to get ETH/USD rate: {:?}", e))
+        }
+        (_, Ok((Err(e),))) => {
+            Err(format!("Failed to get ALGO/USD rate: {:?}", e))
+        }
+        (Err((code, msg)), _) => {
+            Err(format!("XRC call failed for ETH/USD: {:?} - {}", code, msg))
+        }
+        (_, Err((code, msg))) => {
+            Err(format!("XRC call failed for ALGO/USD: {:?} - {}", code, msg))
+        }
+    }
+}
+
+/// Swap ckETH for ckALGO
+///
+/// SECURITY: Only callable by authorized principals (backend, controllers)
+///
+/// Flow:
+/// 1. Verify caller is authorized
+/// 2. Verify swap is enabled and amount within limits
+/// 3. Get current ETH/ALGO rate from XRC (NO fallback)
+/// 4. Call ckETH.icrc2_transfer_from(user, this_canister, amount)
+/// 5. Calculate ckALGO output (minus fee)
+/// 6. Mint ckALGO to user
+/// 7. Record swap, update reserves
+#[update]
+async fn swap_cketh_to_ckalgo(
+    user: Principal,
+    cketh_amount: Nat,
+    min_ckalgo_out: Option<Nat>  // Slippage protection
+) -> Result<SwapResult, String> {
+    // Authorization check
+    let caller_principal = caller();
+    let is_authorized = AUTHORIZED_MINTERS.with(|m| m.borrow().contains(&caller_principal));
+    let is_controller = ic_cdk::api::is_controller(&caller_principal);
+
+    if !is_authorized && !is_controller {
+        return Err(format!(
+            "Unauthorized: only authorized minters can execute swaps. Caller: {}",
+            caller_principal
+        ));
+    }
+
+    // Check swap enabled
+    let enabled = SWAP_ENABLED.with(|e| *e.borrow());
+    if !enabled {
+        return Err("Swaps are currently disabled".to_string());
+    }
+
+    // Validate amount within limits
+    let min_swap = MIN_SWAP_CKETH.with(|m| m.borrow().clone());
+    let max_swap = MAX_SWAP_CKETH.with(|m| m.borrow().clone());
+
+    if cketh_amount < min_swap {
+        return Err(format!(
+            "Swap amount {} below minimum {} (0.0001 ETH)",
+            cketh_amount, min_swap
+        ));
+    }
+    if cketh_amount > max_swap {
+        return Err(format!(
+            "Swap amount {} exceeds maximum {} (1 ETH)",
+            cketh_amount, max_swap
+        ));
+    }
+
+    // Get exchange rate from XRC (NO FALLBACK - reject if unavailable)
+    let rate = get_eth_algo_rate().await?;
+
+    // Calculate output
+    // ckETH has 18 decimals, ckALGO has 6 decimals
+    // cketh_amount is in wei (1e-18 ETH)
+    // rate is ETH/ALGO (how many ALGO per ETH)
+    // output should be in microALGO (1e-6 ALGO)
+    let cketh_as_f64 = nat_to_f64(&cketh_amount);
+    let eth_amount = cketh_as_f64 / 1e18;  // Convert wei to ETH
+    let algo_amount = eth_amount * rate;    // ETH to ALGO
+    let micro_algo = algo_amount * 1e6;     // ALGO to microALGO
+
+    // Apply fee
+    let fee_bps = SWAP_FEE_BPS.with(|f| *f.borrow());
+    let fee_amount = micro_algo * (fee_bps as f64 / 10_000.0);
+    let net_micro_algo = micro_algo - fee_amount;
+
+    if net_micro_algo <= 0.0 {
+        return Err("Output amount too small after fee".to_string());
+    }
+
+    let ckalgo_out = Nat::from(net_micro_algo as u64);
+    let fee_nat = Nat::from(fee_amount as u64);
+
+    // Slippage check
+    if let Some(min_out) = min_ckalgo_out {
+        if ckalgo_out < min_out {
+            return Err(format!(
+                "Slippage exceeded: output {} < minimum {}",
+                ckalgo_out, min_out
+            ));
+        }
+    }
+
+    // Execute: Pull ckETH from user via ICRC-2 transfer_from
+    let cketh_canister = Principal::from_text(CKETH_CANISTER_ID)
+        .map_err(|e| format!("Invalid ckETH canister ID: {}", e))?;
+    let this_canister = ic_cdk::api::id();
+
+    let transfer_args = TransferFromArgs {
+        from: Account {
+            owner: user,
+            subaccount: None,
+        },
+        to: Account {
+            owner: this_canister,
+            subaccount: None,
+        },
+        amount: cketh_amount.clone(),
+        fee: None,
+        memo: None,
+        created_at_time: None,
+        spender_subaccount: None,
+    };
+
+    // Inter-canister call to ckETH
+    let transfer_result: Result<(Result<Nat, TransferFromError>,), _> =
+        ic_cdk::call(cketh_canister, "icrc2_transfer_from", (transfer_args,)).await;
+
+    match transfer_result {
+        Ok((Ok(block_index),)) => {
+            // ckETH received! Now mint ckALGO
+            let user_str = user.to_text();
+
+            // Mint ckALGO to user
+            BALANCES.with(|balances| {
+                let mut balances_map = balances.borrow_mut();
+                let current = balances_map.get(&user_str).unwrap_or(&Nat::from(0u64)).clone();
+                balances_map.insert(user_str.clone(), current + ckalgo_out.clone());
+            });
+
+            // Update total supply
+            TOTAL_SUPPLY.with(|supply| {
+                let mut total = supply.borrow_mut();
+                *total = total.clone() + ckalgo_out.clone();
+            });
+
+            // Track ckETH-backed ckALGO separately (NOT backed by ALGO reserves)
+            CKETH_BACKED_CKALGO.with(|backed| {
+                let mut total = backed.borrow_mut();
+                *total = total.clone() + ckalgo_out.clone();
+            });
+
+            // Track total ckETH received
+            TOTAL_CKETH_RECEIVED.with(|received| {
+                let mut total = received.borrow_mut();
+                *total = total.clone() + cketh_amount.clone();
+            });
+
+            // Record swap for audit trail
+            let record = SwapRecord {
+                user,
+                cketh_in: cketh_amount.clone(),
+                ckalgo_out: ckalgo_out.clone(),
+                rate_used: rate,
+                fee_collected: fee_nat,
+                timestamp: time(),
+                tx_id: format!("SWAP_{}", block_index),
+            };
+
+            SWAP_RECORDS.with(|records| records.borrow_mut().push(record));
+
+            Ok(SwapResult {
+                cketh_in: cketh_amount,
+                ckalgo_out,
+                rate_used: rate,
+                cketh_block_index: block_index,
+            })
+        }
+        Ok((Err(e),)) => Err(format!("ckETH transfer_from failed: {:?}", e)),
+        Err((code, msg)) => Err(format!("Inter-canister call to ckETH failed: {:?} - {}", code, msg)),
+    }
+}
+
+// ============================================================================
+// SWAP ADMIN FUNCTIONS
+// ============================================================================
+
+/// Enable/disable swaps (controllers only)
+#[update]
+fn set_swap_enabled(enabled: bool) -> Result<String, String> {
+    let caller_principal = caller();
+    if !ic_cdk::api::is_controller(&caller_principal) {
+        return Err("Only controllers can enable/disable swaps".to_string());
+    }
+
+    SWAP_ENABLED.with(|e| *e.borrow_mut() = enabled);
+    Ok(format!("Swaps {}", if enabled { "enabled" } else { "disabled" }))
+}
+
+/// Set swap fee (controllers only, max 5%)
+#[update]
+fn set_swap_fee_bps(fee_bps: u64) -> Result<String, String> {
+    let caller_principal = caller();
+    if !ic_cdk::api::is_controller(&caller_principal) {
+        return Err("Only controllers can set swap fee".to_string());
+    }
+
+    if fee_bps > 500 {
+        return Err("Fee cannot exceed 5% (500 bps)".to_string());
+    }
+
+    SWAP_FEE_BPS.with(|f| *f.borrow_mut() = fee_bps);
+    Ok(format!("Swap fee set to {} bps ({}%)", fee_bps, fee_bps as f64 / 100.0))
+}
+
+/// Set swap limits (controllers only)
+#[update]
+fn set_swap_limits(min_cketh: Nat, max_cketh: Nat) -> Result<String, String> {
+    let caller_principal = caller();
+    if !ic_cdk::api::is_controller(&caller_principal) {
+        return Err("Only controllers can set swap limits".to_string());
+    }
+
+    if min_cketh >= max_cketh {
+        return Err("Minimum must be less than maximum".to_string());
+    }
+
+    MIN_SWAP_CKETH.with(|m| *m.borrow_mut() = min_cketh.clone());
+    MAX_SWAP_CKETH.with(|m| *m.borrow_mut() = max_cketh.clone());
+
+    Ok(format!("Swap limits set: min={}, max={}", min_cketh, max_cketh))
+}
+
+/// Query swap configuration
+#[query]
+fn get_swap_config() -> SwapConfig {
+    SwapConfig {
+        enabled: SWAP_ENABLED.with(|e| *e.borrow()),
+        fee_bps: SWAP_FEE_BPS.with(|f| *f.borrow()),
+        min_cketh: MIN_SWAP_CKETH.with(|m| m.borrow().clone()),
+        max_cketh: MAX_SWAP_CKETH.with(|m| m.borrow().clone()),
+        cketh_backed_ckalgo: CKETH_BACKED_CKALGO.with(|b| b.borrow().clone()),
+        total_cketh_received: TOTAL_CKETH_RECEIVED.with(|t| t.borrow().clone()),
+    }
+}
+
+/// Query swap history (most recent first)
+#[query]
+fn get_swap_records(limit: Option<u32>) -> Vec<SwapRecord> {
+    let limit = limit.unwrap_or(100) as usize;
+    SWAP_RECORDS.with(|records| {
+        let r = records.borrow();
+        r.iter().rev().take(limit).cloned().collect()
+    })
+}
+
+/// Get current ETH/ALGO rate (exposed for quote calculations)
+/// Note: This is async and requires an update call
+#[update]
+async fn get_current_eth_algo_rate() -> Result<f64, String> {
+    get_eth_algo_rate().await
 }

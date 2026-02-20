@@ -1,5 +1,5 @@
 // Simplified Bridge Canister Interface - Sprint X
-// Core bridge functionality only
+// Core bridge functionality + ckETH swap
 
 type PendingDeposit = record {
   user : principal;
@@ -26,6 +26,33 @@ type ReserveStatus = record {
   reserve_ratio : float64;
   is_healthy : bool;
   last_verification : nat64;
+};
+
+// Swap types (ckETH -> ckALGO)
+type SwapRecord = record {
+  user : principal;
+  cketh_in : nat;
+  ckalgo_out : nat;
+  rate_used : float64;
+  fee_collected : nat;
+  timestamp : nat64;
+  tx_id : text;
+};
+
+type SwapConfig = record {
+  enabled : bool;
+  fee_bps : nat64;
+  min_cketh : nat;
+  max_cketh : nat;
+  cketh_backed_ckalgo : nat;
+  total_cketh_received : nat;
+};
+
+type SwapResult = record {
+  cketh_in : nat;
+  ckalgo_out : nat;
+  rate_used : float64;
+  cketh_block_index : nat;
 };
 
 service : {
@@ -55,4 +82,19 @@ service : {
   admin_transfer_ck_algo : (principal, principal, nat) -> (variant { Ok : nat; Err : text });
   update_reserve_health : (bool) -> (variant { Ok : text; Err : text });
   get_canister_status : () -> (text) query;
+
+  // Swap Functions (ckETH -> ckALGO)
+  // Core swap function - authorized minters only
+  swap_cketh_to_ckalgo : (principal, nat, opt nat) -> (variant { Ok : SwapResult; Err : text });
+  // Get current rate (calls XRC - update call required)
+  get_current_eth_algo_rate : () -> (variant { Ok : float64; Err : text });
+
+  // Swap Admin Functions (controllers only)
+  set_swap_enabled : (bool) -> (variant { Ok : text; Err : text });
+  set_swap_fee_bps : (nat64) -> (variant { Ok : text; Err : text });
+  set_swap_limits : (nat, nat) -> (variant { Ok : text; Err : text });
+
+  // Swap Query Functions
+  get_swap_config : () -> (SwapConfig) query;
+  get_swap_records : (opt nat32) -> (vec SwapRecord) query;
 }

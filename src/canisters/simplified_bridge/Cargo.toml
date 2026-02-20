@@ -13,3 +13,4 @@ candid = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 num-traits = "0.2"
+# Note: ICRC-2 types defined manually in lib.rs to avoid dependency conflicts
