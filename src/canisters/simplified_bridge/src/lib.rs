@@ -641,6 +641,63 @@ async fn admin_redeem_ck_algo(
     Ok(format!("REDEEM_{}_{}", time(), destination))
 }
 
+/// Admin function: transfer ckALGO from one principal to another
+/// Used by backend for X402 payments (transfers user's tokens to treasury)
+/// Only authorized minters or controllers can call this function
+#[update]
+fn admin_transfer_ck_algo(
+    from_principal: Principal,
+    to_principal: Principal,
+    amount: Nat
+) -> Result<Nat, String> {
+    let caller_principal = caller();
+
+    // Check authorization
+    let is_authorized = AUTHORIZED_MINTERS.with(|minters| {
+        minters.borrow().contains(&caller_principal)
+    });
+    let is_controller = ic_cdk::api::is_controller(&caller_principal);
+
+    if !is_authorized && !is_controller {
+        return Err(format!(
+            "Unauthorized: only authorized minters or controllers can perform admin transfers. Caller: {}",
+            caller_principal
+        ));
+    }
+
+    let from_str = from_principal.to_text();
+    let to_str = to_principal.to_text();
+
+    // Check sender's balance
+    let from_balance = BALANCES.with(|balances| {
+        balances.borrow().get(&from_str).unwrap_or(&Nat::from(0u64)).clone()
+    });
+
+    if from_balance < amount {
+        return Err(format!(
+            "Insufficient balance for principal {}: has {}, requested {}",
+            from_str, from_balance, amount
+        ));
+    }
+
+    // Perform transfer: deduct from sender, add to receiver
+    BALANCES.with(|balances| {
+        let mut balances_map = balances.borrow_mut();
+
+        // Deduct from sender
+        let new_from_balance = from_balance.clone() - amount.clone();
+        balances_map.insert(from_str.clone(), new_from_balance);
+
+        // Add to receiver
+        let to_balance = balances_map.get(&to_str).unwrap_or(&Nat::from(0u64)).clone();
+        let new_to_balance = to_balance + amount.clone();
+        balances_map.insert(to_str, new_to_balance);
+    });
+
+    // Return transfer timestamp as transaction index
+    Ok(Nat::from(time()))
+}
+
 #[query]
 fn get_reserve_ratio() -> ReserveStatus {
     let locked_reserves = LOCKED_ALGO_RESERVES.with(|reserves| reserves.borrow().clone());

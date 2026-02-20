@@ -46,6 +46,7 @@ const simplifiedBridgeIdl = ({ IDL }: any) => {
     'mint_after_deposit_confirmed': IDL.Func([IDL.Text], [IDL.Variant({ 'Ok': IDL.Nat, 'Err': IDL.Text })], []),
     'redeem_ck_algo': IDL.Func([IDL.Nat, IDL.Text], [IDL.Variant({ 'Ok': IDL.Text, 'Err': IDL.Text })], []),
     'admin_redeem_ck_algo': IDL.Func([IDL.Principal, IDL.Nat, IDL.Text], [IDL.Variant({ 'Ok': IDL.Text, 'Err': IDL.Text })], []),
+    'admin_transfer_ck_algo': IDL.Func([IDL.Principal, IDL.Principal, IDL.Nat], [IDL.Variant({ 'Ok': IDL.Nat, 'Err': IDL.Text })], []),
     'get_reserve_ratio': IDL.Func([], [ReserveStatus], ['query']),
     'get_user_deposits': IDL.Func([IDL.Principal], [IDL.Vec(DepositRecord)], ['query']),
 
@@ -330,6 +331,22 @@ export class SimplifiedBridgeService {
         throw new Error(`Admin redeem failed: ${result.Err}`);
       }
     }, `adminRedeemCkAlgo(${user.toString()}, ${amount}, ${destination})`);
+  }
+
+  /**
+   * Admin function: transfer ckALGO from one principal to another
+   * Used by X402 payment system to move tokens from payer to treasury
+   */
+  async adminTransferCkAlgo(from: Principal, to: Principal, amount: bigint): Promise<bigint> {
+    return this.retryOperation(async () => {
+      const result = await this.actor.admin_transfer_ck_algo(from, to, amount);
+      if ('Ok' in result) {
+        console.log(`✅ Transfer ${amount} ckALGO: ${from.toString()} → ${to.toString()}`);
+        return BigInt(result.Ok.toString());
+      } else {
+        throw new Error(`Admin transfer failed: ${result.Err}`);
+      }
+    }, `adminTransferCkAlgo(${from.toString()}, ${to.toString()}, ${amount})`);
   }
 
   async getReserveStatus(): Promise<ReserveStatus> {

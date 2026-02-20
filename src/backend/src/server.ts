@@ -3399,15 +3399,15 @@ app.post('/api/sippar/ci-agents/:agent/:service',
 
     console.log(`🤖 CI Agent service call: ${agent}/${service} for principal: ${principal.slice(0, 10)}...`);
 
-    // Payment verification: require a valid X402 service token
+    // Payment verification: require a valid X402 service token (JWT signed)
     // Token is obtained via POST /api/sippar/x402/create-payment
-    const isValidPayment = paymentToken && x402Service.verifyServiceToken(paymentToken);
+    const verification = x402Service.verifyServiceToken(paymentToken || '');
 
-    if (!isValidPayment) {
+    if (!verification.valid) {
       return res.status(402).json({
         success: false,
         error: 'Payment required',
-        message: 'Obtain a payment token via POST /api/sippar/x402/create-payment, then pass it as paymentToken in the request body',
+        message: verification.error || 'Obtain a payment token via POST /api/sippar/x402/create-payment, then pass it as paymentToken in the request body',
         payment_endpoint: `/api/sippar/x402/create-payment`,
         service_info: {
           agent,
@@ -3415,6 +3415,11 @@ app.post('/api/sippar/ci-agents/:agent/:service',
           pricing: ciAgentService.getAvailableAgents().find(a => a.id.includes(agent))?.pricing
         }
       });
+    }
+
+    // Consume token to prevent replay attacks
+    if (verification.payload) {
+      x402Service.consumeToken(verification.payload.jti);
     }
 
     // Call CI agent service
@@ -4706,18 +4711,41 @@ app.get('/api/sippar/x402/payment-status/:id', async (req, res) => {
   }
 });
 
-// X402 Service Token Verification
+// X402 Service Token Verification (JWT)
 app.post('/api/sippar/x402/verify-token', async (req, res) => {
   const startTime = Date.now();
   try {
-    const { token } = req.body;
-    const isValid = x402Service.verifyServiceToken(token);
+    const { token, consume = false } = req.body;
 
-    logOperation('x402-verify-token', true, Date.now() - startTime);
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        error: 'Token is required',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const verification = x402Service.verifyServiceToken(token);
+
+    // Optionally consume the token (mark as used for replay protection)
+    if (consume && verification.valid && verification.payload) {
+      x402Service.consumeToken(verification.payload.jti);
+    }
+
+    logOperation('x402-verify-token', verification.valid, Date.now() - startTime);
 
     res.json({
       success: true,
-      valid: isValid,
+      valid: verification.valid,
+      payload: verification.valid ? {
+        principal: verification.payload?.sub,
+        service: verification.payload?.svc,
+        amount: verification.payload?.amt,
+        transactionId: verification.payload?.txId,
+        realPayment: verification.payload?.real,
+        expiresAt: verification.payload?.exp ? new Date(verification.payload.exp * 1000).toISOString() : undefined
+      } : undefined,
+      error: verification.error,
       timestamp: new Date().toISOString()
     });
 
