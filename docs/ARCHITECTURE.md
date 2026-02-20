@@ -90,7 +90,7 @@ The bridge (ALGO → ckALGO) is the **infrastructure layer**. The product is **a
 | Canister | ID | Purpose |
 |---|---|---|
 | **threshold_signer** | `vj7ly-diaaa-aaaae-abvoq-cai` | Crypto engine — derives Algorand addresses from ICP principals, signs Algorand transactions using ICP's threshold Ed25519 |
-| **simplified_bridge** | `hldvt-2yaaa-aaaak-qulxa-cai` | Token + bridge — ICRC-1 ckALGO token, deposit tracking, minting, burning, reserve accounting |
+| **simplified_bridge** | `hldvt-2yaaa-aaaak-qulxa-cai` | Token + bridge — ICRC-1 ckALGO token, deposit tracking, minting, burning, reserve accounting, X402 transfers |
 
 **Archived**: `ck_algo` (`gbmxj-yiaaa-aaaak-qulqa-cai`) — original 6700-line monolith with AI/compliance/governance code. Replaced by simplified_bridge. Code in `archive/canisters/ck_algo/`.
 
@@ -134,6 +134,7 @@ The bridge (ALGO → ckALGO) is the **infrastructure layer**. The product is **a
 | `automaticMintingService` | automaticMintingService.ts | (via simplifiedBridgeService) | Queues and processes confirmed deposits |
 | `automaticRedemptionService` | automaticRedemptionService.ts | threshold_signer + Algorand | Signs and submits withdrawal transactions |
 | `custodyAddressService` | custodyAddressService.ts | Both canisters | Generates and registers custody addresses |
+| `x402Service` | x402Service.ts | simplified_bridge canister | X402 payments, JWT tokens, replay protection |
 
 ## Infrastructure
 
@@ -157,3 +158,59 @@ The bridge (ALGO → ckALGO) is the **infrastructure layer**. The product is **a
 | Max deposit | 1M ALGO |
 | Confirmations | 6 (mainnet), 3 (testnet) |
 | Total supply | 23.419 ckALGO (as of 2026-02-20, after 0.7 redeemed) |
+
+## X402 Agent Payment Architecture (2026-02-20)
+
+X402 enables agents to pay for services with real ckALGO transfers, verified by JWT tokens.
+
+### Payment Flow
+
+```
+1. Agent requests service → GET /api/sippar/ci-agents/marketplace
+2. Agent calls POST /api/sippar/x402/create-payment with:
+   - serviceEndpoint, paymentAmount, payerCredentials (principal)
+3. Backend calls simplified_bridge.admin_transfer_ck_algo(from, treasury, amount)
+4. If transfer succeeds, backend signs JWT token with payment proof
+5. Agent receives serviceAccessToken (JWT) with txId, amount, expiry
+6. Agent calls POST /api/sippar/ci-agents/:agent/:service with paymentToken
+7. Backend verifies JWT signature, checks not already consumed
+8. Service executes, token marked as consumed (replay protection)
+```
+
+### Components
+
+| Component | File | Purpose |
+|---|---|---|
+| `x402Service` | x402Service.ts | Payment creation, JWT signing/verification, replay protection |
+| `admin_transfer_ck_algo` | simplified_bridge canister | Backend-initiated ckALGO transfers between principals |
+| Treasury Principal | env `X402_TREASURY_PRINCIPAL` | Destination for all agent payments |
+
+### JWT Token Structure
+
+```typescript
+interface X402PaymentJWT {
+  sub: string;    // payer principal
+  svc: string;    // service endpoint
+  amt: number;    // amount in ckALGO
+  txId: string;   // canister transfer index
+  iat: number;    // issued at (seconds)
+  exp: number;    // expiry (24 hours)
+  jti: string;    // unique token ID (for replay protection)
+  real: boolean;  // true = real ckALGO transfer
+}
+```
+
+### Environment Variables
+
+| Variable | Purpose | Default |
+|---|---|---|
+| `X402_JWT_SECRET` | HMAC secret for JWT signing | dev-secret (MUST change in prod) |
+| `X402_TREASURY_PRINCIPAL` | Payment destination | none (required for real payments) |
+| `X402_REAL_PAYMENTS` | Enable real ckALGO transfers | false (simulated mode) |
+
+### Security
+
+- JWT tokens signed with HS256 (HMAC-SHA256)
+- Replay protection: token IDs tracked, consumed after service execution
+- Backwards compatibility: legacy base64 tokens still verified (for migration)
+- Backend-initiated transfers: only authorized minters can call `admin_transfer_ck_algo`
