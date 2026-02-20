@@ -45,6 +45,7 @@ const simplifiedBridgeIdl = ({ IDL }: any) => {
     'update_deposit_confirmations': IDL.Func([IDL.Text, IDL.Nat8], [IDL.Variant({ 'Ok': IDL.Text, 'Err': IDL.Text })], []),
     'mint_after_deposit_confirmed': IDL.Func([IDL.Text], [IDL.Variant({ 'Ok': IDL.Nat, 'Err': IDL.Text })], []),
     'redeem_ck_algo': IDL.Func([IDL.Nat, IDL.Text], [IDL.Variant({ 'Ok': IDL.Text, 'Err': IDL.Text })], []),
+    'admin_redeem_ck_algo': IDL.Func([IDL.Principal, IDL.Nat, IDL.Text], [IDL.Variant({ 'Ok': IDL.Text, 'Err': IDL.Text })], []),
     'get_reserve_ratio': IDL.Func([], [ReserveStatus], ['query']),
     'get_user_deposits': IDL.Func([IDL.Principal], [IDL.Vec(DepositRecord)], ['query']),
 
@@ -313,6 +314,22 @@ export class SimplifiedBridgeService {
         throw new Error(`Redeem failed: ${result.Err}`);
       }
     }, `redeemCkAlgo(${amount} to ${destination})`);
+  }
+
+  /**
+   * Admin function: redeem ckALGO on behalf of a user
+   * Used by backend to process redemption requests (burns user's tokens)
+   */
+  async adminRedeemCkAlgo(user: Principal, amount: bigint, destination: string): Promise<string> {
+    return this.retryOperation(async () => {
+      const result = await this.actor.admin_redeem_ck_algo(user, amount, destination);
+      if ('Ok' in result) {
+        console.log(`✅ Admin redeemed ${amount} ckALGO from ${user.toString()} to ${destination}`);
+        return result.Ok;
+      } else {
+        throw new Error(`Admin redeem failed: ${result.Err}`);
+      }
+    }, `adminRedeemCkAlgo(${user.toString()}, ${amount}, ${destination})`);
   }
 
   async getReserveStatus(): Promise<ReserveStatus> {

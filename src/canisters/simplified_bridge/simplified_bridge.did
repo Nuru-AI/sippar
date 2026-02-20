@@ -51,6 +51,7 @@ service : {
   get_user_deposits : (principal) -> (vec DepositRecord) query;
 
   // Admin Functions
+  admin_redeem_ck_algo : (principal, nat, text) -> (variant { Ok : text; Err : text });
   update_reserve_health : (bool) -> (variant { Ok : text; Err : text });
   get_canister_status : () -> (text) query;
 }

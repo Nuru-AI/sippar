@@ -102,8 +102,9 @@ const automaticMintingService = new AutomaticMintingService(
 const automaticMintingHandler = new AutomaticMintingHandler(automaticMintingService);
 
 // Initialize Sprint 012.5 Enhanced Automatic Redemption System
+// Uses simplified_bridge canister (hldvt) instead of archived ck_algo canister (gbmxj)
 const automaticRedemptionService = new AutomaticRedemptionService(
-  ckAlgoService,
+  simplifiedBridgeService,
   productionMonitoringService,
   alertManager
 );

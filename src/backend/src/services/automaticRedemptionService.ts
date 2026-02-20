@@ -3,11 +3,12 @@
  * Enhanced automatic redemption system with threshold signature ALGO withdrawal
  */
 
-import { CkAlgoService } from './ckAlgoService.js';
+import { SimplifiedBridgeService } from './simplifiedBridgeService.js';
 import { icpCanisterService } from './icpCanisterService.js';
 import { algorandService, algorandMainnet } from './algorandService.js';
 import { ProductionMonitoringService, Alert } from './productionMonitoringService.js';
 import { AlertManager } from './alertManager.js';
+import { Principal } from '@dfinity/principal';
 import algosdk from 'algosdk';
 
 export interface RedemptionJob {
@@ -44,7 +45,7 @@ export class AutomaticRedemptionService {
   private redemptionQueue: Map<string, RedemptionJob> = new Map();
   private isProcessing: boolean = false;
   private processingInterval: NodeJS.Timeout | null = null;
-  private ckAlgoService: CkAlgoService;
+  private simplifiedBridgeService: SimplifiedBridgeService;
   private monitoringService?: ProductionMonitoringService;
   private alertManager?: AlertManager;
 
@@ -59,11 +60,11 @@ export class AutomaticRedemptionService {
   };
 
   constructor(
-    ckAlgoService: CkAlgoService,
+    simplifiedBridgeService: SimplifiedBridgeService,
     monitoringService?: ProductionMonitoringService,
     alertManager?: AlertManager
   ) {
-    this.ckAlgoService = ckAlgoService;
+    this.simplifiedBridgeService = simplifiedBridgeService;
     this.monitoringService = monitoringService;
     this.alertManager = alertManager;
   }
@@ -185,16 +186,19 @@ export class AutomaticRedemptionService {
         job.status = 'burning';
         console.log(`🔥 Burning ${job.amount} ckALGO tokens for ${job.userPrincipal}...`);
 
-        const ckAlgoMicroUnits = Math.floor(job.amount * 1_000_000);
-        const burnResult = await this.ckAlgoService.burnCkAlgo(
-          job.userPrincipal,
+        const ckAlgoMicroUnits = BigInt(Math.floor(job.amount * 1_000_000));
+        const userPrincipal = Principal.fromText(job.userPrincipal);
+
+        // Use simplified_bridge canister's admin_redeem_ck_algo function
+        const burnResult = await this.simplifiedBridgeService.adminRedeemCkAlgo(
+          userPrincipal,
           ckAlgoMicroUnits,
           job.destinationAddress
         );
 
         job.ckAlgoBurned = true;
-        job.burnResult = burnResult;
-        console.log(`✅ Successfully burned ${job.amount} ckALGO for job ${job.id}`);
+        job.burnResult = { redemption_id: burnResult };
+        console.log(`✅ Successfully burned ${job.amount} ckALGO for job ${job.id} (redemption: ${burnResult})`);
       }
 
       // Step 2: Withdraw ALGO using threshold signatures
