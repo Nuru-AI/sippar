@@ -2,8 +2,8 @@
 
 **Project**: Universal payment bridge for AI agent-to-agent commerce, built on ICP-Algorand Chain Fusion
 **Vision**: Agents paying agents across chains via X402 protocol, secured by ICP threshold signatures
-**Status**: Bridge layer working on mainnet (25+ ckALGO minted). Agent payment layer prototyped, not production.
-**Last Updated**: 2026-02-19
+**Status**: Bridge layer fully working on mainnet — deposit→mint AND redeem→withdraw both proven. Agent payment layer prototyped, not production.
+**Last Updated**: 2026-02-20
 
 ## What This Is
 
@@ -43,10 +43,12 @@ Backend on VPS (74.50.113.152:3004) — polls Algorand, manages deposit lifecycl
 
 ### Backend
 - Express.js on port 3004 behind nginx
-- `simplifiedBridgeService` → talks to simplified_bridge canister
-- `icpCanisterService` → talks to threshold_signer canister
+- `simplifiedBridgeService` → talks to simplified_bridge canister (mint, burn, balances)
+- `icpCanisterService` → talks to threshold_signer canister (address derivation, signing)
 - `depositDetectionService` → polls Algorand via AlgoNode RPC
 - Uses `@dfinity/agent` for ICP canister calls
+- **Redemption**: `/ck-algo/redeem` endpoint burns ckALGO and sends ALGO via threshold signature
+- **Important**: Use `algorandMainnet` (not `algorandService`) for all mainnet transactions
 
 ### Deployment
 - Canisters: `dfx deploy --network ic <canister> --mode upgrade`

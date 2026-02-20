@@ -1,6 +1,6 @@
 # Sippar Status
 
-**Last Updated**: 2026-02-20 15:30 CET
+**Last Updated**: 2026-02-20 16:10 CET
 
 ## Vision
 Sippar is the **cross-chain payment rail for AI agent commerce**. ICP is invisible middleware (chain fusion, threshold crypto, ckTokens) — not a competing L1. Agents on Ethereum or Solana pay in their native token; Sippar swaps via ICP DEX, burns ckALGO, and settles native ALGO to the receiving agent. No bridges, no seed phrases, no human intervention.
@@ -19,14 +19,17 @@ See also: `docs/ARCHITECTURE.md`, `working/sprint-018-agent-to-agent-payments/`.
 - Automatically mints ckALGO
 - **Proven**: 3 successful mints on 2026-02-19 (13.12 + 6 + 5 ALGO = 24.12 ckALGO)
 
-### Redeem → Burn → Withdraw (Mainnet, First Success 2026-02-20)
+### Redeem → Burn → Withdraw (Mainnet, Fully Working 2026-02-20)
 - User requests redemption via `/ck-algo/redeem` endpoint
 - Backend burns ckALGO via `admin_redeem_ck_algo` on `simplified_bridge` canister
 - Creates Algorand withdrawal transaction
 - Signs via ICP threshold signatures (`threshold_signer` canister)
-- Submits to Algorand mainnet
-- **Proven**: Transaction `F6NK46JT23X24AROCM65CWFFCEM55GSHN54DSLFRGM4UEVUUHTKA` (round 58568996)
-- Total supply: 24.919 ckALGO (after 0.2 ckALGO redeemed)
+- Submits to Algorand mainnet using `algorandMainnet` service
+- **Proven**:
+  - `F6NK46JT23X24AROCM65CWFFCEM55GSHN54DSLFRGM4UEVUUHTKA` (0.1 ALGO, round 58568996)
+  - `KX5MFBTZKYN654BUEEAIIVSVUCKWKCW465EXNFE6XMM3IUPPEHWA` (0.5 ALGO to external wallet, round 58569162)
+- Total redeemed: 0.7 ckALGO → 0.6 ALGO delivered (0.1 lost to testnet bug, now fixed)
+- Current supply: 23.419 ckALGO
 
 ### ICRC-1 Token
 - Standard query methods (name, symbol, decimals, fee, total_supply, balance_of)
@@ -56,12 +59,6 @@ See also: `docs/ARCHITECTURE.md`, `working/sprint-018-agent-to-agent-payments/`.
 - Canister upgrades preserve state (pre_upgrade/post_upgrade with stable storage)
 
 ## What Doesn't Work ❌
-
-### Redemption (ckALGO → ALGO) — WORKING
-- **First successful mainnet redemption 2026-02-20 14:00 UTC**
-- Transaction `F6NK46JT23X24AROCM65CWFFCEM55GSHN54DSLFRGM4UEVUUHTKA` confirmed (round 58568996)
-- Full flow: ckALGO burned via `simplified_bridge` → threshold signature → ALGO sent on mainnet
-- **Note**: `algorandMainnet` must be used for withdrawals (not `algorandService` which is testnet)
 
 ### Per-User Custody Addresses
 - All deposits currently go to ONE shared address (`6W47GCLX...`)
