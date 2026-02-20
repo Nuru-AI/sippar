@@ -2,9 +2,16 @@
 
 **Created**: 2026-02-20
 **Updated**: 2026-02-21
-**Status**: Phase 1+2 IMPLEMENTED (canister-side), Phase 3 pending (backend)
+**Status**: Phase 1+2 DEPLOYED & TESTED on mainnet, Phase 3 pending (backend)
 **Goal**: Add direct swap function to simplified_bridge canister that accepts ckETH and mints ckALGO
-**Commit**: `d91bce9` feat: implement ckETH → ckALGO swap in simplified_bridge canister
+
+**Commits**:
+- `d91bce9` feat: implement ckETH → ckALGO swap in simplified_bridge canister
+- `d99ec9c` fix: XRC integration - add cycles and missing error variants
+
+**Mainnet Tests** (2026-02-21):
+- `get_current_eth_algo_rate()` → **21,743.81 ALGO/ETH** ✅
+- `get_swap_config()` → disabled, 0.3% fee, 0.0001-1 ETH limits ✅
 
 ---
 

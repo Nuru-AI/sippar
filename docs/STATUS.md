@@ -1,6 +1,6 @@
 # Sippar Status
 
-**Last Updated**: 2026-02-21 10:30 CET
+**Last Updated**: 2026-02-21 14:30 CET
 
 ## Vision
 Sippar is the **cross-chain payment rail for AI agent commerce**. ICP is invisible middleware (chain fusion, threshold crypto, ckTokens) — not a competing L1. Agents on Ethereum or Solana pay in their native token; Sippar swaps via ICP DEX, burns ckALGO, and settles native ALGO to the receiving agent. No bridges, no seed phrases, no human intervention.
@@ -152,9 +152,9 @@ See also: `docs/ARCHITECTURE.md`, `working/sprint-018-agent-to-agent-payments/`.
 
 ## Architecture Changes (2026-02-21)
 
-### ckETH → ckALGO Swap Implementation (Phase 1+2)
+### ckETH → ckALGO Swap Implementation (Phase 1+2 DEPLOYED)
 - **Goal**: Direct swap function for cross-chain agent payments
-- **Canister update**: Added `swap_cketh_to_ckalgo()` to `simplified_bridge` (commit `d91bce9`)
+- **Canister update**: Added `swap_cketh_to_ckalgo()` to `simplified_bridge`
 - **XRC integration**: Inter-canister calls to Exchange Rate Canister for ETH/ALGO pricing
 - **ICRC-2 support**: Added `icrc2_transfer_from` capability to pull ckETH from users
 - **Reserve tracking**: Separate tracking of ckETH-backed vs ALGO-backed ckALGO
@@ -162,7 +162,13 @@ See also: `docs/ARCHITECTURE.md`, `working/sprint-018-agent-to-agent-payments/`.
 - **Configuration**: 0.3% fee, 0.0001-1 ETH limits, disabled by default
 - **Stable storage**: Updated `pre_upgrade`/`post_upgrade` for swap state persistence
 - **Files changed**: `lib.rs` (+500 lines), `simplified_bridge.did` (+25 lines)
-- **Status**: Canister code ready, NOT deployed yet. Phase 3 (backend) pending.
+- **Commits**:
+  - `d91bce9` feat: implement ckETH → ckALGO swap in simplified_bridge canister
+  - `d99ec9c` fix: XRC integration - add cycles and missing error variants
+- **XRC fix**: Changed `ic_cdk::call` to `call_with_payment128` (1B cycles per XRC request)
+- **Deployed**: `hldvt` upgraded on mainnet
+- **Tested**: `get_current_eth_algo_rate()` → **21,743.81 ALGO/ETH** ✅
+- **Status**: Phase 1+2 DEPLOYED & TESTED. Phase 3 (backend) pending.
 - **Plan**: `docs/plans/CKETH_CKALGO_SWAP_PLAN.md`
 
 ## What's Prototyped But Not Production
@@ -176,12 +182,13 @@ See also: `docs/ARCHITECTURE.md`, `working/sprint-018-agent-to-agent-payments/`.
 - Smart routing system (NLP → agent team assembly)
 - **Status**: Real payments LIVE. Pipeline works end-to-end with Grok LLM and real ckALGO transfers.
 
-### ckETH → ckALGO Swap (Implemented 2026-02-21, Not Deployed)
+### ckETH → ckALGO Swap (DEPLOYED & TESTED 2026-02-21)
 - Canister code complete: `swap_cketh_to_ckalgo()` with ICRC-2 + XRC
 - Pulls ckETH from user via `icrc2_transfer_from`, mints ckALGO
 - Exchange rate from ICP Exchange Rate Canister (no fallback)
 - Admin controls for enable/disable, fee, limits
-- **Status**: Code ready, needs deploy + backend integration (Phase 3)
+- XRC tested: 21,743.81 ALGO/ETH rate returned successfully
+- **Status**: Canister DEPLOYED on mainnet. Backend integration (Phase 3) pending.
 
 ### Agent Platform Integrations (Planned, Not Built)
 - ELNA.ai — SNS canister identified, no IDL/API access yet
@@ -197,8 +204,9 @@ See also: `docs/ARCHITECTURE.md`, `working/sprint-018-agent-to-agent-payments/`.
 3. **List ckALGO on ICPSwap** — critical for cross-token routing
 
 ### Week 3: Cross-Chain Routing
-4. ~~**Canister swap integration**~~ **Phase 1+2 DONE** (`d91bce9`) — ckETH → ckALGO swap in canister (backend pending)
-5. **Wire full flow** — swap → burn → sign → settle
+4. ~~**Canister swap integration**~~ **Phase 1+2 DEPLOYED** (`d91bce9`, `d99ec9c`) — ckETH → ckALGO swap in canister, XRC tested (21,743 ALGO/ETH)
+5. **Backend swap integration** — Phase 3: swapService.ts, IDL bindings, server endpoints
+6. **Wire full flow** — swap → burn → sign → settle
 
 ### Week 4: Agents
 6. **Grok API → CI agents** — real LLM responses
