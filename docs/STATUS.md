@@ -1,6 +1,6 @@
 # Sippar Status
 
-**Last Updated**: 2026-02-19 19:59 CET
+**Last Updated**: 2026-02-20 15:30 CET
 
 ## Vision
 Sippar is the **cross-chain payment rail for AI agent commerce**. ICP is invisible middleware (chain fusion, threshold crypto, ckTokens) — not a competing L1. Agents on Ethereum or Solana pay in their native token; Sippar swaps via ICP DEX, burns ckALGO, and settles native ALGO to the receiving agent. No bridges, no seed phrases, no human intervention.
@@ -55,7 +55,8 @@ See also: `docs/ARCHITECTURE.md`, `working/sprint-018-agent-to-agent-payments/`.
 - No user has attempted a redemption yet
 
 ### Per-User Custody Addresses
-- All deposits currently go to ONE shared address (`7KJLCG...`)
+- All deposits currently go to ONE shared address (`6W47GCLX...`)
+- This address is properly derivable via threshold_signer (principal `2vxsx-fae`, NEW method)
 - `custodyAddressService` can derive per-user addresses via threshold_signer
 - But the live flow hardcodes the single address on startup
 - **Scaling blocker**: Can't distinguish deposits from different users without tx metadata
@@ -68,7 +69,7 @@ See also: `docs/ARCHITECTURE.md`, `working/sprint-018-agent-to-agent-payments/`.
 ## Known Issues
 
 ### Critical
-1. **Single custody address** — all users share one address. Works for demo/testing, not for multi-user production.
+1. **Single custody address** — all users share one address (`6W47GCLX...`). Works for demo/testing, not for multi-user production.
 2. **Confirmation architecture is temporary** — backend reports confirmations to canister (trusted party). Phase 2 should use canister-side HTTP outcalls (ckETH pattern) for trustless verification.
 3. **Payment tokens are simulated** — X402 tokens are base64 JSON with expiry, not backed by on-chain transactions. Gate requires valid token now (bypass fixed).
 
@@ -102,6 +103,24 @@ See also: `docs/ARCHITECTURE.md`, `working/sprint-018-agent-to-agent-payments/`.
 - Added 20 CI agent service IDs to X402 payment whitelist
 - All deployed to VPS, verified on production: valid token → Grok response, no token → 402, old bypass → 402
 - Created `docs/strategy/LAVA-SIPPAR-AGENT-INFRA.md` — combined Lava+Sippar agent infrastructure strategy
+
+## Architecture Changes (2026-02-20)
+
+### Custody Address Cleanup
+- **Removed inaccessible address**: `7KJLCG...` was hardcoded but could not be signed by threshold_signer
+- **Investigation**: Tested 28+ derivation combinations — address origin unknown (likely external generation, key lost)
+- **Written off**: ~24 ALGO at old address (testing loss, all deposits were internal)
+- **Replaced with**: `6W47GCLX...` — properly derivable via threshold_signer (principal `2vxsx-fae`, NEW method)
+- **Files changed**: `server.ts`, `reserveVerificationService.ts`
+- **Backend deployed**: VPS running with new address
+
+### Canister Cleanup
+- **Added**: `derive_old_algorand_address()` — migration support for OLD derivation method
+- **Removed**: 12 test derivation endpoints (investigation leftovers)
+- **Canister deployed**: `vj7ly-diaaa-aaaae-abvoq-cai` upgraded on mainnet
+
+### Documentation
+- Created `docs/reports/CUSTODY-ADDRESS-CLEANUP-2026-02-20.md` — full investigation report
 
 ## What's Prototyped But Not Production
 
