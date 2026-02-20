@@ -1,6 +1,6 @@
 # Sippar Architecture
 
-**Last Updated**: 2026-02-19
+**Last Updated**: 2026-02-20
 
 ## What Sippar Is
 
@@ -79,7 +79,7 @@ The bridge (ALGO → ckALGO) is the **infrastructure layer**. The product is **a
 ┌─────────────────────────────────────────────────────┐
 │              Algorand Mainnet                        │
 │                                                      │
-│  Custody Address: 7KJLCGZSMYMF6CKUGSTHRU75TN6CHJ... │
+│  Custody Address: 6W47GCLXWEIEZ2LRQCXF7HGLOYSXYC... │
 │  (threshold-controlled, derived for principal        │
 │   2vxsx-fae via threshold_signer canister)           │
 └─────────────────────────────────────────────────────┘
@@ -109,19 +109,20 @@ The bridge (ALGO → ckALGO) is the **infrastructure layer**. The product is **a
 
 **Note**: threshold_signer is NOT involved in deposits. The custody address is hardcoded.
 
-## Redemption Flow (ckALGO → ALGO)
+## Redemption Flow (ckALGO → ALGO) — WORKING
 
 ```
-1. User calls simplified_bridge.redeem_ck_algo(amount, algorandDestination)
-2. Canister burns ckALGO, updates reserves
-3. automaticRedemptionService picks up the redemption job
-4. Backend calls threshold_signer.derive_algorand_address(userPrincipal) to find custody address
-5. Backend builds Algorand payment transaction (custody → user's Algorand address)
-6. Backend calls threshold_signer.sign_algorand_transaction(principal, txBytes)
-7. Backend submits signed transaction to Algorand mainnet
+1. User calls POST /ck-algo/redeem with principal, amount, destinationAddress
+2. Backend calls simplified_bridge.admin_redeem_ck_algo() to burn ckALGO
+3. Backend calls threshold_signer.derive_algorand_address(userPrincipal) to find custody address
+4. Backend builds Algorand payment transaction (custody → user's Algorand address)
+5. Backend calls threshold_signer.sign_algorand_transaction(principal, txBytes)
+6. Backend submits signed transaction to Algorand mainnet via algorandMainnet.submitTransaction()
 ```
 
-**Note**: threshold_signer IS required for redemptions (signing the withdrawal).
+**Proven**: Transaction `KX5MFBTZKYN654BUEEAIIVSVUCKWKCW465EXNFE6XMM3IUPPEHWA` (0.5 ALGO, round 58569162)
+
+**Note**: Must use `algorandMainnet` service (not `algorandService` which is testnet).
 
 ## Backend Services
 
@@ -155,4 +156,4 @@ The bridge (ALGO → ckALGO) is the **infrastructure layer**. The product is **a
 | Min deposit | 0.1 ALGO |
 | Max deposit | 1M ALGO |
 | Confirmations | 6 (mainnet), 3 (testnet) |
-| Total supply | 25.119095 ckALGO (as of 2026-02-19) |
+| Total supply | 23.419 ckALGO (as of 2026-02-20, after 0.7 redeemed) |

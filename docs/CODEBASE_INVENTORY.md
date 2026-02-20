@@ -1,5 +1,5 @@
 # Sippar Codebase Inventory
-**Generated**: 2026-02-19 from source code inspection (no docs consulted)
+**Generated**: 2026-02-20 from source code inspection (no docs consulted)
 
 ## A. Canisters (All deployed to ICP mainnet)
 
@@ -16,12 +16,12 @@ File: `src/canisters/simplified_bridge/src/lib.rs`
 | `icrc1_balance_of(principal)` | query | User balance |
 | `icrc1_supported_standards()` | query | Standards list |
 | `icrc1_transfer(to, amount)` | update | Transfer ckALGO |
-| `generate_deposit_address(user)` | update | Generates fake "BRIDGE..." address (stub) |
 | `register_custody_address(addr, user)` | update | Links Algorand address to ICP principal |
 | `register_pending_deposit(user, tx, amt, addr, confs)` | update | Registers detected ALGO deposit |
 | `mint_after_deposit_confirmed(tx_id)` | update | Mints ckALGO after confirmations met |
 | `update_deposit_confirmations(tx_id, confs)` | update | Updates confirmation count |
-| `redeem_ck_algo(amount, destination)` | update | Burns ckALGO, returns redemption ID |
+| `redeem_ck_algo(amount, destination)` | update | Burns caller's ckALGO, returns redemption ID |
+| `admin_redeem_ck_algo(user, amount, dest)` | update | Burns user's ckALGO (backend-initiated redemptions) |
 | `get_reserve_ratio()` | query | Reserve status |
 | `get_user_deposits(user)` | query | User's deposit records |
 | `update_reserve_health(is_healthy)` | update | Admin: set reserve health flag |
@@ -32,34 +32,22 @@ File: `src/canisters/threshold_signer/src/algorand_threshold_signer_backend/src/
 
 | Function | Type | Purpose |
 |---|---|---|
-| `derive_algorand_address(principal)` | update | Derives Algorand address via ICP Schnorr Ed25519 |
+| `derive_algorand_address(principal)` | update | Derives Algorand address via ICP Schnorr Ed25519 (NEW method) |
+| `derive_old_algorand_address(principal)` | update | Migration support for OLD derivation method |
 | `sign_algorand_transaction(principal, tx_bytes)` | update | Threshold-signs an Algorand transaction |
-| `sign_migration_transaction(principal, tx_bytes)` | update | Signs migration transactions |
-| `sign_and_mint_ck_algo(...)` | update | Combined sign + mint |
+| `sign_migration_transaction(principal, tx_bytes)` | update | Signs migration transactions (OLD derivation) |
 | `verify_signature(...)` | query | Signature verification |
 | `get_canister_status()` | query | Status info |
 | `greet(name)` | query | Test function |
 
 **Real crypto**: Uses `SchnorrKeyId` with ICP management canister for Ed25519 threshold signatures.
 
-### ck_algo (`gbmxj-yiaaa-aaaak-qulqa-cai`)
-File: `src/canisters/ck_algo/src/lib.rs` — **6,732 lines, 103 functions**
+### ck_algo (`gbmxj-yiaaa-aaaak-qulqa-cai`) — ARCHIVED
+File: `archive/canisters/ck_algo/src/lib.rs` — **6,732 lines, 103 functions**
 
-A massive canister with far more than token logic:
-- ICRC-1 token functions (name, symbol, transfer, balance, etc.)
-- `mint_ck_algo`, `redeem_ck_algo`, `admin_burn_ck_algo`
-- AI service framework (process_ai_request, enhanced_ai_request, health checks, metrics)
-- Cross-chain operations (initiate, execute, sync state)
-- Smart contract system (create, execute, activate, pause, templates)
-- Revenue analytics (metrics, dashboard, reports)
-- Compliance framework (rules, risk assessment, incidents, regulatory reports)
-- Governance (proposals, voting)
-- Access control (roles, permissions)
-- User tier system
-- Algorand state caching (read, batch read, bulk refresh)
-- Backend integration sync
+**ARCHIVED 2026-02-19**: This canister is no longer used. Code moved to `archive/canisters/ck_algo/`.
 
-**Note**: This canister overlaps significantly with simplified_bridge (both have mint/redeem/ICRC-1). Relationship between the two needs clarification.
+Was a massive monolith with AI/compliance/governance code. Replaced by `simplified_bridge` for all token operations. Backend services that referenced this canister have been updated to use `simplified_bridge` instead.
 
 ## B. Backend Services
 
@@ -100,17 +88,17 @@ File: `src/backend/src/server.ts` — **111 API endpoints**, 5300+ lines
 
 ## C. Redemption Flow — Code Trace
 
-**Status**: Code exists end-to-end but line 233 has `// TODO: In production, submit to Algorand network` followed by simulated tx ID.
+**Status**: WORKING END-TO-END (fixed 2026-02-20)
 
-1. `server.ts:1109` — `POST /ck-algo/redemption/queue` → calls `automaticRedemptionService.queueRedemption()`
-2. `automaticRedemptionService.ts` — `startService()` called on boot (line 5219 of server.ts)
-3. Step 1: Burns ckALGO via `simplifiedBridgeService.redeemCkAlgo()`
-4. Step 2: Creates Algorand payment tx via `algosdk.makePaymentTxnWithSuggestedParamsFromObject()`
-5. Step 2: Signs via `icpCanisterService.signAlgorandTransaction()` — **REAL threshold signing**
-6. **MISSING**: Does NOT submit signed tx to Algorand network. Line 233: `// TODO: In production, submit to Algorand network`
-7. Instead: `job.algoTransactionId = 'THRESHOLD-WITHDRAW-${signedWithdrawal.signed_tx_id.slice(0, 8)}'` (fake tx ID)
+1. `server.ts` — `POST /ck-algo/redeem` → direct redemption endpoint
+2. Burns ckALGO via `simplifiedBridgeService.adminRedeemCkAlgo(user, amount, dest)`
+3. Creates Algorand payment tx via `algosdk.makePaymentTxnWithSuggestedParamsFromObject()`
+4. Signs via `icpCanisterService.signAlgorandTransaction()` — **REAL threshold signing**
+5. Submits to Algorand mainnet via `algorandMainnet.submitTransaction()`
 
-**Gap**: ~5 lines of code to call `algorandService.submitTransaction()` with the signed bytes.
+**Proven**: Transaction `KX5MFBTZKYN654BUEEAIIVSVUCKWKCW465EXNFE6XMM3IUPPEHWA` (0.5 ALGO to external wallet, round 58569162)
+
+**Important**: Must use `algorandMainnet` service (not `algorandService` which defaults to testnet).
 
 ## D. Frontend Components
 
@@ -146,17 +134,18 @@ Frontend: `https://nuru.network/sippar/`
 
 | What | Evidence |
 |---|---|
-| Threshold address derivation | Custody address `7KJLCG...` actively holding 24+ ALGO |
-| Deposit detection (mainnet) | 3 deposits detected and minted today (Feb 19, 2026) |
-| Automatic minting | Working end-to-end as of today |
+| Threshold address derivation | Custody address `6W47GCLX...` (NEW method, principal `2vxsx-fae`) |
+| Deposit detection (mainnet) | 3 deposits detected and minted (Feb 19, 2026) |
+| Automatic minting | Working end-to-end |
 | Threshold signing (testnet) | tx `3RU7HQ2EIO7VIFYW2Q5IIANI5WJJBXH6YT5W4RCB7JZLNH6F3NUQ` |
 | Threshold signing (mainnet) | tx `QODAHWSF55G3P43JXZ7TOYDJUCEQS7CZDMQ5WC5BGPMH6OQ4QTQA` |
-| ckALGO minting (mainnet) | 25.12 ckALGO total supply on canister |
+| **Redemption (mainnet)** | tx `KX5MFBTZKYN654BUEEAIIVSVUCKWKCW465EXNFE6XMM3IUPPEHWA` (0.5 ALGO, Feb 20, 2026) |
+| ckALGO minting (mainnet) | 23.419 ckALGO current supply (after 0.7 redeemed) |
 | Canister ICRC-1 functions | All query/update functions verified |
 
 ## H. Key Gaps (from code, not docs)
 
-1. **Redemption tx submission**: ~~`automaticRedemptionService.ts:233` — signed tx not submitted~~ **FIXED 2026-02-19** — now calls `algorandMainnet.submitTransaction()`. Also fixed testnet→mainnet bug. Needs deploy + test.
-2. **generate_deposit_address**: Canister function returns fake `BRIDGE...` string, not a real derived address. Backend uses `custodyAddressService` instead (which works).
+1. ~~**Redemption tx submission**~~ **FIXED 2026-02-20** — redemption flow working end-to-end on mainnet
+2. ~~**generate_deposit_address**~~ **REMOVED** — function deleted from canister. Backend uses `custodyAddressService` to derive real addresses.
 3. **No persistent storage**: All state in-memory. Backend restart loses processed tx cache, pending deposits, etc.
 4. **Single hardcoded custody address**: `server.ts` auto-registers one address on boot. No per-user address flow active.
