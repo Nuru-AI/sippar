@@ -1,8 +1,10 @@
 # ckETH → ckALGO Direct Swap Implementation Plan
 
 **Created**: 2026-02-20
-**Status**: Planning (not yet implemented)
+**Updated**: 2026-02-21
+**Status**: Phase 1+2 IMPLEMENTED (canister-side), Phase 3 pending (backend)
 **Goal**: Add direct swap function to simplified_bridge canister that accepts ckETH and mints ckALGO
+**Commit**: `d91bce9` feat: implement ckETH → ckALGO swap in simplified_bridge canister
 
 ---
 
@@ -150,8 +152,11 @@ thread_local! {
     static SWAP_ENABLED: RefCell<bool> = RefCell::new(false);
     static SWAP_FEE_BPS: RefCell<u64> = RefCell::new(30); // 0.3% fee
     static MIN_SWAP_CKETH: RefCell<Nat> = RefCell::new(Nat::from(100_000_000_000_000u64)); // 0.0001 ETH
-    static MAX_SWAP_CKETH: RefCell<Nat> = RefCell::new(Nat::from(10_000_000_000_000_000_000u64)); // 10 ETH
+    static MAX_SWAP_CKETH: RefCell<Nat> = RefCell::new(Nat::from(1_000_000_000_000_000_000u64)); // 1 ETH
     static SWAP_RECORDS: RefCell<Vec<SwapRecord>> = RefCell::new(Vec::new());
+    // Reserve tracking: separate ckETH-backed vs ALGO-backed ckALGO
+    static CKETH_BACKED_CKALGO: RefCell<Nat> = RefCell::new(Nat::from(0u64)); // Total ckALGO minted via swaps
+    static TOTAL_CKETH_RECEIVED: RefCell<Nat> = RefCell::new(Nat::from(0u64)); // Total ckETH held by canister
 }
 
 #[derive(Clone, Debug, CandidType, Deserialize, Serialize)]
@@ -353,10 +358,9 @@ async fn get_eth_algo_rate() -> Result<f64, String> {
             }
         }
         _ => {
-            // Fallback to hardcoded rate (conservative)
-            // As of Feb 2026: ETH ~$2,400, ALGO ~$0.25 → ETH/ALGO ~9,600
-            ic_cdk::println!("XRC unavailable, using fallback rate");
-            Ok(8000.0) // Conservative fallback
+            // NO FALLBACK — reject swap if XRC unavailable
+            // Better to fail than give a bad rate with real money
+            Err("Exchange Rate Canister unavailable — swap rejected. Try again later.".to_string())
         }
     }
 }
@@ -538,11 +542,49 @@ After swap:
 
 4. **Accept Fractional Reserve**: For small swap volumes, acceptable risk — simple
 
-**Recommendation for MVP**: Option 4 (Accept Fractional Reserve) with monitoring. Track total ckETH received, alert if exceeds threshold (e.g., 10% of supply).
+**Decision**: Option 4 (Accept Fractional Reserve) + Option 1 tracking. Don't enforce backing ratio for MVP, but track ckETH-backed vs ALGO-backed ckALGO separately in canister state for visibility. Alert if ckETH-backed supply exceeds 10% of total.
 
 ---
 
-## Estimated Effort
+## Implementation Status
+
+| Phase | Task | Status | Commit |
+|-------|------|--------|--------|
+| 1 | Core swap function + XRC integration | ✅ **DONE** | `d91bce9` |
+| 2 | Admin controls | ✅ **DONE** | `d91bce9` |
+| 3 | Backend integration | ⏳ **PENDING** | — |
+| 4 | Stable storage updates | ✅ **DONE** | `d91bce9` |
+| - | Testing (unit + integration) | ⏳ **PENDING** | — |
+| - | Documentation | ⏳ **PENDING** | — |
+
+### Phase 1+2 Implementation (2026-02-21)
+
+**Files modified**:
+- `src/canisters/simplified_bridge/src/lib.rs` (+500 lines)
+- `src/canisters/simplified_bridge/simplified_bridge.did` (+25 lines)
+
+**Functions added**:
+- `swap_cketh_to_ckalgo(user, amount, min_out)` — core swap with ICRC-2 transfer_from
+- `get_eth_algo_rate()` — XRC query (no fallback, rejects if unavailable)
+- `get_current_eth_algo_rate()` — public query wrapper
+- `set_swap_enabled(bool)` — admin enable/disable
+- `set_swap_fee_bps(u64)` — admin fee control (max 5%)
+- `set_swap_limits(min, max)` — admin limit control
+- `get_swap_config()` — query configuration
+- `get_swap_records(limit)` — query swap history
+
+**State added**:
+- `SWAP_ENABLED` — disabled by default
+- `SWAP_FEE_BPS` — 30 (0.3%)
+- `MIN_SWAP_CKETH` — 0.0001 ETH
+- `MAX_SWAP_CKETH` — 1 ETH
+- `SWAP_RECORDS` — audit trail
+- `CKETH_BACKED_CKALGO` — separate reserve tracking
+- `TOTAL_CKETH_RECEIVED` — treasury tracking
+
+**Build verified**: `cargo build --target wasm32-unknown-unknown --release` ✅
+
+## Original Effort Estimate
 
 | Phase | Task | Days | Dependencies |
 |-------|------|------|--------------|
@@ -557,17 +599,19 @@ After swap:
 
 ---
 
-## Open Questions for Decision
+## Decisions (2026-02-21)
 
-1. **Fee Level**: 0.3% (30 bps) proposed. Competitive with Uniswap V3. Adjust?
+1. **Fee Level**: ✅ **0.3% (30 bps)** — Fine for MVP. Private endpoint, not competing with Uniswap. Adjustable later.
 
-2. **Rate Source Priority**: XRC with hardcoded fallback? Or require XRC (fail if unavailable)?
+2. **Rate Source Priority**: ✅ **XRC required, NO fallback** — If XRC fails, reject the swap. Better to fail than give a bad rate with real money. Hardcoded fallback too dangerous if stale. Remove fallback from implementation.
 
-3. **Swap Limits**: 0.0001 - 10 ETH proposed. Adjust based on treasury capacity?
+3. **Swap Limits**: ✅ **0.0001 - 1 ETH** (reduced from 10 ETH) — 1 ETH (~$2.4K) is plenty for alpha. 10 ETH too risky for unaudited canister.
 
-4. **Backend vs Direct**: Should agents call canister directly or through backend? (Backend recommended for consistent authorization)
+4. **Backend vs Direct**: ✅ **Backend** — Consistent with all other endpoints.
 
-5. **ICPSwap Listing**: Week 3 roadmap says "List ckALGO on ICPSwap". Is this swap function a substitute or complement?
+5. **ICPSwap**: ✅ **This swap is a substitute for now** — Stay under the radar. ICPSwap listing comes later after audit.
+
+6. **Reserve Management**: ✅ **Option 4 (accept fractional reserve) + Option 1 tracking** — Don't enforce backing ratio, but track ckETH-backed vs ALGO-backed ckALGO separately for visibility.
 
 ---
 
