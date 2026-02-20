@@ -50,8 +50,10 @@ See also: `docs/ARCHITECTURE.md`, `working/sprint-018-agent-to-agent-payments/`.
 ## What Doesn't Work ❌
 
 ### Redemption (ckALGO → ALGO)
-- Canister burn function exists but **automatic redemption service is untested on mainnet**
+- **Backend fix deployed 2026-02-20**: `automaticRedemptionService` now uses `simplified_bridge` canister (was calling archived `ck_algo`)
+- Canister `admin_redeem_ck_algo` function added for backend-initiated burns
 - Requires threshold_signer to sign withdrawal — flow is wired but not battle-tested
+- **Blocker**: Custody address `6W47GCLX...` has 0 ALGO — cannot complete withdrawal until funded
 - No user has attempted a redemption yet
 
 ### Per-User Custody Addresses
@@ -121,6 +123,13 @@ See also: `docs/ARCHITECTURE.md`, `working/sprint-018-agent-to-agent-payments/`.
 
 ### Documentation
 - Created `docs/reports/CUSTODY-ADDRESS-CLEANUP-2026-02-20.md` — full investigation report
+
+### Redemption Flow Fix (~13:42 UTC)
+- **Root cause**: `automaticRedemptionService` was calling archived `ck_algo` canister (`gbmxj`) instead of live `simplified_bridge` (`hldvt`)
+- **Fix**: Added `admin_redeem_ck_algo` function to `simplified_bridge` canister for backend-initiated burns
+- **Updated**: `automaticRedemptionService.ts` now uses `SimplifiedBridgeService.adminRedeemCkAlgo()`
+- **Files changed**: `lib.rs`, `simplified_bridge.did`, `simplifiedBridgeService.ts`, `automaticRedemptionService.ts`, `server.ts`
+- **Both deployed**: Canister upgraded on mainnet, backend restarted on VPS
 
 ## What's Prototyped But Not Production
 
