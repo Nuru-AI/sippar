@@ -2198,12 +2198,13 @@ app.post('/ck-algo/redeem', async (req, res) => {
     
     // 2. FIRST: Burn ckALGO tokens from user's balance
     console.log(`🔥 Burning ${amount} ckALGO tokens from principal ${principal}...`);
-    const ckAlgoMicroUnits = Math.floor(amount * 1_000_000);
-    
+    const ckAlgoMicroUnits = BigInt(Math.floor(amount * 1_000_000));
+
     try {
-      // Use ckAlgoService for real redemption from correct canister
-      const burnResult = await ckAlgoService.burnCkAlgo(principal, ckAlgoMicroUnits, destinationAddress);
-      console.log(`✅ Successfully redeemed ${amount} ckALGO via ckALGO canister:`, burnResult);
+      // Use simplified_bridge canister (hldvt) for redemption - NOT archived ck_algo (gbmxj)
+      const userPrincipal = Principal.fromText(principal);
+      const burnResult = await simplifiedBridgeService.adminRedeemCkAlgo(userPrincipal, ckAlgoMicroUnits, destinationAddress);
+      console.log(`✅ Successfully burned ${amount} ckALGO via simplified_bridge canister:`, burnResult);
     } catch (burnError) {
       console.error('❌ ckALGO burning failed:', burnError);
       throw new Error('Failed to burn ckALGO tokens: ' + (burnError instanceof Error ? burnError.message : String(burnError)));
@@ -2214,7 +2215,8 @@ app.post('/ck-algo/redeem', async (req, res) => {
     console.log(`📍 User's custody address: ${custodyInfo.address}`);
     
     // 4. Create real Algorand transaction to unlock ALGO (transfer from custody to destination)
-    const suggestedParams = await algorandService.getSuggestedParams();
+    // IMPORTANT: Use mainnet for withdrawal since custody address is on mainnet
+    const suggestedParams = await algorandMainnet.getSuggestedParams();
     const microAlgos = Math.floor(amount * 1_000_000); // Convert to microALGOs
     
     const unlockTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
@@ -2249,7 +2251,8 @@ app.post('/ck-algo/redeem', async (req, res) => {
       };
       
       const encodedSignedTxn = algosdk.encodeObj(signedTxnData);
-      const submissionResult = await algorandService.submitTransaction(encodedSignedTxn);
+      // IMPORTANT: Use mainnet for withdrawal since custody address is on mainnet
+      const submissionResult = await algorandMainnet.submitTransaction(encodedSignedTxn);
       algorandTxId = submissionResult.txId;
       
       console.log(`🎉 ALGO unlocked on Algorand network: ${algorandTxId}`);
