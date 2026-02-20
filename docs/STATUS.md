@@ -18,7 +18,15 @@ See also: `docs/ARCHITECTURE.md`, `working/sprint-018-agent-to-agent-payments/`.
 - Updates canister confirmations when threshold reached
 - Automatically mints ckALGO
 - **Proven**: 3 successful mints on 2026-02-19 (13.12 + 6 + 5 ALGO = 24.12 ckALGO)
-- Total supply: 25.119095 ckALGO
+
+### Redeem → Burn → Withdraw (Mainnet, First Success 2026-02-20)
+- User requests redemption via `/ck-algo/redeem` endpoint
+- Backend burns ckALGO via `admin_redeem_ck_algo` on `simplified_bridge` canister
+- Creates Algorand withdrawal transaction
+- Signs via ICP threshold signatures (`threshold_signer` canister)
+- Submits to Algorand mainnet
+- **Proven**: Transaction `F6NK46JT23X24AROCM65CWFFCEM55GSHN54DSLFRGM4UEVUUHTKA` (round 58568996)
+- Total supply: 24.919 ckALGO (after 0.2 ckALGO redeemed)
 
 ### ICRC-1 Token
 - Standard query methods (name, symbol, decimals, fee, total_supply, balance_of)
@@ -49,12 +57,11 @@ See also: `docs/ARCHITECTURE.md`, `working/sprint-018-agent-to-agent-payments/`.
 
 ## What Doesn't Work ❌
 
-### Redemption (ckALGO → ALGO)
-- **Backend fix deployed 2026-02-20**: `automaticRedemptionService` now uses `simplified_bridge` canister (was calling archived `ck_algo`)
-- Canister `admin_redeem_ck_algo` function added for backend-initiated burns
-- Requires threshold_signer to sign withdrawal — flow is wired but not battle-tested
-- **Blocker**: Custody address `6W47GCLX...` has 0 ALGO — cannot complete withdrawal until funded
-- No user has attempted a redemption yet
+### Redemption (ckALGO → ALGO) — WORKING
+- **First successful mainnet redemption 2026-02-20 14:00 UTC**
+- Transaction `F6NK46JT23X24AROCM65CWFFCEM55GSHN54DSLFRGM4UEVUUHTKA` confirmed (round 58568996)
+- Full flow: ckALGO burned via `simplified_bridge` → threshold signature → ALGO sent on mainnet
+- **Note**: `algorandMainnet` must be used for withdrawals (not `algorandService` which is testnet)
 
 ### Per-User Custody Addresses
 - All deposits currently go to ONE shared address (`6W47GCLX...`)
