@@ -2,7 +2,7 @@
 
 **Project**: Universal payment bridge for AI agent-to-agent commerce, built on ICP-Algorand Chain Fusion
 **Vision**: Agents paying agents across chains via X402 protocol, secured by ICP threshold signatures
-**Status**: Bridge layer fully working on mainnet — deposit→mint AND redeem→withdraw both proven. ckETH→ckALGO swap deployed. Agent payment layer prototyped, not production.
+**Status**: Full E2E working on mainnet — ckETH→ckALGO swap, X402 payments, CI agent invocation all proven. Agent payment layer PRODUCTION.
 **Last Updated**: 2026-02-21
 
 ## What This Is
@@ -60,10 +60,20 @@ Backend on VPS (74.50.113.152:3004) — polls Algorand, manages deposit lifecycl
 - **Exchange rate**: Fetched from ICP Exchange Rate Canister (XRC), ~21,750 ALGO/ETH
 - **Endpoints**: `/swap/config`, `/swap/custody-account/:principal`, `/swap/execute`, `/swap/metrics`
 
+### CI Agent Payments (X402)
+- **Full flow**: ckETH → ckALGO (swap) → X402 payment (JWT) → CI agent (Grok LLM)
+- **Payment endpoint**: `POST /api/sippar/x402/create-payment` — transfers ckALGO to treasury, returns JWT
+- **Agent endpoint**: `POST /api/sippar/ci-agents/:agent/:service` — validates JWT, invokes agent
+- **Service validation**: JWT `svc` field must match endpoint (case-insensitive, both path and dash formats accepted)
+- **Empty prompt**: Rejected with 400 BEFORE consuming payment token
+- **Replay protection**: JWT `jti` tracked, token consumed after successful invocation
+- **Treasury**: `smm4f-x54l6-7c2ed-rxdm7-coedl-62i2x-azfmt-ezhzj-ocftg-aa5ir-iqe`
+
 ### Deployment
 - Canisters: `dfx deploy --network ic <canister> --mode upgrade`
 - Backend: build locally (`npm run build`), rsync dist + node_modules to VPS, `systemctl restart sippar-backend`
 - **VPS has 3.8GB RAM** — npm install fails there. Ship node_modules from local machine.
+- **VPS logs**: If disk fills up, check `/var/log/syslog`. Run `truncate -s 0 /var/log/syslog` and `logrotate -f /etc/logrotate.d/rsyslog`
 
 ## Key Docs
 
@@ -98,3 +108,9 @@ Backend on VPS (74.50.113.152:3004) — polls Algorand, manages deposit lifecycl
 - Don't derive subaccounts locally with SHA256 — call `get_swap_custody_subaccount()` on canister
 - Don't use ICRC-2 approve/transferFrom for swaps — breaks autonomous agent flow
 - Don't skip anti-replay check — canister's `is_swap_deposit_processed()` is source of truth
+
+### CI Agent Payment Don'ts
+- Don't consume payment token before validating prompt — reject empty prompts with 400 first
+- Don't assume service format — accept both `/ci-agents/developer/code-generation` and `ci-developer-code-generation`
+- Don't do case-sensitive service matching — always normalize to lowercase
+- Don't skip JWT `svc` field validation — prevents cross-service token abuse

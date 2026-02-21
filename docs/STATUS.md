@@ -1,6 +1,6 @@
 # Sippar Status
 
-**Last Updated**: 2026-02-21 21:00 UTC
+**Last Updated**: 2026-02-21 18:30 UTC
 
 ## Vision
 Sippar is the **cross-chain payment rail for AI agent commerce**. ICP is invisible middleware (chain fusion, threshold crypto, ckTokens) — not a competing L1. Agents on Ethereum or Solana pay in their native token; Sippar swaps via ICP DEX, burns ckALGO, and settles native ALGO to the receiving agent. No bridges, no seed phrases, no human intervention.
@@ -85,7 +85,7 @@ See also: `docs/ARCHITECTURE.md`, `working/sprint-018-agent-to-agent-payments/`.
 - Step 2: X402 payment → 0.01 ckALGO transferred to treasury → JWT issued (3.4s) ✅
 - Step 3: JWT token → CI Developer agent invoked → Grok LLM response (7.5s) ✅
 - Replay protection confirmed (token consumed after use)
-- **Known bug**: Prompt field not passing through to Grok correctly (`[object Object]` — serialization issue in CI agent handler)
+- **Bug fixed** (commit `d9ec7f5`): Prompt field now passes through correctly to Grok
 - **Balances after test**: `2vxsx-fae` = 23.41 ckALGO, treasury = 5.41 ckALGO
 
 ### Infrastructure
@@ -233,7 +233,6 @@ See also: `docs/ARCHITECTURE.md`, `working/sprint-018-agent-to-agent-payments/`.
   - Grok LLM responded via Developer agent, 7.5s
   - **Bug found**: `prompt` field reaches CI agent as `[object Object]` — serialization issue in request forwarding
 - **Result**: **E2E FLOW WORKS.** First complete ckETH → agent service invocation on mainnet.
-- **Remaining fix**: Prompt passthrough bug in CI agent handler
 
 ### Documentation Audit (~17:00 UTC)
 - **Audit**: 90+ markdown files, many stale (Sept 2025), ~30 endpoints missing from API docs
@@ -245,6 +244,25 @@ See also: `docs/ARCHITECTURE.md`, `working/sprint-018-agent-to-agent-payments/`.
 - **Script**: `scripts/e2e-cketh-to-ci-agent.sh` — executable curl test
 - **P0 false positives**: Treasury principal + JWT secret both correctly configured on VPS
 - **Commit**: `6dddd97`
+
+### CI Agent Payment Security Fixes (~18:00 UTC)
+- **Commit**: `d9ec7f5` — fix(security): P1/P2 fixes for CI agent payment flow
+- **P1 — Prompt passthrough**: Fixed `[object Object]` bug, prompt now reaches Grok correctly
+- **P1 — Service endpoint format**: `validateServiceEndpoint()` now accepts both formats:
+  - `/ci-agents/developer/code-generation` (path format)
+  - `ci-developer-code-generation` (dash format)
+- **P1 — Case sensitivity**: Service matching now case-insensitive (`.toLowerCase()`)
+- **P2 — Trailing slashes**: Stripped before comparison
+- **P2 — Empty prompt rejection**: Returns 400 BEFORE consuming payment token
+- **Files changed**: `server.ts` (+57 lines)
+- **Deployed**: Backend restarted on VPS
+
+### VPS Log Rotation Fix (~18:20 UTC)
+- **Root cause**: `/var/log` had insecure permissions (`drwxrwxr-x` — world-writable)
+- **Symptom**: Logrotate silently failing, syslog growing to 5+ GB, disk 100% full
+- **Fix**: `chmod 755 /var/log` (was 775)
+- **Result**: Logrotate working, disk at 84% (6.3GB free)
+- **Prevention**: Daily cron will now rotate logs at maxsize 100MB
 
 ### Research Reports
 - **Created**: `docs/research/COMPETITIVE-LANDSCAPE-2026-02.md`, `docs/research/MOAT-ASSESSMENT-2026-02.md`, `docs/research/MVP-GAP-ANALYSIS-2026-02.md`
@@ -299,9 +317,10 @@ See also: `docs/ARCHITECTURE.md`, `working/sprint-018-agent-to-agent-payments/`.
 ### Week 4: Agents
 6. ~~**Grok API → CI agents**~~ **DONE** — real LLM responses via grok-3-mini-fast (6-12s)
 7. ~~**E2E flow test**~~ **DONE** — ckETH → ckALGO → X402 payment → CI agent → Grok response (proven on mainnet 2026-02-21)
-8. **Fix prompt passthrough bug** — `[object Object]` in CI agent handler
-9. **Ethereum-side agent script** — autonomous agent that does the full flow
-10. **Algorand-side agent** — receives ALGO, delivers service
+8. ~~**Fix prompt passthrough bug**~~ **DONE** — commit `d9ec7f5`, deployed to VPS
+9. ~~**P1/P2 security fixes**~~ **DONE** — service endpoint validation, case sensitivity, empty prompt rejection
+10. **Ethereum-side agent script** — autonomous agent that does the full flow
+11. **Algorand-side agent** — receives ALGO, delivers service
 
 ### Week 5: Integration + Grant
 11. **End-to-end demo** — polished version of proven flow
