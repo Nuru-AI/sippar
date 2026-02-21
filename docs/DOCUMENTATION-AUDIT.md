@@ -163,16 +163,19 @@ docs/
 
 ## Action Items
 
-### Immediate (Before External Launch)
+### Completed (2026-02-21)
 
-- [ ] Update `docs/api/endpoints.md` with current routes from server.ts
-- [ ] Create `docs/integration/AGENT_QUICKSTART.md`
-- [ ] Test and fix `packages/x402-sdk/README.md` examples
+- [x] Created `docs/api/CURRENT_ENDPOINTS.md` with 111 endpoints from server.ts
+- [x] Created `docs/integration/AGENT_QUICKSTART.md`
+- [x] Created `docs/README.md` documentation index
+- [x] Updated business docs (ONE_PAGE_BUSINESS_SUMMARY, INVESTMENT_OPPORTUNITY_SNAPSHOT, BUSINESS_MODEL_CANVAS, INVESTOR_PITCH_DECK)
+- [x] Deleted superseded docs (endpoints.md, CURRENT_STATUS_AND_DEVELOPMENT_PLAN.md)
+- [x] Added historical markers to stale docs (sprint-management.md, CORRECTED_TECHNICAL_REALITY_ASSESSMENT.md)
 
-### Short-term
+### Remaining
 
 - [ ] Create `docs/integration/SWAP_GUIDE.md` from plan doc
-- [ ] Add `docs/README.md` documentation index
+- [ ] Test and fix `packages/x402-sdk/README.md` examples
 - [ ] Update `docs/guides/user/getting-started.md`
 
 ### Ongoing

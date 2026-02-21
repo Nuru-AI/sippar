@@ -1,8 +1,10 @@
 # Sippar Business Documentation Index
 
 **Complete Cross-Reference Guide for Executive-Ready Business Materials**
-**Date**: September 22, 2025
-**Version**: 1.0
+**Last Updated**: February 2026
+**Version**: 2.0
+
+> **Note**: Executive docs (ONE_PAGE_BUSINESS_SUMMARY, INVESTMENT_OPPORTUNITY_SNAPSHOT, BUSINESS_MODEL_CANVAS, INVESTOR_PITCH_DECK) have been updated to reflect current state (Feb 2026). Other docs have framework value but may contain outdated specifics. Always check `docs/STATUS.md` for current capabilities.
 
 ---
 

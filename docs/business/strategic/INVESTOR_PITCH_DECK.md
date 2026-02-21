@@ -1,321 +1,219 @@
 # Sippar Investor Pitch Deck
 
-**Universal Payment Bridge for AI Agent Ecosystems**
-**Professional Presentation Template and Guidelines**
-**Date**: September 25, 2025
+**Cross-Chain Payment Rail for AI Agent Commerce**
+**Last Updated**: February 2026
+**Status**: Core infrastructure working on mainnet
 
 ---
 
 ## 🎯 **Deck Structure Overview**
 
-**Total Slides**: 14 slides (12-15 minute presentation + 5-10 minutes Q&A)
-**Target Audience**: Early-stage VCs, AI-focused funds, strategic investors, platform partnership funds
-**Presentation Goal**: Secure $130K - $210K funding for rapid platform integration deployment
+**Total Slides**: 12 slides (10-12 minute presentation + Q&A)
+**Target Audience**: Algorand Foundation grants, ICP ecosystem funds, AI/crypto VCs
+**Current Stage**: Infrastructure built, seeking traction and partnerships
 
 ---
 
 ## 📋 **Slide-by-Slide Content**
 
-### **Slide 1: Title & Opening Hook**
-**Visual**: Clean logo, professional team photo, key metrics overlay
+### **Slide 1: Title & Status**
 **Content**:
-- **Company**: Sippar - Universal Payment Bridge for AI Agent Ecosystems
-- **Tagline**: "Be the Bridge, Not the Builder. The Agents Already Exist."
-- **Key Metric**: "Revenue starting Week 2 from cross-platform transaction fees"
-- **Status**: "6-week deployment connecting ELNA.ai, x402 Bazaar, Google AP2"
-- **Demo**: "Live integration-ready technology at https://nuru.network/sippar/"
+- **Company**: Sippar - Cross-Chain Payment Rail for AI Agent Commerce
+- **Tagline**: "Agents pay agents. No bridges. No seed phrases. No humans."
+- **Status**: Core infrastructure working on ICP mainnet (Feb 2026)
+- **Live Systems**: threshold_signer (vj7ly), simplified_bridge (hldvt)
 
-**Speaker Notes**: Open with impact - "AI agent platforms exist but can't transact with each other. We're building the universal bridge connecting them all."
+**Speaker Notes**: "We've built the payment infrastructure for AI agent commerce. It works on mainnet. Now we need traction and partnerships."
 
 ---
 
-### **Slide 2: The Problem - Autonomous AI Commerce Barriers**
-**Visual**: Split screen showing current limitations vs. autonomous AI requirements
+### **Slide 2: The Problem**
 **Content**:
-- **The Reality**: AI agent platforms like ELNA.ai, x402 Bazaar, Google AP2 exist but operate in isolation
-- **Current Barriers**:
-  - Agents trapped in platform silos without cross-ecosystem connectivity
-  - No universal payment infrastructure for cross-platform transactions
-  - Platforms building separate payment systems instead of connecting
-  - Users limited to single-platform agent services instead of best-of-breed
+- **Agents on different chains can't pay each other**
+  - ETH agents can't settle with ALGO agents
+  - Bridges are security risks (multisig, not threshold crypto)
+  - Seed phrases don't work for autonomous agents
+  - No standard protocol for agent-to-agent payments
 
-**Speaker Notes**: "The agents already exist and work well - they just can't pay each other across platforms. We're solving connection, not creation."
+**Speaker Notes**: "The agent economy is coming. Fetch.ai, Google A2A, Coinbase Bazaar, Algorand ASIF — all need settlement rails. None exist."
 
 ---
 
-### **Slide 3: Market Opportunity - AI Agent Platform Connectivity**
-**Visual**: Platform ecosystem map showing isolated platforms and universal bridge connection
+### **Slide 3: The Solution**
 **Content**:
-- **Primary Market**: AI agent platform transaction routing - 0.1% fee opportunity
-- **Existing Platforms**: ELNA.ai, x402 Bazaar, Google AP2, and emerging ecosystems
-- **Transaction Volume**: Growing cross-platform agent service demand
-- **Revenue Model**: Universal bridge earning fees on all cross-ecosystem transactions
+- **ICP as invisible middleware** — not a competing L1
+- **Threshold signatures** — ICP subnet controls Algorand keys
+- **ckTokens** — ckETH, ckALGO for cross-chain settlement
+- **Deposit-based flows** — no human signatures required
+- **X402 protocol** — HTTP 402 for pay-per-use services
 
-**Supporting Data**:
-- 60% of enterprises cite custody concerns as primary blockchain adoption barrier
-- AI services market growing 37% annually with payment automation needs
-- $200T+ global B2B payments requiring autonomous processing capabilities
-
-**Speaker Notes**: "The platforms exist and are growing. We're capturing transaction fee revenue from connecting them rather than competing with them."
-
----
-
-### **Slide 4: Solution - Universal Platform Bridge**
-**Visual**: Architecture diagram showing Platform A → Sippar Bridge → Platform B with transaction routing
-**Content**:
-- **Universal Connectivity**: Single integration connects to all other platforms
-- **Transaction Routing**: 0.1% fee on all cross-platform agent transactions
-- **Rapid Deployment**: 6-week integration timeline vs 10-12 weeks ground-up development
-- **Platform Agnostic**: Works with any AI agent ecosystem requiring payments
-
-**Key Innovation**: First universal payment bridge connecting existing AI agent platforms
-
-**Speaker Notes**: "Instead of building new agents, we're connecting existing platforms so their agents can transact with each other."
-
----
-
-### **Slide 5: Integration Readiness - Proven Technology Foundation**
-**Visual**: Technology stack diagram showing Chain Fusion bridge ready for platform connections
-**Content**:
-- **🛠️ Integration-Ready**: Existing Chain Fusion technology ready for platform connections
-- **Proven Payment Flow**: Production-tested autonomous payment capabilities
-- **Platform Partnerships**: Direct discussions with ELNA.ai, x402 Bazaar, Google AP2
-- **Rapid Timeline**: 6-week deployment vs competitors' 10-12 week development cycles
-- **Revenue Week 2**: Transaction fees start immediately upon platform connections
-
-**Live Demo**: "Let me show you the payment technology ready for platform integration..."
-
-**Speaker Notes**: "We're not building from scratch - our technology is ready to deploy as universal bridge connecting existing platforms."
-
----
-
-### **Slide 6: Product Demo - Live Autonomous AI Payments**
-**Visual**: Screen recording or live demonstration of the platform
-**Content**:
-- **Biometric Login**: Internet Identity authentication without private keys
-- **Autonomous Agent**: AI purchasing services automatically using X402 protocol
-- **Mathematical Security**: Threshold signatures providing cryptographic control
-- **Cross-Chain Assets**: Direct control of assets across multiple blockchains
-- **Enterprise Dashboard**: Real-time analytics and billing integration
-
-**Speaker Notes**: "Notice how the AI agent authenticates, discovers services, negotiates payments, and executes transactions without any human intervention or blockchain complexity."
-
----
-
-### **Slide 7: Business Model - Transaction Fee Revenue**
-**Visual**: Transaction routing diagram showing 0.1% fee collection on cross-platform payments
-**Content**:
-- **Platform Integration Fees**: 0.1% of all cross-platform agent transactions
-- **Volume-Based Growth**: Revenue scales with total agent ecosystem transaction volume
-- **Partnership Revenue**: Additional revenue sharing from platform integration agreements
-- **Network Effects**: Exponential growth as more platforms connect to universal bridge
-
-**Unit Economics**:
-- 95%+ gross margins (software routing with minimal infrastructure)
-- Ultra-low CAC through platform partnerships
-- Network effects drive exponential transaction volume growth
-
-**Speaker Notes**: "Simple model - we earn 0.1% on every cross-platform transaction. Revenue grows with the overall agent ecosystem."
-
----
-
-### **Slide 8: Market Traction - Enterprise Validation**
-**Visual**: Customer pipeline funnel and enterprise interest indicators
-**Content**:
-- **Enterprise Interest**: Direct inquiries from Fortune 500 companies
-- **Technical Validation**: 100% success rate in pilot implementations
-- **Developer Adoption**: Complete SDK with comprehensive documentation
-- **Partnership Pipeline**: Strategic discussions with major AI platforms
-
-**Customer Validation**:
-- Real enterprise customers deploying autonomous payment systems
-- Proven ROI through automated treasury optimization (5-15% yield improvement)
-- Growing pipeline of enterprises requiring autonomous AI commerce capabilities
-
-**Speaker Notes**: "Enterprise customers are validating both the technology and the business model through real deployments and measurable ROI."
-
----
-
-### **Slide 9: Competitive Landscape - Unassailable Advantages**
-**Visual**: Competitive matrix comparing security model, UX, and enterprise readiness
-**Content**:
-| Solution | Security Model | UX Complexity | Enterprise Ready | Autonomous AI |
-|----------|---------------|---------------|------------------|---------------|
-| **Sippar** | **Mathematical** | **Zero Web3** | **Day 1** | **Optimized** |
-| Wormhole | Economic | High | Limited | None |
-| LayerZero | Trusted oracles | High | Limited | None |
-| Traditional | Central authority | Medium | Partial | None |
-
-**Competitive Moats**:
-- 18-24 months to replicate threshold signature + biometric integration
-- First-mover advantage in HTTP 402 + Chain Fusion standards
-- Enterprise compliance advantages competitors cannot easily match
-
-**Speaker Notes**: "Our competitive advantages are structural - mathematical security and biometric authentication cannot be easily replicated by traditional approaches."
-
----
-
-### **Slide 10: Go-to-Market Strategy - Multi-Channel Approach**
-**Visual**: Customer acquisition funnel with channels and conversion metrics
-**Content**:
-- **Direct Enterprise Sales**: Fortune 500 companies deploying autonomous AI agents
-- **Strategic Partnerships**: System integrators (Accenture, IBM), cloud providers (AWS, Azure)
-- **Ecosystem Development**: AI platform integrations requiring payment automation
-- **Developer Community**: Open-source tooling and developer incentive programs
-
-**Customer Acquisition**:
-- Enterprise CAC: $5K, LTV: $100K+ (20:1 ratio)
-- Developer CAC: $500, conversion to paid: 5-10%
-- Partnership leverage: 10x customer reach through channel partners
-
-**Speaker Notes**: "We're leveraging multiple channels to reach customers who need autonomous payment infrastructure, with proven unit economics across all segments."
-
----
-
-### **Slide 11: Financial Projections - Rapid Revenue Growth**
-**Visual**: Timeline showing revenue acceleration from Week 2 through Month 18
-**Content**:
+**Architecture**:
 ```
-Week 2: Revenue Start  (First platform integrations live)
-Month 3: $50K MRR     (3 major platforms connected)
-Month 6: $200K MRR    (Universal bridge operational)
+ETH Agent → ckETH → Sippar Swap → ckALGO → burn → ALGO to receiving agent
 ```
 
-**Key Metrics**:
-- Gross Margin: 95%+ (software routing, minimal infrastructure)
-- Platform Growth: 3 → 10 → 25+ connected AI agent platforms
-- Transaction Volume: Scales with overall agent ecosystem growth
-- Team Scale: 5 → 8 → 12 focused integration specialists
-
-**Speaker Notes**: "Revenue starts Week 2 and scales with agent ecosystem growth. Ultra-efficient model with minimal capital requirements."
+**Speaker Notes**: "Agents pay in their native token. Sippar handles the cross-chain settlement. ICP provides the cryptographic security."
 
 ---
 
-### **Slide 12: Team & Execution - Proven Delivery**
-**Visual**: Team photos with key achievements and advisory network
+### **Slide 4: What's Working (Mainnet Proof)**
 **Content**:
-- **Technical Leadership**: World-first Chain Fusion integration achievement
-- **Blockchain Expertise**: Deep knowledge of both ICP and Algorand ecosystems
-- **Enterprise Understanding**: Compliance requirements and deployment experience
-- **Systematic Development**: Sprint-based methodology with documented milestones
+| Flow | Status | Evidence |
+|------|--------|----------|
+| ALGO → ckALGO | ✅ Working | 24.12 ckALGO minted (Feb 2026) |
+| ckALGO → ALGO | ✅ Working | 0.6 ALGO redeemed via threshold sig |
+| ckETH → ckALGO | ✅ Working | 0.000248 ETH → 5.4 ckALGO |
+| X402 Payments | ✅ Working | Real ICRC-1 transfers to treasury |
+| Agent Services | ✅ Working | 32 services, Grok LLM responses |
 
-**Advisory Network**:
-- **Technical**: ICP and Algorand ecosystem experts
-- **Business**: Enterprise software and blockchain industry veterans
-- **Strategic**: Access to ecosystem resources and customer distribution channels
-
-**Speaker Notes**: "Our team has already achieved what competitors are still trying to build - the only production autonomous AI payment system with mathematical security."
+**Speaker Notes**: "This isn't vaporware. Every flow has on-chain evidence. We can demo all of this."
 
 ---
 
-### **Slide 13: Funding Request - $130K to $210K for Universal Bridge**
-**Visual**: Use of funds breakdown with 6-week milestone timeline
+### **Slide 5: Business Model**
 **Content**:
-- **Integration Development (60%)**: API connectors for ELNA.ai, x402 Bazaar, Google AP2
-- **Operations (25%)**: Transaction routing infrastructure and monitoring systems
-- **Partnership Development (15%)**: Platform partnership agreements and revenue sharing
+| Revenue Stream | Fee | Status |
+|----------------|-----|--------|
+| Swap Fee | 0.3% | Active (ckETH→ckALGO) |
+| Routing Fee | 0.1% | Active (X402 payments) |
+| Agent Services | Per-use | Active (CI marketplace) |
+| ICPSwap LP | Variable | Pending (ckALGO listing) |
 
-**Milestones**:
-- **6 Weeks**: First cross-platform agent payments flowing, revenue starting
-- **3 Months**: 3+ major platforms connected, $50K+ MRR
-- **6 Months**: Universal bridge operational, $200K+ MRR
+**Gross Margin**: 95%+ (ICP cycles + VPS only costs)
 
-**Speaker Notes**: "This funding enables rapid deployment as universal bridge before competitors can build equivalent connections."
+**Speaker Notes**: "Simple model. Fees on swaps and payments. 95% margin. Revenue scales with volume."
 
 ---
 
-### **Slide 14: Call to Action - Bridge the Agent Ecosystem**
-**Visual**: Connected platform ecosystem with Sippar as universal bridge enabling all transactions
+### **Slide 6: Strategic Position**
 **Content**:
-- **The Opportunity**: Become the universal payment bridge for all AI agent platforms
-- **The Strategy**: Connect existing ecosystems rather than compete with them
-- **The Timing**: Platforms exist now and need payment connectivity immediately
-- **The Investment**: Ultra-efficient capital deployment with immediate revenue generation
+- **Algorand ASIF**: Foundation's 2025+ roadmap explicitly targets agent commerce
+- **ICP Chain Fusion**: DFINITY's cross-chain thesis — Sippar validates it works
+- **Lava Network**: Partnership opportunity — combined = full-stack agent infra
+- **First mover**: Only working ICP-Algorand bridge
 
-**Next Steps**:
-- **Due Diligence**: Live demonstration and technical validation
-- **Customer Validation**: Enterprise pilot program participation
-- **Strategic Alignment**: Partnership opportunities with portfolio companies
-
-**Contact Information**: Ready for immediate follow-up and detailed discussions
-
-**Speaker Notes**: "AI agent platforms exist and are growing. They just need a way to pay each other. Be the bridge that connects them all."
+**Speaker Notes**: "Algorand is betting on agent commerce. ICP is betting on Chain Fusion. We're infrastructure for both theses."
 
 ---
 
-## 🎨 **Design Guidelines**
+### **Slide 7: Competitive Landscape**
+**Content**:
+| Solution | Security | Autonomous | Working |
+|----------|----------|------------|---------|
+| **Sippar** | Threshold | ✅ Yes | ✅ Mainnet |
+| Wormhole | Economic | ❌ No | ✅ Yes |
+| LayerZero | Oracle | ❌ No | ✅ Yes |
+| Others | Multisig | ❌ No | ❌ No |
 
-### **Visual Standards**
-- **Color Scheme**: Professional blue/white with Sippar brand colors
-- **Typography**: Clean, modern fonts (Helvetica/Arial family)
-- **Images**: High-quality technical diagrams and real dashboard screenshots
-- **Data Visualization**: Clear charts with consistent styling and color coding
+**Moats**:
+- Only ICP-Algorand threshold bridge
+- Deposit-based flows (no signatures for agents)
+- X402 real payments (not simulated)
 
-### **Slide Layout Standards**
-- **Title**: Clear, bold headers with consistent positioning
-- **Content**: Maximum 5-7 bullet points per slide
-- **Visuals**: Balance text with supporting graphics (60/40 split)
-- **Footnotes**: Source citations and disclaimers where appropriate
-
-### **Animation and Flow**
-- **Transitions**: Subtle, professional slide transitions
-- **Build Animation**: Key points appear on click for narrative control
-- **Live Demo**: Embedded video or screen sharing capability
-- **Backup Slides**: Additional technical details for Q&A section
+**Speaker Notes**: "Existing bridges are for humans. They don't work for autonomous agents. We built for agents."
 
 ---
 
-## 📊 **Appendix Slides** (Available for Q&A)
+### **Slide 8: Technical Architecture**
+**Content**:
+```
+ICP Mainnet                    Algorand Mainnet
+┌─────────────────────┐        ┌──────────────────┐
+│ threshold_signer    │───────▶│ Custody Address  │
+│ (Ed25519)           │        │ (threshold ctrl) │
+├─────────────────────┤        └──────────────────┘
+│ simplified_bridge   │              ▲
+│ (ICRC-1 ckALGO)     │              │
+├─────────────────────┤        ┌─────┴────────────┐
+│ ckETH Ledger        │        │ Backend (VPS)    │
+│ (ICP native)        │◀──────▶│ Express + Algod  │
+└─────────────────────┘        └──────────────────┘
+```
 
-### **A1: Technical Architecture Deep Dive**
-- Detailed system architecture diagrams
-- Security model and cryptographic specifications
-- Integration patterns and API documentation
-- Performance benchmarks and scalability analysis
-
-### **A2: Market Research Details**
-- Industry analyst reports and market sizing methodology
-- Competitive analysis with detailed feature comparisons
-- Customer interview insights and validation data
-- Regulatory landscape analysis
-
-### **A3: Financial Model Details**
-- 5-year financial projections with scenario analysis
-- Unit economics breakdown by customer segment
-- Sensitivity analysis and key assumption validation
-- Funding requirements and capital efficiency metrics
-
-### **A4: Partnership Opportunities**
-- Strategic partnership framework and value propositions
-- Ecosystem integration opportunities
-- Channel partner programs and revenue sharing models
-- Customer success stories and case studies
+**Speaker Notes**: "Two canisters on ICP mainnet. Backend polls Algorand. Threshold signatures enable trustless control."
 
 ---
 
-## 🎯 **Presentation Delivery Guidelines**
+### **Slide 9: Roadmap**
+**Content**:
+| Phase | Target | Status |
+|-------|--------|--------|
+| Bridge (ALGO↔ckALGO) | Q4 2025 | ✅ Done |
+| Swap (ckETH→ckALGO) | Q1 2026 | ✅ Done |
+| ICPSwap Listing | Q1 2026 | Pending |
+| Per-User Custody | Q1 2026 | Pending |
+| External Integration | Q2 2026 | Planned |
+| Multi-Chain (Solana) | Q3 2026 | Planned |
 
-### **Opening (2 minutes)**
-- Strong hook: "Autonomous AI agents will conduct trillions in commerce - we've built the payment infrastructure"
-- Credibility establishment: World-first achievement, production system, real transactions
-- Agenda preview: Problem, solution, market, traction, funding
-
-### **Core Content (10 minutes)**
-- Problem/Solution: 3 minutes with live demo integration
-- Market/Traction: 4 minutes with enterprise validation
-- Business Model/Team: 3 minutes with financial projections
-
-### **Closing (3 minutes)**
-- Investment thesis summary: Technology + market + team + timing
-- Funding request: Clear amount and use of funds
-- Call to action: Next steps and contact information
-
-### **Q&A Preparation**
-- **Technical Questions**: Architecture, security, scalability
-- **Market Questions**: Competition, customer adoption, pricing
-- **Business Questions**: Revenue model, partnerships, exit strategy
-- **Investment Questions**: Valuation, terms, milestones, risks
+**Speaker Notes**: "Core infrastructure done. Now it's about liquidity, scaling, and integrations."
 
 ---
 
-**This pitch deck template provides a comprehensive framework for presenting Sippar's investment opportunity to potential investors, emphasizing the breakthrough technology, massive market opportunity, and proven execution capability that positions Sippar as the definitive payment infrastructure for the emerging autonomous AI economy.**
+### **Slide 10: What We Need**
+**Content**:
+**Immediate (Q1 2026)**:
+1. ICPSwap listing (ckALGO liquidity)
+2. Per-user custody (scale beyond single address)
+3. Algorand Foundation grant proposal
+
+**Near-Term (Q2 2026)**:
+4. First external integration (ELNA, Fetch.ai, or Bazaar)
+5. Full E2E demo (ETH agent → ALGO agent)
+
+**Funding**: Grant-preferred (Algorand Foundation, DFINITY)
+
+**Speaker Notes**: "We're not raising a massive round. Infrastructure is built. We need traction and partnerships."
+
+---
+
+### **Slide 11: Risk Assessment**
+**Content**:
+| Risk | Severity | Mitigation |
+|------|----------|------------|
+| Single custody address | High | Fix planned (Q1) |
+| Agent economy nascent | Medium | Multiple ecosystems |
+| Competition | Medium | First-mover, threshold |
+| VPS single point | Low | Canister logic on ICP |
+
+**Speaker Notes**: "Known limitations are documented. Fix for biggest one (custody) is planned."
+
+---
+
+### **Slide 12: Summary & Contact**
+**Content**:
+- **What exists**: Working ICP-Algorand bridge, swap, X402 payments
+- **What's next**: Liquidity, scale, integrations
+- **Why interesting**: Algorand ASIF, ICP Chain Fusion, agent economy timing
+
+**Live Systems**:
+- Backend: 74.50.113.152:3004
+- Canisters: threshold_signer (vj7ly), simplified_bridge (hldvt)
+
+**Documentation**: `/docs/STATUS.md`, `/docs/ARCHITECTURE.md`
+
+**Speaker Notes**: "Working product. Right timing. Low burn. Let's talk partnerships or grants."
+
+---
+
+## 📊 **Appendix: Technical Details**
+
+### **On-Chain Evidence**
+- Minted: 24.12 ckALGO from real ALGO deposits
+- Redeemed: 0.6 ALGO via threshold signatures
+- Swapped: 0.000248 ETH → 5.4 ckALGO (block 935652)
+- X402: Real ckALGO transfers to treasury
+
+### **Canister IDs**
+- threshold_signer: `vj7ly-diaaa-aaaae-abvoq-cai`
+- simplified_bridge: `hldvt-2yaaa-aaaak-qulxa-cai`
+- Treasury: `smm4f-x54l6-7c2ed-rxdm7-coedl-62i2x-azfmt-ezhzj-ocftg-aa5ir-iqe`
+
+### **Key Documentation**
+- `docs/STATUS.md` — current state, known issues
+- `docs/ARCHITECTURE.md` — system design
+- `docs/plans/CKETH_CKALGO_SWAP_PLAN.md` — swap details
+- `CLAUDE.md` — development context
+
+---
+
+**Summary**: Sippar is cross-chain payment rails for AI agent commerce. Infrastructure works. Focus is traction and partnerships.

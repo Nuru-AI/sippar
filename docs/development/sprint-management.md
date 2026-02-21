@@ -1,8 +1,10 @@
-# Sprint Management System
+# Sprint Management System (ARCHIVED)
 
-**Date**: September 18, 2025
-**Version**: 1.5
-**Purpose**: Centralized sprint planning and tracking for Sippar development
+**Original Date**: September 18, 2025
+**Status**: ARCHIVED — Historical sprint tracking from Sept 2025
+**Current Status**: See `docs/STATUS.md` for current state
+
+> **Note**: This document contains historical sprint information from September 2025. Sprint tracking is no longer maintained here. For current project status, see `docs/STATUS.md`.
 
 ## 📋 **Current Development Plan Reference**
 **For comprehensive current status and development roadmap**: [`/docs/development/CURRENT_STATUS_AND_DEVELOPMENT_PLAN.md`](/docs/development/CURRENT_STATUS_AND_DEVELOPMENT_PLAN.md)

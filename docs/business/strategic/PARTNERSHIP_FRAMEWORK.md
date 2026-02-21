@@ -1,8 +1,10 @@
 # Sippar Partnership Framework
 
 **AI Agent Platform Integration Partnership Templates**
-**Date**: September 25, 2025
-**Version**: 1.0
+**Last Updated**: February 2026 (structure from Sept 2025)
+**Status**: Framework valid, specific partnership details need updating
+
+> **Note**: Core infrastructure now working on mainnet. Partnership templates remain useful. See `docs/STATUS.md` for current state before using in actual outreach.
 
 ---
 
