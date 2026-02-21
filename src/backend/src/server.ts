@@ -3851,10 +3851,14 @@ app.post('/api/sippar/ci-agents/:agent/:service',
 
       // Normalize service paths for comparison (handle various formats)
       const normalizeService = (svc: string): string => {
+        // Lowercase for case-insensitive comparison
+        let normalized = svc.toLowerCase();
         // Remove leading /api/sippar if present
-        let normalized = svc.replace(/^\/api\/sippar/, '');
+        normalized = normalized.replace(/^\/api\/sippar/, '');
+        // Remove trailing slashes
+        normalized = normalized.replace(/\/+$/, '');
         // Convert dashes to slashes for "ci-agent-service" format
-        if (normalized.match(/^ci-[a-z]+-[a-z-]+$/)) {
+        if (normalized.match(/^ci-[a-z0-9]+-[a-z0-9-]+$/)) {
           const parts = normalized.split('-');
           // ci-developer-code-generation -> /ci-agents/developer/code-generation
           if (parts.length >= 3 && parts[0] === 'ci') {
@@ -3883,26 +3887,43 @@ app.post('/api/sippar/ci-agents/:agent/:service',
       }
     }
 
-    // Consume token to prevent replay attacks
-    if (verification.payload) {
-      x402Service.consumeToken(verification.payload.jti);
-    }
-
     // BUG FIX: Extract prompt string properly from various input formats
     // Supports: { prompt: "..." }, { requirements: "..." }, { requirements: { task: "..." } }
+    // IMPORTANT: Extract BEFORE consuming token so we can reject empty prompts without wasting payment
     let promptString: string;
     if (typeof prompt === 'string' && prompt.trim()) {
       // Direct prompt field (preferred)
-      promptString = prompt;
+      promptString = prompt.trim();
     } else if (typeof requirements === 'string' && requirements.trim()) {
       // Requirements as string
-      promptString = requirements;
+      promptString = requirements.trim();
     } else if (requirements && typeof requirements === 'object') {
       // Requirements as object - extract task, prompt, or description
-      promptString = requirements.task || requirements.prompt || requirements.description ||
-                     (Object.keys(requirements).length > 0 ? JSON.stringify(requirements) : '');
+      const extracted = requirements.task || requirements.prompt || requirements.description || '';
+      promptString = typeof extracted === 'string' ? extracted.trim() : '';
+      // Only use JSON.stringify as last resort for non-empty objects
+      if (!promptString && Object.keys(requirements).length > 0) {
+        promptString = JSON.stringify(requirements);
+      }
     } else {
       promptString = '';
+    }
+
+    // P2 FIX: Reject empty prompts BEFORE consuming the payment token
+    // This prevents wasting paid tokens on empty/whitespace-only requests
+    if (!promptString) {
+      console.warn(`🚫 Empty prompt rejected for ${agent}/${service}`);
+      return res.status(400).json({
+        success: false,
+        error: 'Prompt is required',
+        message: 'Request must include a non-empty prompt or requirements field',
+        hint: 'Provide { "prompt": "your task description" } or { "requirements": "your task description" }'
+      });
+    }
+
+    // Consume token to prevent replay attacks (AFTER validation, so invalid requests don't waste tokens)
+    if (verification.payload) {
+      x402Service.consumeToken(verification.payload.jti);
     }
 
     // Call CI agent service
@@ -4957,7 +4978,7 @@ function validateAlgorandAddress(address: string): boolean {
 }
 
 function validateServiceEndpoint(service: string): boolean {
-  // Whitelist of allowed service endpoints
+  // Whitelist of allowed service endpoints (dash format, lowercase)
   const allowedServices = [
     // AI Services
     'ai-oracle-basic',
@@ -4970,8 +4991,8 @@ function validateServiceEndpoint(service: string): boolean {
     'chain-fusion-basic',
     'chain-fusion-enhanced',
     // ckALGO Services
-    'ckALGO-mint',
-    'ckALGO-redeem',
+    'ckalgo-mint',
+    'ckalgo-redeem',
     // External API Services
     'external-openai-gpt4',
     'external-claude-sonnet',
@@ -4999,7 +5020,28 @@ function validateServiceEndpoint(service: string): boolean {
     'ci-cryptographer-security-systems',
     'ci-solutionarchitect-solution-design'
   ];
-  return allowedServices.includes(service);
+
+  // Normalize input to dash format (case-insensitive)
+  // Accepts: "ci-developer-code-generation", "/ci-agents/developer/code-generation",
+  //          "/api/sippar/ci-agents/developer/code-generation"
+  let normalized = service.toLowerCase().trim();
+
+  // Remove trailing slashes
+  normalized = normalized.replace(/\/+$/, '');
+
+  // Remove leading /api/sippar if present
+  normalized = normalized.replace(/^\/api\/sippar/, '');
+
+  // Convert path format to dash format: /ci-agents/developer/code-generation -> ci-developer-code-generation
+  const pathMatch = normalized.match(/^\/?ci-agents\/([a-z0-9]+)\/(.+)$/);
+  if (pathMatch) {
+    normalized = `ci-${pathMatch[1]}-${pathMatch[2]}`;
+  }
+
+  // Remove leading slash if still present (for non-ci-agents paths)
+  normalized = normalized.replace(/^\//, '');
+
+  return allowedServices.includes(normalized);
 }
 
 function validatePaymentAmount(amount: number): boolean {
