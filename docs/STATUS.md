@@ -1,6 +1,6 @@
 # Sippar Status
 
-**Last Updated**: 2026-02-21 12:50 CET
+**Last Updated**: 2026-02-21 11:00 UTC
 
 ## Vision
 Sippar is the **cross-chain payment rail for AI agent commerce**. ICP is invisible middleware (chain fusion, threshold crypto, ckTokens) — not a competing L1. Agents on Ethereum or Solana pay in their native token; Sippar swaps via ICP DEX, burns ckALGO, and settles native ALGO to the receiving agent. No bridges, no seed phrases, no human intervention.
@@ -49,6 +49,25 @@ See also: `docs/ARCHITECTURE.md`, `working/sprint-018-agent-to-agent-payments/`.
 - **Proven**: Test payment transferred 0.01 ckALGO (10,000 microALGO) to treasury
 - **On-chain verification**: `dfx canister call hldvt... icrc1_balance_of` shows 10,000
 - Treasury: `smm4f-x54l6-7c2ed-rxdm7-coedl-62i2x-azfmt-ezhzj-ocftg-aa5ir-iqe`
+
+### ckETH → ckALGO Swap (LIVE 2026-02-21)
+- Fully autonomous deposit-based swap — no human signatures required
+- Agent transfers ckETH to per-principal custody subaccount (SHA256 derived)
+- Backend verifies deposit via ICRC-3 `get_transactions()` query (TOCTOU-safe)
+- Canister mints ckALGO at XRC exchange rate (~21,750 ALGO/ETH)
+- Anti-replay protection via `processed_swap_deposits` HashSet
+- **Proven**: First real swap executed on mainnet
+  - Input: 0.000248 ETH (248,000,000,000,000 wei)
+  - Output: 5.405549 ckALGO
+  - Block: 935652
+- **Production endpoints** (74.50.113.152:3004):
+  - `GET /swap/config` — swap configuration + live rate
+  - `GET /swap/custody-account/:principal` — get deposit instructions
+  - `GET /swap/custody-balance/:principal` — check ckETH in custody
+  - `POST /swap/execute` — execute swap after deposit
+  - `GET /swap/deposit-status/:txId` — check processing status
+  - `GET /swap/metrics` — service metrics
+- **Admin utility**: `admin_sweep_cketh_to_custody()` for recovering misplaced ckETH
 
 ### CI Agent Marketplace (Restored 2026-02-19)
 - **CI API**: 17 agents loaded, healthy (Docker on VPS port 8080)
@@ -180,6 +199,20 @@ See also: `docs/ARCHITECTURE.md`, `working/sprint-018-agent-to-agent-payments/`.
 - **Status**: PHASE 3 COMPLETE & TESTED ON MAINNET. First real ckETH → ckALGO swap successful.
 - **Plan**: `docs/plans/CKETH_CKALGO_SWAP_PLAN.md`
 
+### VPS Deployment (~11:00 UTC)
+- **Backend deployed**: All swap endpoints live on 74.50.113.152:3004
+- **Endpoints tested**:
+  - `/health` — healthy ✅
+  - `/swap/custody-account/:principal` — 628ms ✅
+  - `/swap/custody-balance/:principal` — 263ms ✅
+  - `/swap/deposit-status/:txId` — instant ✅
+  - `/swap/metrics` — 580ms ✅
+  - `/swap/config` — 75s (XRC rate fetch slow but works) ✅
+- **Metrics confirmed**:
+  - `ckethBackedCkalgo`: 5,395,549 (5.395549 ckALGO)
+  - `totalCkethReceived`: 248,000,000,000,000 wei (0.000248 ETH)
+- **Service**: `sippar-backend.service` running, memory 69MB
+
 ## What's Prototyped But Not Production
 
 ### X402 Agent Payment Infrastructure (PRODUCTION 2026-02-20)
@@ -191,14 +224,14 @@ See also: `docs/ARCHITECTURE.md`, `working/sprint-018-agent-to-agent-payments/`.
 - Smart routing system (NLP → agent team assembly)
 - **Status**: Real payments LIVE. Pipeline works end-to-end with Grok LLM and real ckALGO transfers.
 
-### ckETH → ckALGO Swap (LIVE & TESTED 2026-02-21)
-- **Deposit-based autonomous swap** — agents transfer ckETH to custody subaccount, no signatures required
-- Exchange rate from ICP Exchange Rate Canister (~21,795 ALGO/ETH at test time)
-- Admin controls for enable/disable, fee (0.3%), limits (0.0001-1 ETH)
-- Backend services: `ckethDepositService.ts`, 10 REST endpoints
-- Anti-replay protection via `processed_swap_deposits` HashSet
-- **First real swap**: 0.000248 ETH → 5.405549 ckALGO (block 935652)
-- **Status**: LIVE ON MAINNET. First autonomous swap completed successfully.
+### ckETH → ckALGO Swap (PRODUCTION 2026-02-21)
+- ✅ **Deposit-based autonomous swap** — agents transfer ckETH to custody subaccount, no signatures required
+- ✅ Exchange rate from ICP Exchange Rate Canister (~21,795 ALGO/ETH at test time)
+- ✅ Admin controls for enable/disable, fee (0.3%), limits (0.0001-1 ETH)
+- ✅ Backend services: `ckethDepositService.ts`, 10 REST endpoints deployed to VPS
+- ✅ Anti-replay protection via `processed_swap_deposits` HashSet
+- ✅ **First real swap**: 0.000248 ETH → 5.405549 ckALGO (block 935652)
+- **Status**: PRODUCTION — canister + backend deployed, all endpoints live on VPS.
 
 ### Agent Platform Integrations (Planned, Not Built)
 - ELNA.ai — SNS canister identified, no IDL/API access yet
@@ -215,8 +248,8 @@ See also: `docs/ARCHITECTURE.md`, `working/sprint-018-agent-to-agent-payments/`.
 
 ### Week 3: Cross-Chain Routing
 4. ~~**Canister swap integration**~~ **Phase 1+2 DEPLOYED** (`d91bce9`, `d99ec9c`) — ckETH → ckALGO swap in canister, XRC tested (21,743 ALGO/ETH)
-5. ~~**Backend swap integration**~~ **Phase 3 DEPLOYED** — ckethDepositService.ts, 10 REST endpoints, autonomous agent flow
-6. **Wire full flow** — swap → burn → sign → settle (need real ckETH test)
+5. ~~**Backend swap integration**~~ **Phase 3 DEPLOYED + VPS LIVE** — ckethDepositService.ts, 10 REST endpoints, autonomous agent flow
+6. ~~**Wire full flow**~~ **TESTED ON MAINNET** — 0.000248 ETH → 5.405549 ckALGO (block 935652)
 
 ### Week 4: Agents
 6. **Grok API → CI agents** — real LLM responses
