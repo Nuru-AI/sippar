@@ -80,6 +80,8 @@ service : {
   // Admin Functions
   admin_redeem_ck_algo : (principal, nat, text) -> (variant { Ok : text; Err : text });
   admin_transfer_ck_algo : (principal, principal, nat) -> (variant { Ok : nat; Err : text });
+  // Admin: sweep ckETH from main account to user's custody subaccount
+  admin_sweep_cketh_to_custody : (principal, nat) -> (variant { Ok : nat; Err : text });
   update_reserve_health : (bool) -> (variant { Ok : text; Err : text });
   get_canister_status : () -> (text) query;
 

@@ -305,6 +305,7 @@ The canister owns all subaccounts, so it can:
 | `swap_cketh_for_ckalgo_deposit(principal, amount, tx_id, min_out)` | Update | Execute deposit-based swap |
 | `get_swap_config()` | Query | Get swap configuration (fee, limits, rate) |
 | `set_swap_enabled(bool)` | Update | Admin: enable/disable swaps |
+| `admin_sweep_cketh_to_custody(principal, amount)` | Update | Admin: move ckETH from main account to custody (recovery) |
 
 ### REST Endpoints
 

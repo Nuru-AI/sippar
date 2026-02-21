@@ -46,6 +46,30 @@ pub enum TransferFromError {
     GenericError { error_code: Nat, message: String },
 }
 
+/// ICRC-1 Transfer arguments (for admin ckETH sweep)
+#[derive(Clone, Debug, CandidType, Deserialize)]
+pub struct TransferArgs {
+    pub from_subaccount: Option<[u8; 32]>,
+    pub to: Account,
+    pub amount: Nat,
+    pub fee: Option<Nat>,
+    pub memo: Option<Vec<u8>>,
+    pub created_at_time: Option<u64>,
+}
+
+/// ICRC-1 Transfer error types
+#[derive(Clone, Debug, CandidType, Deserialize)]
+pub enum TransferError {
+    BadFee { expected_fee: Nat },
+    BadBurn { min_burn_amount: Nat },
+    InsufficientFunds { balance: Nat },
+    TooOld,
+    CreatedInFuture { ledger_time: u64 },
+    Duplicate { duplicate_of: Nat },
+    TemporarilyUnavailable,
+    GenericError { error_code: Nat, message: String },
+}
+
 // ============================================================================
 // CANISTER IDs
 // ============================================================================
@@ -902,6 +926,61 @@ fn admin_transfer_ck_algo(
 
     // Return transfer timestamp as transaction index
     Ok(Nat::from(time()))
+}
+
+/// Admin function: sweep ckETH from main canister account to user's custody subaccount
+/// Used when user accidentally sends ckETH to main account instead of their custody subaccount
+/// Only controllers can call this function
+#[update]
+async fn admin_sweep_cketh_to_custody(
+    user_principal: Principal,
+    amount: Nat
+) -> Result<Nat, String> {
+    let caller_principal = caller();
+
+    // Only controllers can sweep (more restrictive than regular admin)
+    if !ic_cdk::api::is_controller(&caller_principal) {
+        return Err(format!(
+            "Unauthorized: only controllers can sweep ckETH. Caller: {}",
+            caller_principal
+        ));
+    }
+
+    // Derive the user's custody subaccount
+    let custody_subaccount = derive_custody_subaccount(&user_principal);
+
+    // Get ckETH canister
+    let cketh_canister = Principal::from_text(CKETH_CANISTER_ID)
+        .map_err(|e| format!("Invalid ckETH canister ID: {}", e))?;
+
+    // Build transfer args: from main account (no subaccount) to custody subaccount
+    let transfer_args = TransferArgs {
+        from_subaccount: None,  // From main account
+        to: Account {
+            owner: ic_cdk::api::id(),  // Same canister
+            subaccount: Some(custody_subaccount),  // To custody subaccount
+        },
+        amount: amount.clone(),
+        fee: None,
+        memo: None,
+        created_at_time: None,
+    };
+
+    // Inter-canister call to ckETH
+    let transfer_result: Result<(Result<Nat, TransferError>,), _> =
+        ic_cdk::call(cketh_canister, "icrc1_transfer", (transfer_args,)).await;
+
+    match transfer_result {
+        Ok((Ok(block_index),)) => {
+            ic_cdk::println!(
+                "Swept {} ckETH to custody subaccount for {}, block {}",
+                amount, user_principal, block_index
+            );
+            Ok(block_index)
+        }
+        Ok((Err(e),)) => Err(format!("ckETH transfer failed: {:?}", e)),
+        Err((code, msg)) => Err(format!("Inter-canister call failed: {:?} - {}", code, msg)),
+    }
 }
 
 #[query]

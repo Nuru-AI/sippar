@@ -1,6 +1,6 @@
 # Sippar Status
 
-**Last Updated**: 2026-02-21 12:05 CET
+**Last Updated**: 2026-02-21 12:50 CET
 
 ## Vision
 Sippar is the **cross-chain payment rail for AI agent commerce**. ICP is invisible middleware (chain fusion, threshold crypto, ckTokens) — not a competing L1. Agents on Ethereum or Solana pay in their native token; Sippar swaps via ICP DEX, burns ckALGO, and settles native ALGO to the receiving agent. No bridges, no seed phrases, no human intervention.
@@ -175,7 +175,9 @@ See also: `docs/ARCHITECTURE.md`, `working/sprint-018-agent-to-agent-payments/`.
   - `is_swap_deposit_processed()` → false for new tx_ids ✅
   - `GET /swap/config` → enabled=true, rate=21,750 ALGO/ETH ✅
   - `GET /swap/custody-account/:principal` → full custody instructions ✅
-- **Status**: PHASE 3 COMPLETE. Ready for autonomous agent ckETH → ckALGO swaps.
+  - **REAL SWAP EXECUTED**: 0.000248 ETH → 5.405549 ckALGO (tx 935652) ✅
+- **Admin utility**: `admin_sweep_cketh_to_custody(principal, amount)` — moves ckETH from main account to custody subaccount (for recovery)
+- **Status**: PHASE 3 COMPLETE & TESTED ON MAINNET. First real ckETH → ckALGO swap successful.
 - **Plan**: `docs/plans/CKETH_CKALGO_SWAP_PLAN.md`
 
 ## What's Prototyped But Not Production
@@ -189,13 +191,14 @@ See also: `docs/ARCHITECTURE.md`, `working/sprint-018-agent-to-agent-payments/`.
 - Smart routing system (NLP → agent team assembly)
 - **Status**: Real payments LIVE. Pipeline works end-to-end with Grok LLM and real ckALGO transfers.
 
-### ckETH → ckALGO Swap (FULLY DEPLOYED 2026-02-21)
+### ckETH → ckALGO Swap (LIVE & TESTED 2026-02-21)
 - **Deposit-based autonomous swap** — agents transfer ckETH to custody subaccount, no signatures required
-- Exchange rate from ICP Exchange Rate Canister (21,750 ALGO/ETH)
+- Exchange rate from ICP Exchange Rate Canister (~21,795 ALGO/ETH at test time)
 - Admin controls for enable/disable, fee (0.3%), limits (0.0001-1 ETH)
 - Backend services: `ckethDepositService.ts`, 10 REST endpoints
 - Anti-replay protection via `processed_swap_deposits` HashSet
-- **Status**: FULLY DEPLOYED on mainnet. Ready for autonomous agent swaps.
+- **First real swap**: 0.000248 ETH → 5.405549 ckALGO (block 935652)
+- **Status**: LIVE ON MAINNET. First autonomous swap completed successfully.
 
 ### Agent Platform Integrations (Planned, Not Built)
 - ELNA.ai — SNS canister identified, no IDL/API access yet
