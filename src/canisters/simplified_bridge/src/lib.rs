@@ -3,10 +3,11 @@
 
 use ic_cdk::{init, query, update, caller, api::time, pre_upgrade, post_upgrade};
 use candid::{CandidType, Principal, Nat, Deserialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::cell::RefCell;
 use serde::Serialize;
 use num_traits::cast::ToPrimitive;
+use sha2::{Sha256, Digest};
 
 // ============================================================================
 // ICRC-2 TYPES (defined manually to avoid dependency conflicts)
@@ -204,6 +205,8 @@ pub struct StableStorage {
     pub swap_records: Option<Vec<SwapRecord>>,
     pub cketh_backed_ckalgo: Option<Nat>,
     pub total_cketh_received: Option<Nat>,
+    // Deposit-based swap tracking
+    pub processed_swap_deposits: Option<Vec<String>>,
 }
 
 // ============================================================================
@@ -239,6 +242,9 @@ thread_local! {
     // Reserve tracking: separate ckETH-backed vs ALGO-backed ckALGO
     static CKETH_BACKED_CKALGO: RefCell<Nat> = RefCell::new(Nat::from(0u64));  // Total ckALGO minted via swaps
     static TOTAL_CKETH_RECEIVED: RefCell<Nat> = RefCell::new(Nat::from(0u64)); // Total ckETH held by canister
+
+    // Deposit-based swap tracking (anti-replay protection)
+    static PROCESSED_SWAP_DEPOSITS: RefCell<HashSet<String>> = RefCell::new(HashSet::new());
 }
 
 // ============================================================================
@@ -295,6 +301,7 @@ fn pre_upgrade() {
         swap_records: Some(SWAP_RECORDS.with(|r| r.borrow().clone())),
         cketh_backed_ckalgo: Some(CKETH_BACKED_CKALGO.with(|b| b.borrow().clone())),
         total_cketh_received: Some(TOTAL_CKETH_RECEIVED.with(|t| t.borrow().clone())),
+        processed_swap_deposits: Some(PROCESSED_SWAP_DEPOSITS.with(|d| d.borrow().iter().cloned().collect())),
     };
 
     // Store in stable memory
@@ -379,6 +386,14 @@ fn post_upgrade() {
     }
     if let Some(received) = stable_data.total_cketh_received {
         TOTAL_CKETH_RECEIVED.with(|t| *t.borrow_mut() = received);
+    }
+    if let Some(deposits) = stable_data.processed_swap_deposits {
+        PROCESSED_SWAP_DEPOSITS.with(|d| {
+            let mut set = d.borrow_mut();
+            for tx_id in deposits {
+                set.insert(tx_id);
+            }
+        });
     }
 
     // Ensure backend authorization persists
@@ -1134,8 +1149,22 @@ async fn swap_cketh_to_ckalgo(
         return Err("Output amount too small after fee".to_string());
     }
 
-    let ckalgo_out = Nat::from(net_micro_algo as u64);
-    let fee_nat = Nat::from(fee_amount as u64);
+    // Bounds check before u64 cast (P2 fix: prevent truncation/overflow)
+    if net_micro_algo > (u64::MAX as f64) {
+        return Err(format!(
+            "Output amount {} exceeds maximum representable value",
+            net_micro_algo
+        ));
+    }
+    if fee_amount > (u64::MAX as f64) {
+        return Err(format!(
+            "Fee amount {} exceeds maximum representable value",
+            fee_amount
+        ));
+    }
+
+    let ckalgo_out = Nat::from(net_micro_algo.floor() as u64);
+    let fee_nat = Nat::from(fee_amount.floor() as u64);
 
     // Slippage check
     if let Some(min_out) = min_ckalgo_out {
@@ -1305,4 +1334,217 @@ fn get_swap_records(limit: Option<u32>) -> Vec<SwapRecord> {
 #[update]
 async fn get_current_eth_algo_rate() -> Result<f64, String> {
     get_eth_algo_rate().await
+}
+
+// ============================================================================
+// DEPOSIT-BASED SWAP FUNCTIONS (Autonomous Agent Flow)
+// ============================================================================
+
+/// Derive custody subaccount for a principal (for ckETH deposits)
+///
+/// Agent should transfer ckETH to:
+///   Account { owner: simplified_bridge_canister, subaccount: Some(result) }
+///
+/// The subaccount is SHA256(principal.as_slice())[0:32]
+fn derive_custody_subaccount(principal: &Principal) -> [u8; 32] {
+    let mut hasher = Sha256::new();
+    hasher.update(principal.as_slice());
+    let result = hasher.finalize();
+    let mut subaccount = [0u8; 32];
+    subaccount.copy_from_slice(&result[..32]);
+    subaccount
+}
+
+/// Get custody subaccount for ckETH deposits (query)
+///
+/// Returns the 32-byte subaccount that the agent should deposit ckETH to.
+/// Full deposit account: { owner: this_canister, subaccount: result }
+#[query]
+fn get_swap_custody_subaccount(principal: Principal) -> Vec<u8> {
+    derive_custody_subaccount(&principal).to_vec()
+}
+
+/// Check if a swap deposit has already been processed (anti-replay)
+#[query]
+fn is_swap_deposit_processed(tx_id: String) -> bool {
+    PROCESSED_SWAP_DEPOSITS.with(|d| d.borrow().contains(&tx_id))
+}
+
+/// Get list of processed swap deposits (for debugging/audit)
+#[query]
+fn get_processed_swap_deposits(limit: Option<u32>) -> Vec<String> {
+    let limit = limit.unwrap_or(100) as usize;
+    PROCESSED_SWAP_DEPOSITS.with(|d| {
+        d.borrow().iter().take(limit).cloned().collect()
+    })
+}
+
+/// Swap ckETH for ckALGO - Deposit-Based (Autonomous Agent Flow)
+///
+/// SECURITY: Only callable by authorized principals (backend, controllers)
+/// Backend MUST verify ckETH deposit BEFORE calling this function.
+///
+/// Flow:
+/// 1. Agent transfers ckETH to custody subaccount (standard ICRC-1 transfer)
+/// 2. Agent calls backend POST /swap/execute with tx_id
+/// 3. Backend verifies ckETH balance in custody subaccount
+/// 4. Backend calls this function with deposit details
+/// 5. Canister verifies deposit not already processed (anti-replay)
+/// 6. Canister gets exchange rate from XRC
+/// 7. Canister mints ckALGO to agent's principal
+/// 8. Canister marks deposit as processed
+///
+/// NOTE: This function does NOT call ckETH canister to verify balance.
+/// Backend is trusted to verify the deposit before calling.
+#[update]
+async fn swap_cketh_for_ckalgo_deposit(
+    agent_principal: Principal,
+    cketh_amount: Nat,
+    cketh_tx_id: String,
+    min_ckalgo_out: Option<Nat>
+) -> Result<SwapResult, String> {
+    // 1. Authorization check
+    let caller_principal = caller();
+    let is_authorized = AUTHORIZED_MINTERS.with(|m| m.borrow().contains(&caller_principal));
+    let is_controller = ic_cdk::api::is_controller(&caller_principal);
+
+    if !is_authorized && !is_controller {
+        return Err(format!(
+            "Unauthorized: only authorized principals can execute deposit swaps. Caller: {}",
+            caller_principal
+        ));
+    }
+
+    // 2. Check swap enabled
+    let enabled = SWAP_ENABLED.with(|e| *e.borrow());
+    if !enabled {
+        return Err("Swaps are currently disabled".to_string());
+    }
+
+    // 3. Check for duplicate tx_id (anti-replay protection)
+    let is_duplicate = PROCESSED_SWAP_DEPOSITS.with(|deposits| {
+        deposits.borrow().contains(&cketh_tx_id)
+    });
+    if is_duplicate {
+        return Err(format!("Deposit {} already processed", cketh_tx_id));
+    }
+
+    // 4. Validate amount within limits
+    let min_swap = MIN_SWAP_CKETH.with(|m| m.borrow().clone());
+    let max_swap = MAX_SWAP_CKETH.with(|m| m.borrow().clone());
+
+    if cketh_amount < min_swap {
+        return Err(format!(
+            "Swap amount {} below minimum {} (0.0001 ETH)",
+            cketh_amount, min_swap
+        ));
+    }
+    if cketh_amount > max_swap {
+        return Err(format!(
+            "Swap amount {} exceeds maximum {} (1 ETH)",
+            cketh_amount, max_swap
+        ));
+    }
+
+    // 5. Get exchange rate from XRC (NO FALLBACK - reject if unavailable)
+    let rate = get_eth_algo_rate().await?;
+
+    // 6. Calculate output
+    // ckETH has 18 decimals, ckALGO has 6 decimals
+    // cketh_amount is in wei (1e-18 ETH)
+    // rate is ETH/ALGO (how many ALGO per ETH)
+    // output should be in microALGO (1e-6 ALGO)
+    let cketh_as_f64 = nat_to_f64(&cketh_amount);
+    let eth_amount = cketh_as_f64 / 1e18;  // Convert wei to ETH
+    let algo_amount = eth_amount * rate;    // ETH to ALGO
+    let micro_algo = algo_amount * 1e6;     // ALGO to microALGO
+
+    // Apply fee
+    let fee_bps = SWAP_FEE_BPS.with(|f| *f.borrow());
+    let fee_amount = micro_algo * (fee_bps as f64 / 10_000.0);
+    let net_micro_algo = micro_algo - fee_amount;
+
+    if net_micro_algo <= 0.0 {
+        return Err("Output amount too small after fee".to_string());
+    }
+
+    // Bounds check before u64 cast (P2 fix: prevent truncation/overflow)
+    if net_micro_algo > (u64::MAX as f64) {
+        return Err(format!(
+            "Output amount {} exceeds maximum representable value",
+            net_micro_algo
+        ));
+    }
+    if fee_amount > (u64::MAX as f64) {
+        return Err(format!(
+            "Fee amount {} exceeds maximum representable value",
+            fee_amount
+        ));
+    }
+
+    let ckalgo_out = Nat::from(net_micro_algo.floor() as u64);
+    let fee_nat = Nat::from(fee_amount.floor() as u64);
+
+    // 7. Slippage check
+    if let Some(min_out) = min_ckalgo_out {
+        if ckalgo_out < min_out {
+            return Err(format!(
+                "Slippage exceeded: output {} < minimum {}",
+                ckalgo_out, min_out
+            ));
+        }
+    }
+
+    // 8. Mark deposit as processed BEFORE minting (prevents double-processing on retry)
+    PROCESSED_SWAP_DEPOSITS.with(|deposits| {
+        deposits.borrow_mut().insert(cketh_tx_id.clone());
+    });
+
+    // 9. Mint ckALGO to agent
+    let agent_str = agent_principal.to_text();
+
+    BALANCES.with(|balances| {
+        let mut balances_map = balances.borrow_mut();
+        let current = balances_map.get(&agent_str).unwrap_or(&Nat::from(0u64)).clone();
+        balances_map.insert(agent_str.clone(), current + ckalgo_out.clone());
+    });
+
+    // 10. Update total supply
+    TOTAL_SUPPLY.with(|supply| {
+        let mut total = supply.borrow_mut();
+        *total = total.clone() + ckalgo_out.clone();
+    });
+
+    // 11. Track ckETH-backed ckALGO separately (NOT backed by ALGO reserves)
+    CKETH_BACKED_CKALGO.with(|backed| {
+        let mut total = backed.borrow_mut();
+        *total = total.clone() + ckalgo_out.clone();
+    });
+
+    // 12. Track total ckETH received
+    TOTAL_CKETH_RECEIVED.with(|received| {
+        let mut total = received.borrow_mut();
+        *total = total.clone() + cketh_amount.clone();
+    });
+
+    // 13. Record swap for audit trail
+    let record = SwapRecord {
+        user: agent_principal,
+        cketh_in: cketh_amount.clone(),
+        ckalgo_out: ckalgo_out.clone(),
+        rate_used: rate,
+        fee_collected: fee_nat,
+        timestamp: time(),
+        tx_id: format!("DEPOSIT_SWAP_{}", cketh_tx_id),
+    };
+
+    SWAP_RECORDS.with(|records| records.borrow_mut().push(record));
+
+    // 14. Return result
+    Ok(SwapResult {
+        cketh_in: cketh_amount,
+        ckalgo_out,
+        rate_used: rate,
+        cketh_block_index: Nat::from(0u64), // Not applicable for deposit-based swap
+    })
 }

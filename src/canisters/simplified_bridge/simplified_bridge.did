@@ -97,4 +97,14 @@ service : {
   // Swap Query Functions
   get_swap_config : () -> (SwapConfig) query;
   get_swap_records : (opt nat32) -> (vec SwapRecord) query;
+
+  // Deposit-Based Swap Functions (Autonomous Agent Flow)
+  // Get custody subaccount for ckETH deposits
+  get_swap_custody_subaccount : (principal) -> (vec nat8) query;
+  // Check if a deposit tx_id was already processed
+  is_swap_deposit_processed : (text) -> (bool) query;
+  // Get list of processed deposit tx_ids (for debugging)
+  get_processed_swap_deposits : (opt nat32) -> (vec text) query;
+  // Execute deposit-based swap (backend calls after verifying ckETH deposit)
+  swap_cketh_for_ckalgo_deposit : (principal, nat, text, opt nat) -> (variant { Ok : SwapResult; Err : text });
 }

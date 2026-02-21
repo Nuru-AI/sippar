@@ -1,6 +1,6 @@
 # Sippar Architecture
 
-**Last Updated**: 2026-02-20
+**Last Updated**: 2026-02-21
 
 ## What Sippar Is
 
@@ -135,6 +135,7 @@ The bridge (ALGO → ckALGO) is the **infrastructure layer**. The product is **a
 | `automaticRedemptionService` | automaticRedemptionService.ts | threshold_signer + Algorand | Signs and submits withdrawal transactions |
 | `custodyAddressService` | custodyAddressService.ts | Both canisters | Generates and registers custody addresses |
 | `x402Service` | x402Service.ts | simplified_bridge canister | X402 payments, JWT tokens, replay protection |
+| `ckethDepositService` | ckethDepositService.ts | ckETH canister + simplified_bridge | ckETH → ckALGO swap with ICRC-3 verification |
 
 ## Infrastructure
 
@@ -214,3 +215,119 @@ interface X402PaymentJWT {
 - Replay protection: token IDs tracked, consumed after service execution
 - Backwards compatibility: legacy base64 tokens still verified (for migration)
 - Backend-initiated transfers: only authorized minters can call `admin_transfer_ck_algo`
+
+## ckETH → ckALGO Swap Architecture (2026-02-21)
+
+Enables autonomous AI agents to swap ckETH for ckALGO without human signatures.
+
+### Why Deposit-Based (Not ICRC-2)
+
+ICRC-2's `icrc2_approve()` function uses `caller()` as the token owner. This means:
+- The backend's anonymous principal (`2vxsx-fae`) cannot approve on behalf of users
+- Users would need to sign approval transactions manually
+- **This breaks autonomous agent operation**
+
+The deposit-based pattern solves this:
+1. Agent transfers ckETH to a custody subaccount (owned by the canister)
+2. Backend verifies the on-chain transaction
+3. Canister mints ckALGO to the agent
+
+### Flow Diagram
+
+```
+┌──────────────┐     1. Transfer ckETH      ┌──────────────────┐
+│              │ ─────────────────────────→ │  ckETH Canister  │
+│    Agent     │                            │  (custody sub-   │
+│  (principal) │                            │   account)       │
+└──────────────┘                            └──────────────────┘
+       │                                            │
+       │ 2. POST /swap/execute                      │
+       │    with tx_id (block index)                │
+       ▼                                            │
+┌──────────────────────────────────────┐            │
+│           Backend                     │            │
+│                                       │ 3. ICRC-3  │
+│  ckethDepositService:                 │◀───────────┘
+│  • Queries get_transactions(block_id) │    query
+│  • Verifies recipient = custody       │
+│  • Extracts ACTUAL amount from tx     │
+│  • Ignores user-provided amount       │
+└──────────────────────────────────────┘
+       │
+       │ 4. swap_cketh_for_ckalgo_deposit()
+       │    (with verified amount)
+       ▼
+┌──────────────────────────────────────┐
+│      simplified_bridge canister       │
+│                                       │
+│  • Checks tx_id not already processed │
+│  • Fetches ETH/ALGO rate from XRC     │
+│  • Mints ckALGO to agent principal    │
+│  • Records tx_id in processed set     │
+└──────────────────────────────────────┘
+       │
+       │ 5. ckALGO minted
+       ▼
+┌──────────────┐
+│    Agent     │  Now has ckALGO!
+│  (principal) │
+└──────────────┘
+```
+
+### Security Model
+
+| Threat | Mitigation |
+|--------|------------|
+| **TOCTOU race condition** | Uses ICRC-3 to query immutable transaction data, not mutable balance |
+| **Amount manipulation** | User-provided `ckethAmount` is **IGNORED**. Backend extracts actual amount from on-chain transaction |
+| **Replay attacks** | `processed_swap_deposits` HashSet in canister tracks all tx_ids |
+| **Wrong custody subaccount** | Backend queries canister's `get_swap_custody_subaccount()` instead of local derivation |
+| **Float overflow** | Bounds check before `f64 as u64` cast in canister |
+
+### Per-Principal Custody Subaccounts
+
+Each agent has a unique custody subaccount derived as:
+```
+subaccount = SHA256(agent_principal.as_bytes())[0:32]
+```
+
+The canister owns all subaccounts, so it can:
+- Receive ckETH transfers without approval
+- Track which agent deposited what
+- Isolate deposits between agents
+
+### Canister Functions
+
+| Function | Type | Purpose |
+|----------|------|---------|
+| `get_swap_custody_subaccount(principal)` | Query | Get 32-byte subaccount for agent deposits |
+| `is_swap_deposit_processed(tx_id)` | Query | Check if tx_id already processed (anti-replay) |
+| `swap_cketh_for_ckalgo_deposit(principal, amount, tx_id, min_out)` | Update | Execute deposit-based swap |
+| `get_swap_config()` | Query | Get swap configuration (fee, limits, rate) |
+| `set_swap_enabled(bool)` | Update | Admin: enable/disable swaps |
+
+### REST Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/swap/config` | GET | Swap config + current ETH/ALGO rate |
+| `/swap/custody-account/:principal` | GET | Get custody subaccount for deposits |
+| `/swap/custody-balance/:principal` | GET | Check ckETH balance in custody |
+| `/swap/execute` | POST | Execute swap after deposit |
+| `/swap/metrics` | GET | Service metrics |
+
+### Configuration
+
+| Parameter | Value | Notes |
+|-----------|-------|-------|
+| Fee | 0.3% (30 bps) | Configurable via `set_swap_fee_bps()` |
+| Min swap | 0.0001 ETH | ~$0.20 at current prices |
+| Max swap | 1 ETH | ~$2000 at current prices |
+| Exchange rate | XRC canister | ~21,750 ALGO/ETH (Feb 2026) |
+
+### CRITICAL: Security Rules
+
+1. **NEVER trust user-provided amounts** — Always use on-chain verified amount from ICRC-3 query
+2. **ALWAYS use canister's subaccount query** — Don't derive locally, call `get_swap_custody_subaccount()`
+3. **tx_id is block index** — Must be a valid ckETH block index, not arbitrary string
+4. **Anti-replay is in canister** — Backend check is optimization only, canister is source of truth

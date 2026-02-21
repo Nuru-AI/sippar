@@ -1,6 +1,6 @@
 # Sippar Status
 
-**Last Updated**: 2026-02-21 14:30 CET
+**Last Updated**: 2026-02-21 12:05 CET
 
 ## Vision
 Sippar is the **cross-chain payment rail for AI agent commerce**. ICP is invisible middleware (chain fusion, threshold crypto, ckTokens) — not a competing L1. Agents on Ethereum or Solana pay in their native token; Sippar swaps via ICP DEX, burns ckALGO, and settles native ALGO to the receiving agent. No bridges, no seed phrases, no human intervention.
@@ -152,23 +152,30 @@ See also: `docs/ARCHITECTURE.md`, `working/sprint-018-agent-to-agent-payments/`.
 
 ## Architecture Changes (2026-02-21)
 
-### ckETH → ckALGO Swap Implementation (Phase 1+2 DEPLOYED)
-- **Goal**: Direct swap function for cross-chain agent payments
-- **Canister update**: Added `swap_cketh_to_ckalgo()` to `simplified_bridge`
-- **XRC integration**: Inter-canister calls to Exchange Rate Canister for ETH/ALGO pricing
-- **ICRC-2 support**: Added `icrc2_transfer_from` capability to pull ckETH from users
-- **Reserve tracking**: Separate tracking of ckETH-backed vs ALGO-backed ckALGO
-- **Admin controls**: `set_swap_enabled`, `set_swap_fee_bps`, `set_swap_limits`
-- **Configuration**: 0.3% fee, 0.0001-1 ETH limits, disabled by default
-- **Stable storage**: Updated `pre_upgrade`/`post_upgrade` for swap state persistence
-- **Files changed**: `lib.rs` (+500 lines), `simplified_bridge.did` (+25 lines)
-- **Commits**:
-  - `d91bce9` feat: implement ckETH → ckALGO swap in simplified_bridge canister
-  - `d99ec9c` fix: XRC integration - add cycles and missing error variants
-- **XRC fix**: Changed `ic_cdk::call` to `call_with_payment128` (1B cycles per XRC request)
+### ckETH → ckALGO Swap Implementation (PHASE 3 COMPLETE - AUTONOMOUS AGENT FLOW)
+- **Goal**: Fully autonomous ckETH → ckALGO swap for AI agents (no human signatures)
+- **Architecture Decision**: Deposit-based pattern (NOT ICRC-2) — agents transfer to custody subaccount, backend verifies, canister mints
+- **Why not ICRC-2**: `icrc2_approve()` uses `caller()` as owner — backend cannot approve on behalf of users. Breaks autonomous agent flow.
+- **Phase 1+2 (Canister)**:
+  - `swap_cketh_to_ckalgo()` — authorized minter swap (still available)
+  - XRC integration for ETH/ALGO pricing
+  - Admin controls: enable/disable, fee (0.3%), limits (0.0001-1 ETH)
+- **Phase 3 (Deposit-Based Autonomous Flow)**:
+  - `derive_custody_subaccount(principal)` — SHA256 hash for per-agent subaccounts
+  - `get_swap_custody_subaccount(principal)` — query subaccount bytes
+  - `is_swap_deposit_processed(tx_id)` — anti-replay check
+  - `swap_cketh_for_ckalgo_deposit(principal, amount, tx_id, min_out)` — deposit-based swap
+  - Backend: `ckethDepositService.ts` (280 lines) — deposit verification + swap execution
+  - Backend: 10 new endpoints (`/swap/config`, `/swap/execute`, `/swap/custody-account/:principal`, etc.)
+- **Stable storage**: Persists `processed_swap_deposits` HashSet for anti-replay protection
+- **Files changed**: `lib.rs`, `Cargo.toml` (sha2), `simplified_bridge.did`, `simplifiedBridgeService.ts`, `ckethDepositService.ts` (NEW), `server.ts`
 - **Deployed**: `hldvt` upgraded on mainnet
-- **Tested**: `get_current_eth_algo_rate()` → **21,743.81 ALGO/ETH** ✅
-- **Status**: Phase 1+2 DEPLOYED & TESTED. Phase 3 (backend) pending.
+- **Tested**:
+  - `get_swap_custody_subaccount()` → 32-byte subaccount ✅
+  - `is_swap_deposit_processed()` → false for new tx_ids ✅
+  - `GET /swap/config` → enabled=true, rate=21,750 ALGO/ETH ✅
+  - `GET /swap/custody-account/:principal` → full custody instructions ✅
+- **Status**: PHASE 3 COMPLETE. Ready for autonomous agent ckETH → ckALGO swaps.
 - **Plan**: `docs/plans/CKETH_CKALGO_SWAP_PLAN.md`
 
 ## What's Prototyped But Not Production
@@ -182,13 +189,13 @@ See also: `docs/ARCHITECTURE.md`, `working/sprint-018-agent-to-agent-payments/`.
 - Smart routing system (NLP → agent team assembly)
 - **Status**: Real payments LIVE. Pipeline works end-to-end with Grok LLM and real ckALGO transfers.
 
-### ckETH → ckALGO Swap (DEPLOYED & TESTED 2026-02-21)
-- Canister code complete: `swap_cketh_to_ckalgo()` with ICRC-2 + XRC
-- Pulls ckETH from user via `icrc2_transfer_from`, mints ckALGO
-- Exchange rate from ICP Exchange Rate Canister (no fallback)
-- Admin controls for enable/disable, fee, limits
-- XRC tested: 21,743.81 ALGO/ETH rate returned successfully
-- **Status**: Canister DEPLOYED on mainnet. Backend integration (Phase 3) pending.
+### ckETH → ckALGO Swap (FULLY DEPLOYED 2026-02-21)
+- **Deposit-based autonomous swap** — agents transfer ckETH to custody subaccount, no signatures required
+- Exchange rate from ICP Exchange Rate Canister (21,750 ALGO/ETH)
+- Admin controls for enable/disable, fee (0.3%), limits (0.0001-1 ETH)
+- Backend services: `ckethDepositService.ts`, 10 REST endpoints
+- Anti-replay protection via `processed_swap_deposits` HashSet
+- **Status**: FULLY DEPLOYED on mainnet. Ready for autonomous agent swaps.
 
 ### Agent Platform Integrations (Planned, Not Built)
 - ELNA.ai — SNS canister identified, no IDL/API access yet
@@ -205,8 +212,8 @@ See also: `docs/ARCHITECTURE.md`, `working/sprint-018-agent-to-agent-payments/`.
 
 ### Week 3: Cross-Chain Routing
 4. ~~**Canister swap integration**~~ **Phase 1+2 DEPLOYED** (`d91bce9`, `d99ec9c`) — ckETH → ckALGO swap in canister, XRC tested (21,743 ALGO/ETH)
-5. **Backend swap integration** — Phase 3: swapService.ts, IDL bindings, server endpoints
-6. **Wire full flow** — swap → burn → sign → settle
+5. ~~**Backend swap integration**~~ **Phase 3 DEPLOYED** — ckethDepositService.ts, 10 REST endpoints, autonomous agent flow
+6. **Wire full flow** — swap → burn → sign → settle (need real ckETH test)
 
 ### Week 4: Agents
 6. **Grok API → CI agents** — real LLM responses

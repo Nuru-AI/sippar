@@ -3,11 +3,15 @@
  * Production-ready server with ICP threshold signature integration
  */
 
+// IMPORTANT: Load environment variables FIRST, before any other imports
+// This ensures services like x402Service see the env vars when they initialize
+import { config } from 'dotenv';
+config();
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import { config } from 'dotenv';
 import { z } from 'zod';
 import { Principal } from '@dfinity/principal';
 import { HttpAgent, Actor } from '@dfinity/agent';
@@ -31,6 +35,7 @@ import { alertManager } from './services/alertManager.js';
 import { x402Service } from './services/x402Service.js';
 import { ElnaIntegration } from './services/elnaIntegration.js';
 import { ciAgentService } from './services/ciAgentService.js';
+import { ckethDepositService } from './services/ckethDepositService.js';
 import { createRateLimiter, createStrictRateLimiter, createLenientRateLimiter } from './middleware/rateLimiter.js';
 import {
   validateAgentInvocation,
@@ -40,9 +45,6 @@ import {
   pathValidators,
   sanitizeRequest
 } from './middleware/inputValidation.js';
-
-// Load environment variables
-config();
 
 // Utility function for retrying ICP operations with exponential backoff
 async function retryIcpOperation<T>(operation: () => Promise<T>, maxRetries: number = 5): Promise<T> {
@@ -2505,6 +2507,430 @@ app.get('/ck-algo/balance/:principal', async (req, res) => {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred',
       timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+// ============================================================================
+// ckETH -> ckALGO SWAP ENDPOINTS (Deposit-Based, Autonomous Agent Flow)
+// ============================================================================
+
+/**
+ * GET /swap/config
+ * Get swap configuration (enabled, fee, limits)
+ */
+app.get('/swap/config', async (req, res) => {
+  const startTime = Date.now();
+  try {
+    const [config, rate] = await Promise.all([
+      simplifiedBridgeService.getSwapConfig(),
+      simplifiedBridgeService.getCurrentEthAlgoRate().catch(() => null)
+    ]);
+
+    res.json({
+      success: true,
+      config: {
+        enabled: config.enabled,
+        feeBps: Number(config.fee_bps),
+        feePercent: Number(config.fee_bps) / 100,
+        minCketh: config.min_cketh.toString(),
+        minCkethFormatted: `${Number(config.min_cketh) / 1e18} ETH`,
+        maxCketh: config.max_cketh.toString(),
+        maxCkethFormatted: `${Number(config.max_cketh) / 1e18} ETH`,
+        ckethBackedCkalgo: config.cketh_backed_ckalgo.toString(),
+        totalCkethReceived: config.total_cketh_received.toString()
+      },
+      currentRate: rate,
+      ckethCanister: 'ss2fx-dyaaa-aaaar-qacoq-cai',
+      duration: Date.now() - startTime,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Swap config failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get swap config',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * GET /swap/rate
+ * Get current ETH/ALGO exchange rate from XRC
+ */
+app.get('/swap/rate', async (req, res) => {
+  const startTime = Date.now();
+  try {
+    const rate = await simplifiedBridgeService.getCurrentEthAlgoRate();
+
+    res.json({
+      success: true,
+      rate: rate,
+      pair: 'ETH/ALGO',
+      source: 'ICP Exchange Rate Canister (XRC)',
+      duration: Date.now() - startTime,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get rate failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get exchange rate',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * GET /swap/custody-account/:principal
+ * Get custody account info for ckETH deposits
+ */
+app.get('/swap/custody-account/:principal', async (req, res) => {
+  const startTime = Date.now();
+  try {
+    const { principal } = req.params;
+
+    // Validate principal
+    try {
+      Principal.fromText(principal);
+    } catch {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid principal format'
+      });
+    }
+
+    // Now async - queries canister for subaccount (P1 fix: single source of truth)
+    const custodyInfo = await ckethDepositService.getCustodyAccountInfo(principal);
+
+    res.json({
+      success: true,
+      custodyAccount: {
+        owner: custodyInfo.owner,
+        subaccount: custodyInfo.subaccount,
+        subaccountArray: Array.from(custodyInfo.subaccountBytes),
+        ckethCanister: 'ss2fx-dyaaa-aaaar-qacoq-cai'
+      },
+      instructions: custodyInfo.instructions,
+      agentPrincipal: principal,
+      duration: Date.now() - startTime,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get custody account failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get custody account',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * GET /swap/custody-balance/:principal
+ * Get agent's ckETH custody balance (deposited but not yet swapped)
+ */
+app.get('/swap/custody-balance/:principal', async (req, res) => {
+  const startTime = Date.now();
+  try {
+    const { principal } = req.params;
+    const balance = await ckethDepositService.getCustodyBalance(principal);
+
+    res.json({
+      success: true,
+      balance: {
+        total: balance.balance.toString(),
+        totalFormatted: `${Number(balance.balance) / 1e18} ETH`,
+        lastUpdated: new Date(balance.lastUpdated).toISOString()
+      },
+      principal,
+      duration: Date.now() - startTime,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get custody balance failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get custody balance',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * POST /swap/execute
+ * Execute ckETH to ckALGO swap (deposit-based, autonomous)
+ *
+ * Flow:
+ * 1. Agent transfers ckETH to custody account (GET /swap/custody-account first)
+ * 2. Agent calls this endpoint with tx_id from transfer
+ * 3. Backend verifies deposit, executes swap
+ */
+app.post('/swap/execute', async (req, res) => {
+  const startTime = Date.now();
+  try {
+    const { principal, ckethAmount, ckethTxId, minCkalgoOut } = z.object({
+      principal: z.string().min(1),
+      ckethAmount: z.string().min(1),      // Amount in wei (string for bigint)
+      ckethTxId: z.string().min(1),        // Block index from icrc1_transfer
+      minCkalgoOut: z.string().optional()  // Slippage protection
+    }).parse(req.body);
+
+    const amount = BigInt(ckethAmount);
+    const minOut = minCkalgoOut ? BigInt(minCkalgoOut) : undefined;
+
+    console.log(`Deposit swap request: ${principal} swapping ${amount} ckETH (tx: ${ckethTxId})`);
+
+    const result = await ckethDepositService.executeDepositSwap(
+      principal,
+      amount,
+      ckethTxId,
+      minOut
+    );
+
+    if (result.success && result.swapResult) {
+      res.json({
+        success: true,
+        swap: {
+          ckethIn: result.swapResult.cketh_in.toString(),
+          ckethInFormatted: `${Number(result.swapResult.cketh_in) / 1e18} ETH`,
+          ckalgoOut: result.swapResult.ckalgo_out.toString(),
+          ckalgoOutFormatted: `${Number(result.swapResult.ckalgo_out) / 1e6} ALGO`,
+          rateUsed: result.swapResult.rate_used,
+          ckethTxId
+        },
+        principal,
+        duration: Date.now() - startTime,
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        error: result.error,
+        custodyInfo: result.custodyInfo,
+        timestamp: new Date().toISOString()
+      });
+    }
+  } catch (error) {
+    console.error('Swap execute failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Swap execution failed',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * GET /swap/deposit-status/:txId
+ * Get status of a specific deposit
+ */
+app.get('/swap/deposit-status/:txId', async (req, res) => {
+  const startTime = Date.now();
+  try {
+    const { txId } = req.params;
+    const deposit = ckethDepositService.getDepositStatus(txId);
+
+    if (!deposit) {
+      // Check if processed on canister
+      const processedOnCanister = await simplifiedBridgeService.isSwapDepositProcessed(txId);
+
+      if (processedOnCanister) {
+        return res.json({
+          success: true,
+          deposit: {
+            txId,
+            status: 'swapped',
+            source: 'canister'
+          },
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      return res.status(404).json({
+        success: false,
+        error: `Deposit ${txId} not found`
+      });
+    }
+
+    res.json({
+      success: true,
+      deposit: {
+        txId: deposit.ckethTxId,
+        agentPrincipal: deposit.agentPrincipal,
+        amount: deposit.amount.toString(),
+        amountFormatted: `${Number(deposit.amount) / 1e18} ETH`,
+        status: deposit.status,
+        error: deposit.error,
+        detectedAt: new Date(deposit.detectedAt).toISOString()
+      },
+      duration: Date.now() - startTime,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get deposit status failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get deposit status',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * GET /swap/history
+ * Get swap history from canister
+ */
+app.get('/swap/history', async (req, res) => {
+  const startTime = Date.now();
+  try {
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+    const records = await simplifiedBridgeService.getSwapRecords(limit);
+
+    res.json({
+      success: true,
+      records: records.map(r => ({
+        user: r.user.toString(),
+        ckethIn: r.cketh_in.toString(),
+        ckethInFormatted: `${Number(r.cketh_in) / 1e18} ETH`,
+        ckalgoOut: r.ckalgo_out.toString(),
+        ckalgoOutFormatted: `${Number(r.ckalgo_out) / 1e6} ALGO`,
+        rateUsed: r.rate_used,
+        feeCollected: r.fee_collected.toString(),
+        timestamp: new Date(Number(r.timestamp) / 1e6).toISOString(),
+        txId: r.tx_id
+      })),
+      count: records.length,
+      duration: Date.now() - startTime,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get swap history failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get swap history',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * GET /swap/metrics
+ * Get deposit service metrics
+ */
+app.get('/swap/metrics', async (req, res) => {
+  const startTime = Date.now();
+  try {
+    const metrics = ckethDepositService.getMetrics();
+    const config = await simplifiedBridgeService.getSwapConfig();
+
+    res.json({
+      success: true,
+      metrics: {
+        localCache: {
+          totalDepositsProcessed: metrics.totalDepositsProcessed,
+          swappedDeposits: metrics.swappedDeposits,
+          failedDeposits: metrics.failedDeposits,
+          totalCkethProcessed: metrics.totalCkethProcessed.toString(),
+          totalCkethProcessedFormatted: `${Number(metrics.totalCkethProcessed) / 1e18} ETH`
+        },
+        canister: {
+          ckethBackedCkalgo: config.cketh_backed_ckalgo.toString(),
+          totalCkethReceived: config.total_cketh_received.toString()
+        }
+      },
+      duration: Date.now() - startTime,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get swap metrics failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get swap metrics',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * POST /swap/admin/enable
+ * Enable/disable swaps (controllers only)
+ */
+app.post('/swap/admin/enable', async (req, res) => {
+  try {
+    const { enabled } = z.object({
+      enabled: z.boolean()
+    }).parse(req.body);
+
+    const result = await simplifiedBridgeService.setSwapEnabled(enabled);
+    res.json({
+      success: true,
+      result,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Set swap enabled failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to set swap enabled',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * POST /swap/admin/fee
+ * Set swap fee (controllers only, max 5%)
+ */
+app.post('/swap/admin/fee', async (req, res) => {
+  try {
+    const { feeBps } = z.object({
+      feeBps: z.number().min(0).max(500)
+    }).parse(req.body);
+
+    const result = await simplifiedBridgeService.setSwapFeeBps(BigInt(feeBps));
+    res.json({
+      success: true,
+      result,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Set swap fee failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to set swap fee',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * POST /swap/admin/limits
+ * Set swap limits (controllers only)
+ */
+app.post('/swap/admin/limits', async (req, res) => {
+  try {
+    const { minCketh, maxCketh } = z.object({
+      minCketh: z.string(),
+      maxCketh: z.string()
+    }).parse(req.body);
+
+    const result = await simplifiedBridgeService.setSwapLimits(
+      BigInt(minCketh),
+      BigInt(maxCketh)
+    );
+    res.json({
+      success: true,
+      result,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Set swap limits failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to set swap limits',
+      timestamp: new Date().toISOString()
     });
   }
 });

@@ -27,6 +27,33 @@ const simplifiedBridgeIdl = ({ IDL }: any) => {
     'minted_ck_algo': IDL.Nat,
   });
 
+  // Swap types (ckETH -> ckALGO)
+  const SwapRecord = IDL.Record({
+    'user': IDL.Principal,
+    'cketh_in': IDL.Nat,
+    'ckalgo_out': IDL.Nat,
+    'rate_used': IDL.Float64,
+    'fee_collected': IDL.Nat,
+    'timestamp': IDL.Nat64,
+    'tx_id': IDL.Text,
+  });
+
+  const SwapConfig = IDL.Record({
+    'enabled': IDL.Bool,
+    'fee_bps': IDL.Nat64,
+    'min_cketh': IDL.Nat,
+    'max_cketh': IDL.Nat,
+    'cketh_backed_ckalgo': IDL.Nat,
+    'total_cketh_received': IDL.Nat,
+  });
+
+  const SwapResult = IDL.Record({
+    'cketh_in': IDL.Nat,
+    'ckalgo_out': IDL.Nat,
+    'rate_used': IDL.Float64,
+    'cketh_block_index': IDL.Nat,
+  });
+
   return IDL.Service({
     // ICRC-1 Standard Methods
     'icrc1_name': IDL.Func([], [IDL.Text], ['query']),
@@ -53,6 +80,33 @@ const simplifiedBridgeIdl = ({ IDL }: any) => {
     // Admin Functions
     'update_reserve_health': IDL.Func([IDL.Bool], [IDL.Variant({ 'Ok': IDL.Text, 'Err': IDL.Text })], []),
     'get_canister_status': IDL.Func([], [IDL.Text], ['query']),
+
+    // Swap Functions (ckETH -> ckALGO)
+    'swap_cketh_to_ckalgo': IDL.Func(
+      [IDL.Principal, IDL.Nat, IDL.Opt(IDL.Nat)],
+      [IDL.Variant({ 'Ok': SwapResult, 'Err': IDL.Text })],
+      []
+    ),
+    'get_current_eth_algo_rate': IDL.Func(
+      [],
+      [IDL.Variant({ 'Ok': IDL.Float64, 'Err': IDL.Text })],
+      []
+    ),
+    'set_swap_enabled': IDL.Func([IDL.Bool], [IDL.Variant({ 'Ok': IDL.Text, 'Err': IDL.Text })], []),
+    'set_swap_fee_bps': IDL.Func([IDL.Nat64], [IDL.Variant({ 'Ok': IDL.Text, 'Err': IDL.Text })], []),
+    'set_swap_limits': IDL.Func([IDL.Nat, IDL.Nat], [IDL.Variant({ 'Ok': IDL.Text, 'Err': IDL.Text })], []),
+    'get_swap_config': IDL.Func([], [SwapConfig], ['query']),
+    'get_swap_records': IDL.Func([IDL.Opt(IDL.Nat32)], [IDL.Vec(SwapRecord)], ['query']),
+
+    // Deposit-Based Swap Functions (Autonomous Agent Flow)
+    'get_swap_custody_subaccount': IDL.Func([IDL.Principal], [IDL.Vec(IDL.Nat8)], ['query']),
+    'is_swap_deposit_processed': IDL.Func([IDL.Text], [IDL.Bool], ['query']),
+    'get_processed_swap_deposits': IDL.Func([IDL.Opt(IDL.Nat32)], [IDL.Vec(IDL.Text)], ['query']),
+    'swap_cketh_for_ckalgo_deposit': IDL.Func(
+      [IDL.Principal, IDL.Nat, IDL.Text, IDL.Opt(IDL.Nat)],
+      [IDL.Variant({ 'Ok': SwapResult, 'Err': IDL.Text })],
+      []
+    ),
   });
 };
 
@@ -72,6 +126,32 @@ export interface DepositRecord {
   algorand_tx_id: string;
   confirmed_at: bigint;
   minted_ck_algo: bigint;
+}
+
+export interface SwapConfig {
+  enabled: boolean;
+  fee_bps: bigint;
+  min_cketh: bigint;
+  max_cketh: bigint;
+  cketh_backed_ckalgo: bigint;
+  total_cketh_received: bigint;
+}
+
+export interface SwapResult {
+  cketh_in: bigint;
+  ckalgo_out: bigint;
+  rate_used: number;
+  cketh_block_index: bigint;
+}
+
+export interface SwapRecord {
+  user: Principal;
+  cketh_in: bigint;
+  ckalgo_out: bigint;
+  rate_used: number;
+  fee_collected: bigint;
+  timestamp: bigint;
+  tx_id: string;
 }
 
 export class SimplifiedBridgeService {
@@ -382,6 +462,166 @@ export class SimplifiedBridgeService {
       const result = await this.actor.get_canister_status();
       return result;
     }, 'getCanisterStatus');
+  }
+
+  // ============================================================================
+  // Swap Functions (ckETH -> ckALGO)
+  // ============================================================================
+
+  /**
+   * Get swap configuration
+   */
+  async getSwapConfig(): Promise<SwapConfig> {
+    return this.retryOperation(async () => {
+      const result = await this.actor.get_swap_config();
+      return {
+        enabled: Boolean(result.enabled),
+        fee_bps: BigInt(result.fee_bps.toString()),
+        min_cketh: BigInt(result.min_cketh.toString()),
+        max_cketh: BigInt(result.max_cketh.toString()),
+        cketh_backed_ckalgo: BigInt(result.cketh_backed_ckalgo.toString()),
+        total_cketh_received: BigInt(result.total_cketh_received.toString()),
+      };
+    }, 'getSwapConfig');
+  }
+
+  /**
+   * Get current ETH/ALGO exchange rate from XRC
+   */
+  async getCurrentEthAlgoRate(): Promise<number> {
+    return this.retryOperation(async () => {
+      const result = await this.actor.get_current_eth_algo_rate();
+      if ('Ok' in result) {
+        return Number(result.Ok);
+      } else {
+        throw new Error(`Failed to get exchange rate: ${result.Err}`);
+      }
+    }, 'getCurrentEthAlgoRate');
+  }
+
+  /**
+   * Get swap history records
+   */
+  async getSwapRecords(limit?: number): Promise<SwapRecord[]> {
+    return this.retryOperation(async () => {
+      const limitOpt = limit !== undefined ? [limit] : [];
+      const result = await this.actor.get_swap_records(limitOpt);
+      return result.map((r: any) => ({
+        user: r.user,
+        cketh_in: BigInt(r.cketh_in.toString()),
+        ckalgo_out: BigInt(r.ckalgo_out.toString()),
+        rate_used: Number(r.rate_used),
+        fee_collected: BigInt(r.fee_collected.toString()),
+        timestamp: BigInt(r.timestamp.toString()),
+        tx_id: r.tx_id,
+      }));
+    }, `getSwapRecords(${limit})`);
+  }
+
+  // ============================================================================
+  // Deposit-Based Swap Functions (Autonomous Agent Flow)
+  // ============================================================================
+
+  /**
+   * Get custody subaccount for ckETH deposits
+   * Returns 32-byte subaccount that agent should deposit to
+   */
+  async getSwapCustodySubaccount(principal: Principal): Promise<Uint8Array> {
+    return this.retryOperation(async () => {
+      const result = await this.actor.get_swap_custody_subaccount(principal);
+      return new Uint8Array(result);
+    }, `getSwapCustodySubaccount(${principal.toString()})`);
+  }
+
+  /**
+   * Check if a swap deposit tx_id was already processed
+   */
+  async isSwapDepositProcessed(txId: string): Promise<boolean> {
+    return this.retryOperation(async () => {
+      return await this.actor.is_swap_deposit_processed(txId);
+    }, `isSwapDepositProcessed(${txId})`);
+  }
+
+  /**
+   * Get list of processed swap deposit tx_ids
+   */
+  async getProcessedSwapDeposits(limit?: number): Promise<string[]> {
+    return this.retryOperation(async () => {
+      const limitOpt = limit !== undefined ? [limit] : [];
+      return await this.actor.get_processed_swap_deposits(limitOpt);
+    }, `getProcessedSwapDeposits(${limit})`);
+  }
+
+  /**
+   * Execute ckETH to ckALGO swap (deposit-based, autonomous agent flow)
+   * Backend calls this AFTER verifying ckETH deposit in custody
+   *
+   * @param agentPrincipal - Principal to receive ckALGO
+   * @param ckethAmount - Amount of ckETH deposited (in wei)
+   * @param ckethTxId - ICRC-1 block index from ckETH transfer
+   * @param minCkalgoOut - Optional slippage protection
+   */
+  async swapCkethForCkalgoDeposit(
+    agentPrincipal: Principal,
+    ckethAmount: bigint,
+    ckethTxId: string,
+    minCkalgoOut?: bigint
+  ): Promise<SwapResult> {
+    return this.retryOperation(async () => {
+      const minOutOpt = minCkalgoOut !== undefined ? [minCkalgoOut] : [];
+      const result = await this.actor.swap_cketh_for_ckalgo_deposit(
+        agentPrincipal,
+        ckethAmount,
+        ckethTxId,
+        minOutOpt
+      );
+      if ('Ok' in result) {
+        const swap = result.Ok;
+        console.log(`✅ Deposit swap: ${swap.cketh_in} ckETH → ${swap.ckalgo_out} ckALGO @ ${swap.rate_used}`);
+        return {
+          cketh_in: BigInt(swap.cketh_in.toString()),
+          ckalgo_out: BigInt(swap.ckalgo_out.toString()),
+          rate_used: Number(swap.rate_used),
+          cketh_block_index: BigInt(swap.cketh_block_index.toString()),
+        };
+      } else {
+        throw new Error(`Deposit swap failed: ${result.Err}`);
+      }
+    }, `swapCkethForCkalgoDeposit(${agentPrincipal.toString()}, ${ckethAmount}, ${ckethTxId})`);
+  }
+
+  // ============================================================================
+  // Swap Admin Functions
+  // ============================================================================
+
+  async setSwapEnabled(enabled: boolean): Promise<string> {
+    return this.retryOperation(async () => {
+      const result = await this.actor.set_swap_enabled(enabled);
+      if ('Ok' in result) {
+        return result.Ok;
+      }
+      throw new Error(`Set swap enabled failed: ${result.Err}`);
+    }, `setSwapEnabled(${enabled})`);
+  }
+
+  async setSwapFeeBps(feeBps: bigint): Promise<string> {
+    return this.retryOperation(async () => {
+      const result = await this.actor.set_swap_fee_bps(feeBps);
+      if ('Ok' in result) {
+        return result.Ok;
+      }
+      throw new Error(`Set swap fee failed: ${result.Err}`);
+    }, `setSwapFeeBps(${feeBps})`);
+  }
+
+  async setSwapLimits(minCketh: bigint, maxCketh: bigint): Promise<string> {
+    return this.retryOperation(async () => {
+      const result = await this.actor.set_swap_limits(minCketh, maxCketh);
+      if ('Ok' in result) {
+        return result.Ok;
+      }
+      throw new Error(`Set swap limits failed: ${result.Err}`);
+    }, `setSwapLimits(${minCketh}, ${maxCketh})`);
   }
 
   // ============================================================================
