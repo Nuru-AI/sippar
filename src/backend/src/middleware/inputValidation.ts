@@ -36,7 +36,16 @@ const agentInvocationSchema = z.object({
     .max(100, 'Session ID too long')
     .regex(/^[a-zA-Z0-9_-]+$/, 'Invalid session ID format'),
 
-  requirements: z.record(z.any()).optional(),
+  // Accept prompt as direct string (preferred)
+  prompt: z.string()
+    .max(10000, 'Prompt too long')
+    .optional(),
+
+  // Accept requirements as string or object for backward compatibility
+  requirements: z.union([
+    z.string().max(10000, 'Requirements too long'),
+    z.record(z.any())
+  ]).optional(),
 
   paymentVerified: z.boolean().optional(),
 

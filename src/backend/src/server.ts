@@ -3817,7 +3817,7 @@ app.post('/api/sippar/ci-agents/:agent/:service',
   async (req, res) => {
   const startTime = performance.now();
   const { agent, service } = req.params;
-  const { sessionId, requirements, paymentToken } = req.body;
+  const { sessionId, requirements, paymentToken, prompt } = req.body;
 
   try {
     // Extract principal from request (would be set by authentication middleware)
@@ -3843,9 +3843,66 @@ app.post('/api/sippar/ci-agents/:agent/:service',
       });
     }
 
+    // BUG FIX: Validate that JWT's service (svc) field matches the requested endpoint
+    // This prevents a token paid for service A from being used to invoke service B
+    if (verification.payload) {
+      const requestedService = `/ci-agents/${agent}/${service}`;
+      const tokenService = verification.payload.svc || '';
+
+      // Normalize service paths for comparison (handle various formats)
+      const normalizeService = (svc: string): string => {
+        // Remove leading /api/sippar if present
+        let normalized = svc.replace(/^\/api\/sippar/, '');
+        // Convert dashes to slashes for "ci-agent-service" format
+        if (normalized.match(/^ci-[a-z]+-[a-z-]+$/)) {
+          const parts = normalized.split('-');
+          // ci-developer-code-generation -> /ci-agents/developer/code-generation
+          if (parts.length >= 3 && parts[0] === 'ci') {
+            normalized = `/ci-agents/${parts[1]}/${parts.slice(2).join('-')}`;
+          }
+        }
+        // Ensure leading slash
+        if (!normalized.startsWith('/')) {
+          normalized = '/' + normalized;
+        }
+        return normalized;
+      };
+
+      const normalizedRequested = normalizeService(requestedService);
+      const normalizedToken = normalizeService(tokenService);
+
+      if (normalizedRequested !== normalizedToken) {
+        console.warn(`🚫 Service mismatch: Token for "${tokenService}" used on "${requestedService}"`);
+        return res.status(403).json({
+          success: false,
+          error: 'Token not valid for this service',
+          message: 'The payment token was issued for a different service endpoint',
+          expected: requestedService,
+          tokenService: tokenService
+        });
+      }
+    }
+
     // Consume token to prevent replay attacks
     if (verification.payload) {
       x402Service.consumeToken(verification.payload.jti);
+    }
+
+    // BUG FIX: Extract prompt string properly from various input formats
+    // Supports: { prompt: "..." }, { requirements: "..." }, { requirements: { task: "..." } }
+    let promptString: string;
+    if (typeof prompt === 'string' && prompt.trim()) {
+      // Direct prompt field (preferred)
+      promptString = prompt;
+    } else if (typeof requirements === 'string' && requirements.trim()) {
+      // Requirements as string
+      promptString = requirements;
+    } else if (requirements && typeof requirements === 'object') {
+      // Requirements as object - extract task, prompt, or description
+      promptString = requirements.task || requirements.prompt || requirements.description ||
+                     (Object.keys(requirements).length > 0 ? JSON.stringify(requirements) : '');
+    } else {
+      promptString = '';
     }
 
     // Call CI agent service
@@ -3853,7 +3910,7 @@ app.post('/api/sippar/ci-agents/:agent/:service',
       agent,
       task: service,
       sessionId: sessionId || `session-${Date.now()}`,
-      requirements: requirements || {},
+      requirements: promptString,
       principal,
       paymentVerified: true
     });

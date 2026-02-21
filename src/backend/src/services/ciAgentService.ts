@@ -14,7 +14,7 @@ export interface CIAgentRequest {
   agent: string;
   task: string;
   sessionId: string;
-  requirements: any;
+  requirements: string;  // Prompt string extracted from request body
   principal: string;
   paymentVerified?: boolean;
 }
