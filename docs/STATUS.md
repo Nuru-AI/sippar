@@ -264,6 +264,13 @@ See also: `docs/ARCHITECTURE.md`, `working/sprint-018-agent-to-agent-payments/`.
 - **Result**: Logrotate working, disk at 84% (6.3GB free)
 - **Prevention**: Daily cron will now rotate logs at maxsize 100MB
 
+### Production Test Confirmed (~18:36 UTC)
+- **CI API restart**: DB connection dropped, fixed with `docker restart ci-api`
+- **E2E test**: X402 payment (3.1s) → CI Developer agent → Grok response (12.2s)
+- **Prompt**: "Write a simple Rust function that adds two numbers" → proper code response
+- **Quality score**: 0.96
+- **All fixes verified working**: prompt passthrough, service validation, token consumption
+
 ### Research Reports
 - **Created**: `docs/research/COMPETITIVE-LANDSCAPE-2026-02.md`, `docs/research/MOAT-ASSESSMENT-2026-02.md`, `docs/research/MVP-GAP-ANALYSIS-2026-02.md`
 - **Key findings**: Market real ($24M x402), competitors ahead (Coinbase/Stripe/Google), Algorand niche wide open, ICP DePIN + Algorand PQC = institutional moat
