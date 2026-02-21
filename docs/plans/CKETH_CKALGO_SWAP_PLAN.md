@@ -2,14 +2,20 @@
 
 **Created**: 2026-02-20
 **Updated**: 2026-02-21
-**Status**: Phase 3 REDESIGNED for autonomous agent operation
+**Status**: ✅ PHASE 3 COMPLETE — First real swap executed on mainnet
 **Goal**: Enable fully autonomous ckETH to ckALGO swaps without human-in-the-loop
 
 **Commits**:
 - `d91bce9` feat: implement ckETH to ckALGO swap in simplified_bridge canister (ICRC-2 version)
 - `d99ec9c` fix: XRC integration - add cycles and missing error variants
+- `7240852` feat: Phase 3 deposit-based ckETH→ckALGO swap with security fixes
+- `7ab2c52` feat: add admin_sweep_cketh_to_custody + first real swap success
+- `00e8789` docs: update STATUS with VPS deployment + swap endpoints live
 
-**CRITICAL UPDATE (2026-02-21)**: Phase 3 completely redesigned to use **Deposit-Based Swap** pattern instead of ICRC-2 approve/transferFrom. This enables fully autonomous agent operation.
+**COMPLETED (2026-02-21)**: Phase 3 deposit-based swap fully implemented and tested on mainnet.
+- **First real swap**: 0.000248 ETH → 5.405549 ckALGO (block 935652)
+- **VPS deployment**: All endpoints live on 74.50.113.152:3004
+- **Security fixes**: TOCTOU via ICRC-3, amount verification from on-chain data
 
 ---
 
@@ -1231,14 +1237,29 @@ const result = await swapCkethToCkalgo(
 
 | Phase | Task | Status | Notes |
 |-------|------|--------|-------|
-| 1 | Core swap function + XRC integration | DONE | ICRC-2 version deployed |
-| 2 | Admin controls | DONE | Works |
-| 3.1 | Canister deposit-based swap function | PENDING | Remove ICRC-2, add deposit-based |
-| 3.2 | ckethDepositService.ts | PENDING | New service |
-| 3.3 | simplifiedBridgeService.ts updates | PENDING | Add new method bindings |
-| 3.4 | API endpoints | PENDING | New deposit-based endpoints |
-| 4 | Testing | PENDING | Unit + integration |
-| 5 | Documentation | PENDING | Update ARCHITECTURE.md |
+| 1 | Core swap function + XRC integration | ✅ DONE | ICRC-2 version deployed |
+| 2 | Admin controls | ✅ DONE | Works |
+| 3.1 | Canister deposit-based swap function | ✅ DONE | `swap_cketh_for_ckalgo_deposit()` deployed |
+| 3.2 | ckethDepositService.ts | ✅ DONE | 280 lines, ICRC-3 verification |
+| 3.3 | simplifiedBridgeService.ts updates | ✅ DONE | All method bindings added |
+| 3.4 | API endpoints | ✅ DONE | 10 endpoints, all live on VPS |
+| 4 | Testing | ✅ DONE | Real swap: 0.000248 ETH → 5.405549 ckALGO |
+| 5 | Documentation | ✅ DONE | ARCHITECTURE.md, STATUS.md updated |
+
+### Security Audit Fixes (2026-02-21)
+
+| Issue | Severity | Fix |
+|-------|----------|-----|
+| TOCTOU race condition | P0 Critical | ICRC-3 `get_transactions()` verification |
+| Amount manipulation | P1 High | User-provided amount IGNORED, use on-chain data |
+| Subaccount derivation mismatch | P1 High | Query canister's `get_swap_custody_subaccount()` |
+| Float overflow | P2 Medium | Bounds check before `f64 as u64` cast |
+
+### Admin Utilities Added
+
+| Function | Purpose |
+|----------|---------|
+| `admin_sweep_cketh_to_custody(principal, amount)` | Recover ckETH sent to wrong account |
 
 ---
 
@@ -1278,18 +1299,51 @@ const result = await swapCkethToCkalgo(
 
 ---
 
-## Estimated Effort
+## Actual Effort (Completed 2026-02-21)
 
-| Phase | Task | Days |
-|-------|------|------|
-| 3.1 | Canister changes | 1-2 |
-| 3.2 | ckethDepositService.ts | 2-3 |
-| 3.3 | simplifiedBridgeService updates | 0.5 |
-| 3.4 | API endpoints | 1 |
-| 4 | Testing | 2 |
-| 5 | Documentation | 0.5 |
+| Phase | Task | Actual |
+|-------|------|--------|
+| 3.1 | Canister changes | ~3 hours |
+| 3.2 | ckethDepositService.ts | ~4 hours |
+| 3.3 | simplifiedBridgeService updates | ~1 hour |
+| 3.4 | API endpoints | ~2 hours |
+| 4 | Testing + security fixes | ~3 hours |
+| 5 | Documentation | ~1 hour |
 
-**Total**: 7-9 days
+**Total**: ~1 day (with security audit and VPS deployment)
+
+---
+
+## Production Test Results (2026-02-21)
+
+### First Real Swap
+
+```
+Input:  0.000248 ETH (248,000,000,000,000 wei)
+Output: 5.405549 ckALGO
+Rate:   ~21,795 ALGO/ETH
+Block:  935652
+```
+
+### VPS Endpoint Latencies
+
+| Endpoint | Latency |
+|----------|---------|
+| `/health` | instant |
+| `/swap/custody-account/:principal` | 628ms |
+| `/swap/custody-balance/:principal` | 263ms |
+| `/swap/deposit-status/:txId` | instant |
+| `/swap/metrics` | 580ms |
+| `/swap/config` | 75s (XRC rate slow) |
+
+### Metrics After First Swap
+
+```json
+{
+  "ckethBackedCkalgo": "5395549",
+  "totalCkethReceived": "248000000000000"
+}
+```
 
 ---
 
