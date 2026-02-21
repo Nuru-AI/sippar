@@ -1,6 +1,6 @@
 # Sippar Status
 
-**Last Updated**: 2026-02-21 11:00 UTC
+**Last Updated**: 2026-02-21 18:00 UTC
 
 ## Vision
 Sippar is the **cross-chain payment rail for AI agent commerce**. ICP is invisible middleware (chain fusion, threshold crypto, ckTokens) — not a competing L1. Agents on Ethereum or Solana pay in their native token; Sippar swaps via ICP DEX, burns ckALGO, and settles native ALGO to the receiving agent. No bridges, no seed phrases, no human intervention.
@@ -78,6 +78,15 @@ See also: `docs/ARCHITECTURE.md`, `working/sprint-018-agent-to-agent-payments/`.
 - **✅ Real LLM responses** — Grok (grok-3-mini-fast) via xAI API, 6-12s response times
 - **✅ Payment verification fixed** — requires valid X402 token, old `paymentVerified` bypass removed
 - **✅ CI agent services in X402 payment whitelist** — all 20 agent service IDs added
+
+### End-to-End Flow: ckETH → ckALGO → X402 Payment → CI Agent (PROVEN 2026-02-21)
+- **Full autonomous agent payment flow tested on mainnet production**
+- Step 1: ckETH deposit → swap → 5.41 ckALGO minted (block 935652) ✅
+- Step 2: X402 payment → 0.01 ckALGO transferred to treasury → JWT issued (3.4s) ✅
+- Step 3: JWT token → CI Developer agent invoked → Grok LLM response (7.5s) ✅
+- Replay protection confirmed (token consumed after use)
+- **Known bug**: Prompt field not passing through to Grok correctly (`[object Object]` — serialization issue in CI agent handler)
+- **Balances after test**: `2vxsx-fae` = 23.41 ckALGO, treasury = 5.41 ckALGO
 
 ### Infrastructure
 - Backend running on VPS (74.50.113.152:3004)
@@ -213,6 +222,35 @@ See also: `docs/ARCHITECTURE.md`, `working/sprint-018-agent-to-agent-payments/`.
   - `totalCkethReceived`: 248,000,000,000,000 wei (0.000248 ETH)
 - **Service**: `sippar-backend.service` running, memory 69MB
 
+### E2E Flow Test (~18:00 UTC)
+- **Goal**: Prove full ckETH → ckALGO → X402 payment → CI agent invocation flow on production
+- **Step 1** (swap): Already proven — 0.000248 ETH → 5.41 ckALGO
+- **Step 2** (X402 payment): `POST /api/sippar/x402/create-payment` with `ci-developer-code-generation` service
+  - 0.01 ckALGO transferred from `2vxsx-fae` → treasury (`smm4f...`)
+  - JWT token issued (HS256, `real: true`), 3.4s processing
+- **Step 3** (CI agent invoke): `POST /api/sippar/ci-agents/developer/code-generation` with JWT token
+  - Token verified, consumed (replay protection worked)
+  - Grok LLM responded via Developer agent, 7.5s
+  - **Bug found**: `prompt` field reaches CI agent as `[object Object]` — serialization issue in request forwarding
+- **Result**: **E2E FLOW WORKS.** First complete ckETH → agent service invocation on mainnet.
+- **Remaining fix**: Prompt passthrough bug in CI agent handler
+
+### Documentation Audit (~17:00 UTC)
+- **Audit**: 90+ markdown files, many stale (Sept 2025), ~30 endpoints missing from API docs
+- **Created**: `docs/DOCUMENTATION-AUDIT.md`, `docs/README.md`, `docs/api/CURRENT_ENDPOINTS.md` (111 endpoints), `docs/integration/AGENT_QUICKSTART.md`
+- **Commit**: `37a2000`
+
+### E2E Flow Trace
+- **Report**: `docs/reports/E2E-FLOW-TRACE.md` — 958-line analysis of full payment flow
+- **Script**: `scripts/e2e-cketh-to-ci-agent.sh` — executable curl test
+- **P0 false positives**: Treasury principal + JWT secret both correctly configured on VPS
+- **Commit**: `6dddd97`
+
+### Research Reports
+- **Created**: `docs/research/COMPETITIVE-LANDSCAPE-2026-02.md`, `docs/research/MOAT-ASSESSMENT-2026-02.md`, `docs/research/MVP-GAP-ANALYSIS-2026-02.md`
+- **Key findings**: Market real ($24M x402), competitors ahead (Coinbase/Stripe/Google), Algorand niche wide open, ICP DePIN + Algorand PQC = institutional moat
+- **Commit**: `ee65789`
+
 ## What's Prototyped But Not Production
 
 ### X402 Agent Payment Infrastructure (PRODUCTION 2026-02-20)
@@ -252,14 +290,16 @@ See also: `docs/ARCHITECTURE.md`, `working/sprint-018-agent-to-agent-payments/`.
 6. ~~**Wire full flow**~~ **TESTED ON MAINNET** — 0.000248 ETH → 5.405549 ckALGO (block 935652)
 
 ### Week 4: Agents
-6. **Grok API → CI agents** — real LLM responses
-7. **Ethereum-side agent** — pays ckETH, receives service
-8. **Algorand-side agent** — receives ALGO, delivers service
+6. ~~**Grok API → CI agents**~~ **DONE** — real LLM responses via grok-3-mini-fast (6-12s)
+7. ~~**E2E flow test**~~ **DONE** — ckETH → ckALGO → X402 payment → CI agent → Grok response (proven on mainnet 2026-02-21)
+8. **Fix prompt passthrough bug** — `[object Object]` in CI agent handler
+9. **Ethereum-side agent script** — autonomous agent that does the full flow
+10. **Algorand-side agent** — receives ALGO, delivers service
 
 ### Week 5: Integration + Grant
-9. **End-to-end demo** — ETH agent pays, ALGO agent delivers, fully automated
-10. **Lava MCP server** — agent-accessible RPC (if time)
-11. **Algorand Foundation grant proposal** — Sippar + Lava as agent infra stack
+11. **End-to-end demo** — polished version of proven flow
+12. **Lava MCP server** — agent-accessible RPC (if time)
+13. **Algorand Foundation grant proposal** — Sippar + Lava as agent infra stack
 
 ### Deferred
 - Per-user custody addresses (post-MVP)
