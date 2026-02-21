@@ -66,10 +66,24 @@ Backend on VPS (74.50.113.152:3004) — polls Algorand, manages deposit lifecycl
 - **VPS has 3.8GB RAM** — npm install fails there. Ship node_modules from local machine.
 
 ## Key Docs
+
+### Technical
 - `docs/ARCHITECTURE.md` — system architecture, canister map, flows
 - `docs/STATUS.md` — current state, known issues, next steps
 - `docs/CODEBASE_INVENTORY.md` — generated 2026-02-19, code-level inventory
-- Other docs in `docs/` — from Sept 2025, may contain useful reference but not current
+- `docs/api/CURRENT_ENDPOINTS.md` — 111 endpoints from server.ts (Feb 2026)
+- `docs/integration/AGENT_QUICKSTART.md` — 5-minute quickstart for agent developers
+- `docs/plans/CKETH_CKALGO_SWAP_PLAN.md` — swap implementation details
+
+### Business & Investor (Updated Feb 2026)
+- `docs/business/BUSINESS_DOCUMENTATION_INDEX.md` — index of all business docs
+- `docs/business/executive/ONE_PAGE_BUSINESS_SUMMARY.md` — quick investor overview
+- `docs/business/executive/INVESTMENT_OPPORTUNITY_SNAPSHOT.md` — detailed investment case
+- `docs/business/strategic/INVESTOR_PITCH_DECK.md` — slide-by-slide pitch template
+
+### Documentation Meta
+- `docs/README.md` — documentation index (start here)
+- `docs/DOCUMENTATION-AUDIT.md` — gap analysis, what's done/remaining
 
 ## Don't
 

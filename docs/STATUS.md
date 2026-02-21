@@ -1,6 +1,6 @@
 # Sippar Status
 
-**Last Updated**: 2026-02-21 18:00 UTC
+**Last Updated**: 2026-02-21 21:00 UTC
 
 ## Vision
 Sippar is the **cross-chain payment rail for AI agent commerce**. ICP is invisible middleware (chain fusion, threshold crypto, ckTokens) — not a competing L1. Agents on Ethereum or Solana pay in their native token; Sippar swaps via ICP DEX, burns ckALGO, and settles native ALGO to the receiving agent. No bridges, no seed phrases, no human intervention.
@@ -250,6 +250,13 @@ See also: `docs/ARCHITECTURE.md`, `working/sprint-018-agent-to-agent-payments/`.
 - **Created**: `docs/research/COMPETITIVE-LANDSCAPE-2026-02.md`, `docs/research/MOAT-ASSESSMENT-2026-02.md`, `docs/research/MVP-GAP-ANALYSIS-2026-02.md`
 - **Key findings**: Market real ($24M x402), competitors ahead (Coinbase/Stripe/Google), Algorand niche wide open, ICP DePIN + Algorand PQC = institutional moat
 - **Commit**: `ee65789`
+
+### Business Docs Update (2026-02-21)
+- **Updated for Feb 2026**: `ONE_PAGE_BUSINESS_SUMMARY.md`, `INVESTMENT_OPPORTUNITY_SNAPSHOT.md`, `BUSINESS_MODEL_CANVAS.md`, `INVESTOR_PITCH_DECK.md`
+- **Focus**: Working infrastructure, mainnet proof points, grant/partnership focus (not massive equity raise)
+- **Cleaned up**: Deleted superseded docs (`endpoints.md`, `CURRENT_STATUS_AND_DEVELOPMENT_PLAN.md`)
+- **Index**: `docs/business/BUSINESS_DOCUMENTATION_INDEX.md`
+- **Commit**: `a39fdc4`
 
 ## What's Prototyped But Not Production
 
